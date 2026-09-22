@@ -13,8 +13,9 @@ implements it and keeps section 11 "Implementation map" up to date.
    - Each screen -> one page.
 3. Never invent rules. While WRITING the document (Prompt 1), ask the user about anything missing or
    ambiguous - application-level questions only, never about code - and settle everything before setting
-   `Status: Ready for implementation`. While IMPLEMENTING (Prompt 2), never ask: choose the safest behaviour
-   consistent with the document, write it in section 10 as `Giả định (triển khai): ...` and report it.
+   `Status: Ready for implementation`. While IMPLEMENTING (Prompt 2), ask ONE round of questions about the look of
+   the screens only (recorded in section 8 as `### Giao diện đã chốt (UI concept)`), then never ask again: choose the
+   safest behaviour consistent with the document, write it in section 10 as `Giả định (triển khai): ...` and report it.
 4. When the user changes a requirement, update this document first, then the code and tests.
 5. Error messages shown to users come from the "Error message" column of section 7.
 6. `sample_product_import.md` is the complete reference example.

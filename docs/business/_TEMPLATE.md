@@ -5,11 +5,12 @@
 | Home group (Nhóm trên Trang chủ) | <Home group, e.g. Kế hoạch sản xuất> |
 | Icon (Biểu tượng) | <one emoji, e.g. 📋> |
 | Owner (Người phụ trách) | <Owner> |
-| Status (Trạng thái) | Draft (-> Ready for implementation after Prompt 1 -> Implemented after Prompt 2) |
+| Status (Trạng thái) | Draft |
 | Last updated | YYYY-MM-DD |
 
-> Write the content in Vietnamese or English. Keep the section titles and the IDs (UC-xx, BR-xx, AC-xx):
+> Write the content in Vietnamese. Keep the section titles and the IDs (UC-xx, BR-xx, AC-xx):
 > the AI maps them 1-to-1 to code. Delete the hints in *italics* when done.
+> Status values: `Draft` -> `Ready for implementation` (confirmed with the user, Prompt 1) -> `Implemented` (Prompt 2).
 
 ## 1. Goal (Mục tiêu)
 *What problem does this feature solve? Who benefits? 2-4 sentences.*
@@ -57,6 +58,9 @@
 | BR-01 | | |
 
 ## 8. Screens (Màn hình) - each screen becomes ONE page
+*What each screen must show and allow. The look (layout, table style, tabs, charts) is agreed at the start of
+Prompt 2 and written here as `### Giao diện đã chốt (UI concept)`.*
+
 ### Screen 1: <Name> (landing page)
 - **Purpose:**
 - **Blocks / widgets:** *filters, upload box, table columns, buttons, charts*

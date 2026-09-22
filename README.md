@@ -28,8 +28,10 @@ Làm theo hướng dẫn trong [docs/prompt/README.md](docs/prompt/README.md):
    (chỉ về cách ứng dụng hoạt động), viết tài liệu nghiệp vụ `docs/business/<ten_chuc_nang>.md` bằng tiếng Việt
    và chờ bạn chốt.
 2. Dán **Prompt 2**
-   ([docs/prompt/02-implement-feature.md](docs/prompt/02-implement-feature.md)): AI tự lập kế hoạch, viết backend +
-   giao diện, chạy kiểm tra mà không hỏi gì thêm, rồi hướng dẫn bạn cách dùng.
+   ([docs/prompt/02-implement-feature.md](docs/prompt/02-implement-feature.md)): AI hỏi **một lượt** về cách bạn muốn
+   dùng giao diện (bảng như Excel chỉ xem hay sửa trực tiếp, bộ lọc, số liệu tổng hợp...; gõ "ok" để dùng đề xuất).
+   Sau đó AI tự lập kế hoạch, chia việc cho các AI phụ (backend / giao diện), chạy kiểm tra mà không hỏi gì thêm, rồi
+   hướng dẫn bạn cách dùng.
 3. Chạy lại `run.ps1` → chức năng mới xuất hiện ở Trang chủ và menu bên trái.
 
 Chức năng mẫu **"Nhập sản phẩm từ Excel (mẫu)"** cho thấy một chức năng hoàn chỉnh

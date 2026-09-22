@@ -12,11 +12,11 @@
 ```python
 # frontend/features/leave_request/pages/submit_page.py
 from backend.core.gateway import gateway
-from backend.features.leave_request import LeaveRequestController          # the top layer only
+from backend.features.leave_request import LeaveRequestController  # the top layer only
 from backend.features.leave_request.dto.submit_dto import SubmitLeaveRequest
 
 leave = gateway.open(LeaveRequestController)
-result = leave.submit(SubmitLeaveRequest(days=2, reason="Việc riêng"))       # typed result DTO
+result = leave.submit(SubmitLeaveRequest(days=2, reason="Việc riêng"))  # typed result DTO
 ```
 
 ## Layers (top -> bottom), condensed per business
@@ -85,11 +85,12 @@ Global rules:
 ```python
 class AuditMiddleware(GatewayMiddleware):
     def handle(self, call, proceed):
-        result = proceed(call)            # call.feature_key, call.name, call.request are available
-        ...                               # e.g. write an audit record
+        result = proceed(call)  # call.feature_key, call.name, call.request are available
+        ...  # e.g. write an audit record
         return result
 
-gateway.use(AuditMiddleware())            # registered once in the framework, never in a feature
+
+gateway.use(AuditMiddleware())  # registered once in the framework, never in a feature
 ```
 
 ## Errors

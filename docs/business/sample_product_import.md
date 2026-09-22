@@ -79,6 +79,13 @@ trước khi lưu, cho biết tồn kho hiện tại và xuất báo cáo Excel.
 | BR-10 | File must be .xlsx/.xls, ≤ 10 MB, contain all required columns, 1-5000 data rows | File thiếu cột bắt buộc: ... |
 
 ## 8. Screens (Màn hình)
+### Giao diện đã chốt (UI concept)
+- Menu: mục "Nhập sản phẩm từ Excel (mẫu)" mở màn hình 1; mục con "↳ Danh sách sản phẩm" mở màn hình 2.
+- Màn hình 1: 3 khối theo thứ tự các bước (tải file mẫu -> chọn file -> kết quả kiểm tra); bảng kết quả chỉ xem, có
+  công tắc "Chỉ hiện dòng lỗi"; nút "Lưu N dòng hợp lệ".
+- Màn hình 2: bộ lọc (từ khoá, trạng thái tồn) ở trên; ô số liệu tổng hợp; bên trái bảng chỉ xem + nút "Xuất Excel",
+  bên phải biểu đồ tròn trạng thái tồn kho.
+
 ### Screen 1: Nhập sản phẩm từ Excel (landing page)
 - Step 1 panel: download template (UC-01).
 - Step 2 panel: upload box (.xlsx/.xls).

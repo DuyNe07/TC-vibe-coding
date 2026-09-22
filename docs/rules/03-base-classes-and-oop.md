@@ -104,10 +104,12 @@ class SampleProductImportController(BaseController):
         """UC-04 Tra cứu sản phẩm + tồn kho."""
         return ListProductsService().handle(request)
 
+
 # backend/features/sample_product_import/__init__.py
 from backend.features.sample_product_import.controllers.sample_product_import_controller import (
     SampleProductImportController,
 )
+
 __all__ = ["SampleProductImportController"]
 
 # page

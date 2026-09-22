@@ -3,16 +3,23 @@
 ## New feature
 1. **Read** `docs/README.md` and all `docs/rules/`.
 2. **Business doc**: open `docs/business/<key>.md`. If missing or incomplete, write it first with the user
-   (procedure: `docs/prompt/01-business-analysis.md`).
-   All questions to the user happen at THIS stage, and only about the application (screens, data, rules,
-   messages, files) - never about code. The document ends with `Status: Ready for implementation`.
-3. **Plan (no waiting)**: write `docs/plans/<key>-implementation-plan.md` (summary, requirement traceability
-   matrix with every field/file column/UC/BR/screen element/AC -> code element -> test, file list, ordered steps
-   with checkboxes, implementation assumptions), then execute it immediately. During implementation do NOT ask
-   the user anything: technical choices are yours; business gaps get the safest behaviour consistent with the
-   document, recorded in section 10 as `Giả định (triển khai): ...` and reported at the end.
-   Only touch the feature's own folders, its document and its plan; never break other features.
-   (Full procedure: `docs/prompt/02-implement-feature.md`.)
+   (procedure: `docs/prompt/01-business-analysis.md`). All business questions happen at THIS stage, only about the
+   application (data, rules, use cases, files, what each screen shows and allows) - never about code. The document
+   ends with `Status: Ready for implementation`.
+3. **UI concept, then plan (no more waiting)** (full procedure: `docs/prompt/02-implement-feature.md`):
+   - Ask the user ONE round of questions about how they want to use the screens (menu or tabs, Excel-like table:
+     read-only / edit in cells / pick a row, input by form / grid / Excel upload, filters, totals, charts,
+     confirmations), with a proposal they can accept with "ok". Record the answer in section 8 as
+     `### Giao diện đã chốt (UI concept)`. This is the ONLY question during implementation.
+   - Write `docs/plans/<key>-implementation-plan.md` (summary, requirement traceability matrix with every field/file
+     column/UC/BR/screen element/AC -> code element -> test, controller contract, ordered steps with checkboxes,
+     implementation assumptions), then execute it immediately without asking anything: technical choices are yours;
+     business gaps get the safest behaviour consistent with the document, recorded in section 10 as
+     `Giả định (triển khai): ...` and reported at the end.
+   - Build with sub-agents when the tool has them: backend sub-agent (`backend/features/<key>/`) and UI-design
+     sub-agent (studies https://docs.streamlit.io/develop/api-reference, writes `docs/plans/<key>-ui-design.md`) in
+     parallel, then UI-build sub-agent (`frontend/features/<key>/`). Without sub-agents, do the same roles in sequence.
+   - Only touch the feature's own folders, its document and its plans; never break other features.
 4. **Scaffold**: `python scripts/new_feature.py <key> --title "..." --description "..." --icon "..." --owner "..."`.
    It creates backend + frontend + doc stub with a working `ping` use case. Run `run.ps1` to see the card.
 5. **Map the doc to code** (write this mapping in section 11 of the doc as you go):
@@ -27,6 +34,9 @@
 
 6. **Implement bottom-up**: models -> business (+ tests) -> repositories -> builders -> dto -> services
    (log main steps) -> controller methods -> pages -> manifest (`pages=(...)`).
+   - Registering with the gateway = exporting the ONE controller from `backend/features/<key>/__init__.py`
+     (done by the scaffold; no central list to edit, so features never conflict).
+   - The feature's navigation = `manifest.py`: its pages appear in the sidebar menu and its card on Home.
 7. **Remove the scaffold** `ping` (dto, service, controller method, test, page call) once real use cases exist.
 8. **Test**: unit tests for every BR-xx and every service in `backend/features/<key>/tests/`.
 9. **Verify**: `python scripts/check.py` -> `ALL CHECKS PASSED`. Fix the code, never the tests.

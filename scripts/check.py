@@ -6,6 +6,7 @@ Usage:
 """
 
 import argparse
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -15,12 +16,15 @@ ROOT = Path(__file__).resolve().parents[1]
 
 def run(title: str, command: list[str]) -> bool:
     print(f"\n=== {title} ===", flush=True)
-    result = subprocess.run(command, cwd=ROOT)
+    # UTF-8 mode: Vietnamese messages must not crash on Windows consoles (cp1252)
+    result = subprocess.run(command, cwd=ROOT, env={**os.environ, "PYTHONUTF8": "1", "PYTHONIOENCODING": "utf-8"})
     print(f"--> {'OK' if result.returncode == 0 else 'FAILED'}", flush=True)
     return result.returncode == 0
 
 
 def main() -> int:
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(errors="replace")
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--fix", action="store_true", help="run ruff --fix and ruff format first")
     args = parser.parse_args()

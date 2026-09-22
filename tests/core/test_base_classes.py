@@ -145,3 +145,62 @@ def test_log_entries_are_written_and_filtered(tmp_path, monkeypatch) -> None:
     demo = read_log_entries("demo", min_level="INFO")
     assert demo and demo[-1].message == "demo warning"
     assert all("other" not in e.source for e in demo)
+
+
+def test_page_render_harness_detects_a_crashing_page() -> None:
+    from streamlit.testing.v1 import AppTest
+
+    def script() -> None:
+        from frontend.core.base_page import BasePage
+
+        class BrokenPage(BasePage):
+            title = "Broken"
+
+            def render_header(self) -> None:
+                pass
+
+            def render(self) -> None:
+                raise RuntimeError("boom")
+
+        BrokenPage("demo_feature").run()
+
+    app = AppTest.from_function(script, default_timeout=60)
+    app.run()
+    assert app.error, "a crashing page must show an error box that the render test can detect"
+
+
+def test_frame_to_records_gives_dto_ready_values() -> None:
+    import numpy as np
+    import pandas as pd
+
+    from frontend.core.components import frame_to_records
+
+    frame = pd.DataFrame(
+        {"qty": [1, 2], "price": [2.5, None], "name": ["a", None], "day": [pd.Timestamp("2026-01-02"), pd.NaT]}
+    )
+    first, second = frame_to_records(frame)
+    assert first == {"qty": 1, "price": 2.5, "name": "a", "day": pd.Timestamp("2026-01-02").to_pydatetime()}
+    assert type(first["qty"]) is int and not isinstance(first["qty"], np.integer)
+    assert second == {"qty": 2, "price": None, "name": None, "day": None}
+
+
+def test_excel_like_tables_render() -> None:
+    from streamlit.testing.v1 import AppTest
+
+    def script() -> None:
+        import streamlit as st
+
+        from frontend.core.components import data_table, editable_table
+
+        rows = [{"code": "A", "qty": 1}, {"code": "B", "qty": None}]
+        picked = data_table(rows, selection="single", key="pick")
+        edited = editable_table(rows, key="edit", disabled=["code"])
+        empty = editable_table([], key="empty", columns=["code", "qty"], allow_add_delete=True)
+        st.write(f"picked={len(picked)} edited={edited} empty={len(empty)}")
+
+    app = AppTest.from_function(script, default_timeout=60)
+    app.run()
+    assert not app.exception and not app.error
+    assert "picked=0" in app.markdown[0].value
+    assert "{'code': 'B', 'qty': None}" in app.markdown[0].value
+    assert "empty=0" in app.markdown[0].value

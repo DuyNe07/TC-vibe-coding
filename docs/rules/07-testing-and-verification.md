@@ -20,6 +20,7 @@ The Claude Code Stop hook runs it automatically when code changed and blocks fin
 | `test_structure.py` | all features and Home load; backend/frontend feature exists on both sides, required folders/files, valid key, business doc exists, no stray files |
 | `test_inheritance.py` | classes inherit their layer's base; one service per file named `xxx_service.py`; exactly ONE controller per feature, exported by the feature `__init__.py`; each service called by exactly one controller method; controller methods are one `return` line; BR codes exist in the business doc; pages inherit BasePage and are listed in the manifest |
 | `test_imports.py` | backend never imports streamlit/frontend; features never import each other; layer import matrix; pages import only `backend.core` + own feature root/`dto`; pages never create controllers (must use `gateway.open`); no file libraries in frontend; no `print()`; no `open()` in frontend |
+| `test_pages_render.py` | Home and every feature page render headlessly (Streamlit AppTest) on first load, with no data, without any exception or error box |
 | `tests/core/` | framework base classes, gateway (+ middlewares) and logging behave as documented |
 
 ## When a check fails

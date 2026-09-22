@@ -7,7 +7,8 @@
         description = "Tra cứu và xuất danh sách đơn hàng."
 
         def render(self) -> None:
-            result = OrderController().list_orders(ListOrdersRequest(keyword="A"))   # direct call
+            orders = gateway.open(OrderController)          # top layer of the business, via the gateway
+            result = orders.list_orders(ListOrdersRequest(keyword="A"))
             data_table([item.model_dump() for item in result.items])
 
 ``run()`` is the fixed template (header -> render -> error boundary). Never override it.

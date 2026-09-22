@@ -219,7 +219,8 @@ def main() -> int:
     print("\nNext steps (docs/rules/05-feature-workflow.md):")
     print(f"  1. Complete docs/business/{key}.md")
     print("  2. Implement models -> business -> repositories -> builders -> dto -> services -> controller -> pages")
-    print("  3. python scripts/check.py      4. powershell -ExecutionPolicy Bypass -File .\\run.ps1")
+    print("  3. python scripts/check.py")
+    print("  4. powershell -ExecutionPolicy Bypass -File .\\run.ps1")
     return 0
 
 

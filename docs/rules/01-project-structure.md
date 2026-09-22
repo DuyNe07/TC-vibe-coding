@@ -18,7 +18,7 @@ TC-vibe-coding/
 ├── docs/
 │   ├── README.md               # START HERE
 │   ├── rules/                  # mandatory rules (this folder)
-│   ├── business/               # one business document per feature: <feature_key>.md
+│   ├── business/               # one business document per feature: <feature_key>.md (+ _sources/ raw material)
 │   ├── plans/                  # plans written by the AI before coding: <feature_key>-implementation-plan.md
 │   └── prompt/                 # ready-made prompts for users (business analysis, implementation)
 │

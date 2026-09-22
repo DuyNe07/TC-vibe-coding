@@ -17,7 +17,9 @@ class AppShell:
 
     def run(self) -> None:
         settings = get_settings()
-        st.set_page_config(page_title=settings.name, page_icon=page_icon(), layout="wide", initial_sidebar_state="expanded")
+        st.set_page_config(
+            page_title=settings.name, page_icon=page_icon(), layout="wide", initial_sidebar_state="expanded"
+        )
         apply_theme()
         router = Router(FeatureRegistry.discover(), self.home_page)
         set_current_router(router)
