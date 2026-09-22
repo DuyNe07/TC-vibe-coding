@@ -2,6 +2,8 @@
 
 | Feature key | `sample_product_import` (= folder name in `backend/features/` and `frontend/features/`) |
 |---|---|
+| Home group (Nhóm trên Trang chủ) | Chức năng mẫu |
+| Icon (Biểu tượng) | 📦 |
 | Owner (Người phụ trách) | TC Vibe Coding |
 | Status (Trạng thái) | Done - REFERENCE IMPLEMENTATION (copy its patterns, do not extend it) |
 | Last updated | 2026-09-22 |

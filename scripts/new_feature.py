@@ -208,6 +208,8 @@ def main() -> int:
     if not doc_path.exists():
         template = (ROOT / "docs" / "business" / "_TEMPLATE.md").read_text(encoding="utf-8")
         doc = template.replace("<feature_key>", key).replace("<Feature title>", args.title.strip())
+        doc = doc.replace("<Home group, e.g. Kế hoạch sản xuất>", args.group.strip() or "Chức năng")
+        doc = doc.replace("<one emoji, e.g. 📋>", args.icon.strip() or "🧩")
         doc_path.write_text(doc.replace("<Owner>", args.owner.strip() or "TBD"), encoding="utf-8", newline="\n")
         created.append(doc_path)
 

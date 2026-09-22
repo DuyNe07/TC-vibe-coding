@@ -2,8 +2,10 @@
 
 | Feature key | `<feature_key>` (= folder name in `backend/features/` and `frontend/features/`) |
 |---|---|
+| Home group (Nhóm trên Trang chủ) | <Home group, e.g. Kế hoạch sản xuất> |
+| Icon (Biểu tượng) | <one emoji, e.g. 📋> |
 | Owner (Người phụ trách) | <Owner> |
-| Status (Trạng thái) | Draft |
+| Status (Trạng thái) | Draft (-> Ready for implementation after Prompt 1 -> Implemented after Prompt 2) |
 | Last updated | YYYY-MM-DD |
 
 > Write the content in Vietnamese or English. Keep the section titles and the IDs (UC-xx, BR-xx, AC-xx):

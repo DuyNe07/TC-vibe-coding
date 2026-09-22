@@ -24,11 +24,12 @@ Tuỳ chọn thêm vào cuối lệnh: `-Port 8600` (đổi cổng), `-NoBrowser
 Làm theo hướng dẫn trong [docs/prompt/README.md](docs/prompt/README.md):
 
 1. Cho AI học nghiệp vụ (giải thích, dán nội dung, đính kèm file mẫu), rồi dán **Prompt 1**
-   ([docs/prompt/01-business-analysis.md](docs/prompt/01-business-analysis.md)): AI hỏi lại những chỗ chưa rõ và
-   viết tài liệu nghiệp vụ `docs/business/<ten_chuc_nang>.md` bằng tiếng Việt.
-2. Kiểm tra tài liệu, rồi dán **Prompt 2**
-   ([docs/prompt/02-implement-feature.md](docs/prompt/02-implement-feature.md)): AI lập kế hoạch, chờ bạn duyệt,
-   rồi viết backend + giao diện và chạy kiểm tra.
+   ([docs/prompt/01-business-analysis.md](docs/prompt/01-business-analysis.md)): AI hỏi lại những chỗ chưa rõ
+   (chỉ về cách ứng dụng hoạt động), viết tài liệu nghiệp vụ `docs/business/<ten_chuc_nang>.md` bằng tiếng Việt
+   và chờ bạn chốt.
+2. Dán **Prompt 2**
+   ([docs/prompt/02-implement-feature.md](docs/prompt/02-implement-feature.md)): AI tự lập kế hoạch, viết backend +
+   giao diện, chạy kiểm tra mà không hỏi gì thêm, rồi hướng dẫn bạn cách dùng.
 3. Chạy lại `run.ps1` → chức năng mới xuất hiện ở Trang chủ và menu bên trái.
 
 Chức năng mẫu **"Nhập sản phẩm từ Excel (mẫu)"** cho thấy một chức năng hoàn chỉnh

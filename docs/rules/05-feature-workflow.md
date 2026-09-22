@@ -4,12 +4,15 @@
 1. **Read** `docs/README.md` and all `docs/rules/`.
 2. **Business doc**: open `docs/business/<key>.md`. If missing or incomplete, write it first with the user
    (procedure: `docs/prompt/01-business-analysis.md`).
-   Make sure sections 4 (data), 6 (use cases UC-xx), 7 (rules BR-xx) and 8 (screens) are clear.
-   Ask the user about anything unclear; record answers/defaults in section 10.
-3. **Plan -> wait**: write `docs/plans/<key>-implementation-plan.md` (summary, requirement traceability matrix
-   with every field/file column/UC/BR/screen element/AC -> code element -> test, file list, ordered steps with
-   checkboxes, questions). Show it to the user and WAIT for approval before writing code. Keep the checkboxes
-   updated while executing. (Full procedure: `docs/prompt/02-implement-feature.md`.)
+   All questions to the user happen at THIS stage, and only about the application (screens, data, rules,
+   messages, files) - never about code. The document ends with `Status: Ready for implementation`.
+3. **Plan (no waiting)**: write `docs/plans/<key>-implementation-plan.md` (summary, requirement traceability
+   matrix with every field/file column/UC/BR/screen element/AC -> code element -> test, file list, ordered steps
+   with checkboxes, implementation assumptions), then execute it immediately. During implementation do NOT ask
+   the user anything: technical choices are yours; business gaps get the safest behaviour consistent with the
+   document, recorded in section 10 as `Giả định (triển khai): ...` and reported at the end.
+   Only touch the feature's own folders, its document and its plan; never break other features.
+   (Full procedure: `docs/prompt/02-implement-feature.md`.)
 4. **Scaffold**: `python scripts/new_feature.py <key> --title "..." --description "..." --icon "..." --owner "..."`.
    It creates backend + frontend + doc stub with a working `ping` use case. Run `run.ps1` to see the card.
 5. **Map the doc to code** (write this mapping in section 11 of the doc as you go):
