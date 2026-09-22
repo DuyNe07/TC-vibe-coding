@@ -1,0 +1,35 @@
+# =============================================================================
+# TC-vibe-coding - Python dependencies (Python 3.11)
+# -----------------------------------------------------------------------------
+# RULES (see docs/rules/08-dependencies-and-running.md):
+#   * This is the ONLY dependency file. Do not create others.
+#   * Pin EXACT versions (==). run.ps1 reinstalls automatically when this changes.
+#   * Add a comment explaining why a new library is needed.
+# =============================================================================
+
+# ---- Frontend (UI) ----------------------------------------------------------
+streamlit==1.64.0          # Web UI framework (frontend/)
+plotly==7.1.0              # Interactive charts inside Streamlit pages
+
+# ---- Models, DTOs, configuration --------------------------------------------
+pydantic==2.13.5           # Base classes for models (entities) and DTOs
+pydantic-settings==2.15.0  # Typed settings loaded from environment / .env
+python-dotenv==1.2.3       # Loads .env files
+
+# ---- Data processing --------------------------------------------------------
+pandas==3.0.6              # Tabular data manipulation
+
+# ---- Excel files ------------------------------------------------------------
+openpyxl==3.1.5            # Read/write .xlsx
+xlrd==2.0.2                # Read legacy .xls
+
+# ---- Word files -------------------------------------------------------------
+python-docx==1.2.0         # Read/write .docx
+docxtpl==0.20.2            # Fill .docx templates with Jinja2 placeholders
+
+# ---- PDF files --------------------------------------------------------------
+pypdf==6.19.0              # Read text from .pdf
+
+# ---- Quality tools (used by scripts/check.py) -------------------------------
+pytest==9.1.1              # Unit + architecture tests
+ruff==0.16.8               # Linter / formatter

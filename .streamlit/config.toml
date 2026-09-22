@@ -1,0 +1,16 @@
+# Streamlit configuration. See docs/rules/08-dependencies-and-running.md
+[server]
+headless = true              # run.ps1 opens the browser itself (on /home)
+runOnSave = true             # auto-rerun when code changes (vibe coding friendly)
+maxUploadSize = 50           # MB
+folderWatchBlacklist = [".venv", "data", "logs", "docs", ".git"]
+
+[browser]
+gatherUsageStats = false
+
+[client]
+toolbarMode = "minimal"
+showSidebarNavigation = false  # navigation is rendered by frontend/core/components/sidebar_nav.py
+
+[theme]
+primaryColor = "#0F62FE"
