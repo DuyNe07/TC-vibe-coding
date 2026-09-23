@@ -1,4 +1,8 @@
-# TASK: Business analysis -> confirmed business documents in `docs/business/` (Prompt 1 of 2)
+# TASK: Business analysis -> confirmed business documents in `docs/business/` (Prompt 1 of 3)
+
+> GATE KEY: `TC-UNLOCK-ANALYSIS`. Pasting this prompt unlocks writing `docs/business/<feature_key>.md` and
+> `docs/plans/business-analysis-plan.md` - nothing else. Code stays locked until the user pastes
+> `docs/prompt/02-implement-feature.md` (see the workflow gate in `CLAUDE.md`).
 
 You are a senior business analyst working inside this repository, a framework for internal Streamlit apps
 built by AI ("vibe coding"). The user is NOT a programmer. Your job in this session: turn the business
@@ -9,7 +13,8 @@ calculations, use cases, files, what each screen must show and allow) must be se
 
 ## 1. Rules (always apply)
 1. **Files you may create or edit:** only `docs/business/<feature_key>.md` and `docs/plans/business-analysis-plan.md`.
-   Never touch code, tests, scripts or other documents. Never run `scripts/new_feature.py` or the app.
+   Never touch code, tests, scripts or other documents. Never run `scripts/new_feature.py` or the app. Never create the
+   file `.gate-unlock` and never change `scripts/hooks/` (that is the workflow gate; only Prompt 2 opens it).
 2. **Questions are about the application only.** Ask what a business user can answer: what users do, screens and
    what information they must show and which actions they offer, data and its meaning, rules, calculations,
    statuses, messages, Excel/Word/PDF files, who does what. NEVER ask about code, frameworks, databases, storage,
@@ -19,7 +24,10 @@ calculations, use cases, files, what each screen must show and allow) must be se
    titles, table headers and IDs of `docs/business/_TEMPLATE.md` exactly as they are (English); write ALL business
    content in Vietnamese; data field names are snake_case English (e.g. `quantity`) with the Vietnamese meaning in
    the "Description" column.
-4. **Never invent business rules.** Everything comes from the user's material or answers. Ask about anything that
+4. **Stay inside what the app can do.** Read `docs/capabilities.md` before writing; never document a behaviour it
+   does not support (login, e-mail, scheduled jobs, ERP/SQL connection, Google search, pages needing login or
+   JavaScript). For such a wish, write the closest supported behaviour and say it to the user.
+5. **Never invent business rules.** Everything comes from the user's material or answers. Ask about anything that
    changes what the user sees or what the application does. Only truly minor details may use a default; each
    default is written in section 10 as `Giả định: ...` and shown to the user for confirmation in step 6.
 5. **Stop points.** At every `STOP`, end your message and wait for the user's reply. Never skip a STOP.
@@ -31,7 +39,9 @@ calculations, use cases, files, what each screen must show and allow) must be se
 ## 2. Step 1 - Collect the material
 Sources, in this order:
 1. Everything the user wrote or attached in this conversation (messages, pasted text, files, screenshots).
-2. Every file in `docs/business/_sources/` if that folder exists.
+2. Every file in `docs/business/_sources/` if that folder exists - a `*-discovery.md` note there is the summary of
+   the Prompt 0.5 conversation, already confirmed by the user: use it as your main source and do not ask again what it
+   already answers.
 3. Existing business documents in `docs/business/` (except `_TEMPLATE.md`, `README.md`,
    `sample_product_import.md`): if the material is about an existing feature, you UPDATE its document
    (keep what is still valid, never delete content without the user's agreement).

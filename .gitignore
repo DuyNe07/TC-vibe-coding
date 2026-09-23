@@ -221,4 +221,9 @@ __marimo__/
 data/
 logs/
 .playwright-mcp/
-.claude
+.gate-unlock
+
+# Claude Code: the shared hooks (workflow gate) ARE versioned, personal settings are not
+.claude/*
+!.claude/settings.json
+.claude/settings.local.json

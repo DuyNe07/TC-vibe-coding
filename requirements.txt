@@ -30,6 +30,10 @@ docxtpl==0.20.2            # Fill .docx templates with Jinja2 placeholders
 # ---- PDF files --------------------------------------------------------------
 pypdf==6.19.0              # Read text from .pdf
 
+# ---- Public web pages (backend/shared/web) ----------------------------------
+requests==2.34.2           # Download a page or a file from an internal/public URL
+lxml==6.1.3                # Parse the downloaded HTML (text, tables, links)
+
 # ---- Quality tools (used by scripts/check.py) -------------------------------
 pytest==9.1.1              # Unit + architecture tests
 ruff==0.16.8               # Linter / formatter

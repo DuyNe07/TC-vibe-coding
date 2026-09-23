@@ -25,6 +25,20 @@ backend/features/<key>/services/        (orchestrates one use case)
 logs/app.log  <── the gateway logs every call ──> "📜 Nhật ký chạy" panel at the bottom of each page
 ```
 
+## The workflow gate (before anything else)
+
+This repository is **locked for writing by default**: scanning and analysing the code is always allowed, writing code
+is not. The only allowed path has 3 steps, each started by the user pasting a prompt:
+
+| Step | Prompt | The AI may write |
+|---|---|---|
+| 0.5 Discovery | [prompt/00-discovery.md](prompt/00-discovery.md) | only `business/_sources/*-discovery.md` |
+| 1 Business analysis | [prompt/01-business-analysis.md](prompt/01-business-analysis.md) (key `TC-UNLOCK-ANALYSIS`) | + `business/<key>.md`, `plans/business-analysis-plan.md` |
+| 2 Implementation | [prompt/02-implement-feature.md](prompt/02-implement-feature.md) (key `TC-UNLOCK-IMPLEMENT`, document `Status: Ready for implementation`) | + the feature's code in `backend/features/<key>/` and `frontend/features/<key>/` |
+
+Details and the mechanical guard (`scripts/hooks/gate_guard.sh`, file `.gate-unlock`): [CLAUDE.md](../CLAUDE.md) and
+rule A.0 of [rules/00-golden-rules.md](rules/00-golden-rules.md).
+
 ## Mandatory reading order (read ALL before changing anything)
 
 | # | File | Defines |
@@ -39,6 +53,7 @@ logs/app.log  <── the gateway logs every call ──> "📜 Nhật ký chạ
 | 7 | [rules/07-testing-and-verification.md](rules/07-testing-and-verification.md) | Tests and `scripts/check.py` |
 | 8 | [rules/08-dependencies-and-running.md](rules/08-dependencies-and-running.md) | `requirements.txt`, `run.ps1`, config, folders |
 | 9 | [rules/09-logging.md](rules/09-logging.md) | Logs to file + log panel on screen |
+| - | [capabilities.md](capabilities.md) | What the app can and cannot do - never promise more |
 | - | [business/README.md](business/README.md) | How to read and update business documents |
 
 **Reference implementation:** feature `sample_product_import` (backend + frontend +
@@ -48,11 +63,14 @@ logs/app.log  <── the gateway logs every call ──> "📜 Nhật ký chạ
 
 | Task | Do this |
 |---|---|
+| Understand a new need with the user | Follow [prompt/00-discovery.md](prompt/00-discovery.md) |
+| Know what the app can / cannot do | [capabilities.md](capabilities.md) |
 | Write a business document | Follow [prompt/01-business-analysis.md](prompt/01-business-analysis.md) |
 | Build a new feature | Follow [prompt/02-implement-feature.md](prompt/02-implement-feature.md) (plan first, then [05-feature-workflow.md](rules/05-feature-workflow.md)) |
 | Change a feature | Update `docs/business/<key>.md` first, then code, then tests |
 | Call the backend from a page | `gateway.open(XxxController).method(XxxRequest(...))` - the controller of the SAME feature |
 | Read/write Excel, Word, PDF | `backend/shared/file_io` (ExcelReader/ExcelWriter, WordReader/WordWriter/WordTemplateRenderer, PdfTextReader) |
+| Take data from a public web page | `backend/shared/web` (`fetch_page(url).tables()`, `fetch_file(url)`) - from builders/services only |
 | Build the UI | `frontend/core/components` (panel, stat_row, data_table, file_upload, download_button, ...) |
 | Log something | `self.logger.info(...)` in services/pages; it appears in the page's log panel |
 | Add a library | Pinned line in `requirements.txt` |

@@ -20,7 +20,7 @@ TTarget = TypeVar("TTarget")
 
 
 class RuleViolation(BaseValueObject):
-    """Result of a failed rule. ``message`` is user-facing (Vietnamese)."""
+    """Result of a failed rule. ``message`` is user-facing."""
 
     rule_code: str
     message: str
@@ -41,7 +41,7 @@ class BaseBusinessRule(ABC, Generic[TTarget]):
         if not RULE_CODE_PATTERN.match(cls.code):
             raise ConfigurationError(f"{cls.__name__}.code must look like 'BR-01' (got {cls.code!r})")
         if not cls.message:
-            raise ConfigurationError(f"{cls.__name__}.message (Vietnamese, user-facing) is required")
+            raise ConfigurationError(f"{cls.__name__}.message (user-facing) is required")
 
     @abstractmethod
     def is_satisfied_by(self, target: TTarget) -> bool:

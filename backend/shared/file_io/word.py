@@ -85,5 +85,5 @@ class WordTemplateRenderer:
             buffer = BytesIO()
             document.save(buffer)
         except Exception as exc:
-            raise FileProcessingError(f"Không thể tạo file Word từ mẫu: {exc}") from exc
+            raise FileProcessingError(f"Cannot build the Word file from the template: {exc}") from exc
         return buffer.getvalue()

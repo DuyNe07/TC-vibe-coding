@@ -87,7 +87,7 @@ class HomePage(BasePage):
             return
         with st.expander(f"⚠️ {len(errors)} chức năng không tải được (các chức năng khác vẫn hoạt động)", expanded=True):
             for error in errors:
-                st.markdown(f"**{error.feature_key}** — {error.message}")
+                st.markdown(f"**{error.feature_key}** - {error.message}")
                 st.code(error.traceback, language="text")
 
     @staticmethod

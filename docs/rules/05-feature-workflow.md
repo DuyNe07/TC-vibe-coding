@@ -1,7 +1,12 @@
 # 05 - Feature Workflow (the only allowed path)
 
+The repository is locked for writing until the implementation prompt is used: see the workflow gate in `CLAUDE.md`
+and rule A.0 of `00-golden-rules.md`.
+
 ## New feature
-1. **Read** `docs/README.md` and all `docs/rules/`.
+1. **Read** `docs/README.md`, all `docs/rules/` and `docs/capabilities.md` (never promise more than it lists).
+   If the user has not explained the business yet, start with `docs/prompt/00-discovery.md`: talk with them, check
+   feasibility against `docs/capabilities.md`, and write the discovery note in `docs/business/_sources/`.
 2. **Business doc**: open `docs/business/<key>.md`. If missing or incomplete, write it first with the user
    (procedure: `docs/prompt/01-business-analysis.md`). All business questions happen at THIS stage, only about the
    application (data, rules, use cases, files, what each screen shows and allows) - never about code. The document

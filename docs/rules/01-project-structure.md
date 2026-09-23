@@ -12,15 +12,17 @@ TC-vibe-coding/
 ├── conftest.py                 # tests never write to the real data/ folder
 ├── .env.example                # copied to .env by run.ps1 (APP_NAME, APP_PORT, ...)
 ├── .streamlit/config.toml      # Streamlit settings (headless, theme, upload size)
-├── .claude/settings.json       # Stop hook: runs scripts/check.py after AI changes
+├── .claude/settings.json       # hooks: workflow gate (SessionStart + PreToolUse) + check.py after changes
+├── .gate-unlock                # only while implementing (created/removed by Prompt 2); never committed
 ├── CLAUDE.md / AGENTS.md       # entry point for AI tools -> docs/README.md
 │
 ├── docs/
 │   ├── README.md               # START HERE
+│   ├── capabilities.md         # what the app can and cannot do (check before promising anything)
 │   ├── rules/                  # mandatory rules (this folder)
 │   ├── business/               # one business document per feature: <feature_key>.md (+ _sources/ raw material)
 │   ├── plans/                  # plans written by the AI before coding: <feature_key>-implementation-plan.md
-│   └── prompt/                 # ready-made prompts for users (business analysis, implementation)
+│   └── prompt/                 # ready-made prompts for users (00 discovery, 01 analysis, 02 implementation)
 │
 ├── backend/                    # pure Python, no Streamlit
 │   ├── core/                   # FRAMEWORK - do not modify for a feature
@@ -31,7 +33,7 @@ TC-vibe-coding/
 │   │   ├── logger.py           # get_logger(), read_log_entries()
 │   │   ├── exceptions.py       # AppError hierarchy
 │   │   └── naming.py           # naming conventions
-│   ├── shared/                 # generic helpers: file_io (Excel/Word/PDF), utils (text, numbers)
+│   ├── shared/                 # generic helpers: file_io (Excel/Word/PDF), web (public pages), utils (text, numbers)
 │   └── features/
 │       └── <feature_key>/
 │           ├── __init__.py     # public API: exports the feature's ONE controller (top layer)
@@ -62,7 +64,8 @@ TC-vibe-coding/
 ├── scripts/
 │   ├── new_feature.py          # scaffold a feature (the only way to create one)
 │   ├── check.py                # lint + all tests = Definition of Done
-│   └── hooks/stop_guard.sh     # used by the Claude Code Stop hook
+│   └── hooks/                  # Claude Code hooks: session_start.sh + gate_guard.sh (workflow gate),
+│                               # stop_guard.sh (runs check.py before finishing)
 ├── tests/
 │   ├── architecture/           # enforces these rules (never edit)
 │   └── core/                   # tests of the framework

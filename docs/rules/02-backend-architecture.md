@@ -53,6 +53,13 @@ A layer only calls the layers below it. Errors (`AppError`) bubble up; the gatew
 | `models/` | Data shape, field constraints, self-contained properties (`total = qty * price`) | I/O, rules involving other objects |
 | `dto/` | Input/output of use cases. May re-export model enums | Logic |
 
+## Shared helpers (`backend/shared/`) - use them instead of the raw libraries
+| Module | Gives you |
+|---|---|
+| `file_io` | `ExcelReader/ExcelWriter`, `WordReader/WordWriter/WordContent/WordTemplateRenderer`, `PdfTextReader` |
+| `web` | `fetch_page(url)` -> `WebPage` (`.text()`, `.tables()`, `.links()`, `.find_texts(xpath)`), `fetch_file(url)` -> `(bytes, filename)`, `WebFetchError`. Public pages only (no login, no JavaScript); call it from `builders/` or `services/`, never from a page |
+| `utils` | `strip_accents`, `normalize_key`, `parse_decimal` |
+
 ## Allowed imports inside a feature (enforced by `tests/architecture/test_imports.py`)
 `backend.core.*` and `backend.shared.*` are always allowed.
 

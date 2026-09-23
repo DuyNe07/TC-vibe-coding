@@ -36,4 +36,4 @@ def render_sidebar_nav(router: "Router") -> None:
                 for entry in entries[1:]:
                     st.page_link(entry.page, label=f"↳ {entry.page_cls.title}")
         if router.registry.errors:
-            st.warning(f"{len(router.registry.errors)} chức năng đang lỗi — xem chi tiết ở Trang chủ.", icon="⚠️")
+            st.warning(f"{len(router.registry.errors)} chức năng đang lỗi - xem chi tiết ở Trang chủ.", icon="⚠️")

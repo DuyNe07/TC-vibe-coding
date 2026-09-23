@@ -14,8 +14,14 @@
 English for identifiers, comments, docstrings and log messages. See the table in 01.
 
 ## Texts shown to users
-- Labels, messages and error messages follow the language of the business document (Vietnamese by default).
-- Error messages say what is wrong AND what to do: "File thiếu cột bắt buộc: Đơn giá. Hãy dùng file mẫu."
+- **Inside a feature** (page labels, buttons, empty states, BR-xx messages, `exceptions.py` of the feature): the
+  language of the business document, i.e. Vietnamese. Error messages say what is wrong AND what to do:
+  "File thiếu cột bắt buộc: Đơn giá. Hãy dùng file mẫu."
+- **Framework code** (`backend/core`, `backend/shared`): English messages - they are technical fallbacks
+  ("File type '.pdf' is not supported. Supported types: .xlsx, .xls"). A feature that wants a Vietnamese wording
+  catches the error and raises its own.
+- **Shared UI chrome** (`frontend/core`, Home: sidebar, breadcrumb, log panel, empty states): stays Vietnamese,
+  the end users are Vietnamese. Never translate it while working on a feature.
 
 ## Errors
 - Raise `AppError` subclasses for expected problems; let unexpected exceptions propagate (they are logged

@@ -33,7 +33,7 @@ class InvalidInputError(AppError):
             for err in exc.errors()
         ]
         summary = "; ".join(f"{e['field']}: {e['message']}" for e in errors[:5])
-        return cls(f"Input data is invalid — {summary}", details=errors)
+        return cls(f"Input data is invalid - {summary}", details=errors)
 
 
 class NotFoundError(AppError):

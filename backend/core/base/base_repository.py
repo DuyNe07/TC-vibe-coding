@@ -110,7 +110,7 @@ class BaseRepository(ABC, Generic[TEntity]):
         with self._lock:
             items = self._load()
             if items.pop(entity_id, None) is None:
-                raise NotFoundError(f"Không tìm thấy {self.entity_type.__name__} với id '{entity_id}'.")
+                raise NotFoundError(f"Can not find entity {self.entity_type.__name__} with id '{entity_id}'.")
             self._save(items)
 
     def clear(self) -> None:

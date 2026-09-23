@@ -21,7 +21,7 @@ def read_source(source: FileSource) -> tuple[bytes, str]:
         return source, ""
     path = Path(source)
     if not path.exists():
-        raise FileProcessingError(f"Không tìm thấy file: {path}")
+        raise FileProcessingError(f"File not found: {path}")
     return path.read_bytes(), path.name
 
 
@@ -33,14 +33,14 @@ class BaseFileReader(ABC, Generic[TOutput]):
         extension = Path(filename).suffix.lower()
         if filename and self.supported_extensions and extension not in self.supported_extensions:
             raise FileProcessingError(
-                f"Định dạng '{extension}' không được hỗ trợ. Hỗ trợ: {', '.join(self.supported_extensions)}."
+                f"File type '{extension}' is not supported. Supported types: {', '.join(self.supported_extensions)}."
             )
         try:
             return self._read(BytesIO(content), extension)
         except FileProcessingError:
             raise
         except Exception as exc:
-            raise FileProcessingError(f"Không đọc được file '{filename or 'upload'}': {exc}") from exc
+            raise FileProcessingError(f"Cannot read the file '{filename or 'upload'}': {exc}") from exc
 
     @abstractmethod
     def _read(self, stream: BytesIO, extension: str) -> TOutput: ...

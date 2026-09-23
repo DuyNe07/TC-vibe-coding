@@ -19,10 +19,14 @@ Dừng ứng dụng: bấm `Ctrl + C` trong cửa sổ PowerShell.
 
 Tuỳ chọn thêm vào cuối lệnh: `-Port 8600` (đổi cổng), `-NoBrowser` (không mở trình duyệt), `-Reinstall` (cài lại thư viện).
 
-## 2. Thêm một chức năng mới (ra lệnh cho AI, 2 lượt)
+## 2. Thêm một chức năng mới (ra lệnh cho AI, 3 lượt)
 
-Làm theo hướng dẫn trong [docs/prompt/README.md](docs/prompt/README.md):
+Làm theo hướng dẫn trong [docs/prompt/README.md](docs/prompt/README.md). AI **không được phép viết code** cho đến
+lượt 3, nên cứ trao đổi nghiệp vụ thoải mái ở hai lượt đầu. Xem app làm được những gì:
+[docs/capabilities.md](docs/capabilities.md).
 
+0. Dán **Prompt 0.5** ([docs/prompt/00-discovery.md](docs/prompt/00-discovery.md)): AI giới thiệu app làm được gì rồi
+   hỏi - đáp với bạn về công việc hiện tại và mong muốn, cuối cùng tóm tắt lại để bạn xác nhận là hiểu đúng.
 1. Cho AI học nghiệp vụ (giải thích, dán nội dung, đính kèm file mẫu), rồi dán **Prompt 1**
    ([docs/prompt/01-business-analysis.md](docs/prompt/01-business-analysis.md)): AI hỏi lại những chỗ chưa rõ
    (chỉ về cách ứng dụng hoạt động), viết tài liệu nghiệp vụ `docs/business/<ten_chuc_nang>.md` bằng tiếng Việt

@@ -80,4 +80,4 @@ class BaseService(ABC, Generic[TRequest, TResponse]):
                 return self.request_model.model_validate(dict(payload))  # type: ignore[return-value]
         except PydanticValidationError as exc:
             raise InvalidInputError.from_pydantic(exc) from exc
-        raise InvalidInputError(f"Cần dữ liệu kiểu {self.request_model.__name__}, nhận được {type(payload).__name__}.")
+        raise InvalidInputError(f"Expected a {self.request_model.__name__}, got {type(payload).__name__}.")

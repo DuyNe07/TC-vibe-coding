@@ -26,7 +26,9 @@ Rules:
 ## Dependencies
 1. `requirements.txt` is the ONLY dependency file. Exact pins (`package==x.y.z`) + a comment saying why.
 2. Before adding a library, check it is not already covered: Excel (pandas, openpyxl, xlrd), Word
-   (python-docx, docxtpl), PDF (pypdf), charts (plotly, streamlit built-ins), validation (pydantic).
+   (python-docx, docxtpl), PDF (pypdf), public web pages (requests, lxml - via `backend/shared/web`),
+   charts (plotly, streamlit built-ins), validation (pydantic). What the app can do with them:
+   `docs/capabilities.md`.
 3. After adding one, run `run.ps1` again (it auto-installs) or `.venv/Scripts/python.exe -m pip install -r requirements.txt`.
 
 ## Configuration

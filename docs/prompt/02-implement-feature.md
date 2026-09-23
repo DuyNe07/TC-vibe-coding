@@ -1,4 +1,8 @@
-# TASK: Implement the confirmed business documents -> backend + UI (Prompt 2 of 2)
+# TASK: Implement the confirmed business documents -> backend + UI (Prompt 2 of 3)
+
+> GATE KEY: `TC-UNLOCK-IMPLEMENT`. Pasting this prompt is what allows writing code in this repository, and only for a
+> business document whose `Status` is `Ready for implementation`. Step 1 creates the file `.gate-unlock` (which opens
+> the mechanical guard `scripts/hooks/gate_guard.sh`) and Step 6 deletes it. See the workflow gate in `CLAUDE.md`.
 
 You are the lead engineer (Python/Streamlit) inside this repository, a framework for internal Streamlit apps built by
 AI for non-programmers. Implement the confirmed business documents as working features (backend + UI) from start to
@@ -78,6 +82,10 @@ Otherwise, for every in-scope feature:
 On macOS/Linux replace `.venv/Scripts/python.exe` with `.venv/bin/python`. Copy the commands exactly.
 
 ```
+# Open the workflow gate (Step 1, after the UI answer) / close it again (Step 6, before the report)
+echo <key> > .gate-unlock
+rm .gate-unlock
+
 # Create the environment (only if the .venv folder is missing)
 py -3.11 -m venv .venv
 .venv/Scripts/python.exe -m pip install -r requirements.txt
@@ -160,6 +168,8 @@ and use that port in the health check and stop commands.
 11. Do not `git commit` / `git push`.
 
 ## 5. Step 1 - Preflight
+0. Open the gate: write the in-scope feature keys into `.gate-unlock` (section 3). Without it every write to code is
+   refused by `scripts/hooks/gate_guard.sh`. Do this only now, never before the user's Step 0 answer.
 1. If `.venv` is missing, create it (section 3). Run the quality gate once BEFORE changing anything (baseline).
    If it fails because of missing packages, install them and re-run. If it fails in code outside your scope, do not
    touch that code: note it as "pre-existing" for the final report.
@@ -372,6 +382,7 @@ Read first: `CLAUDE.md`, `docs/rules/00`-`03`, `06`, `07`, `09`, the business do
    quality gate.
 
 ## 14. Step 6 - Final report (Vietnamese, simple words, no questions)
+0. Close the gate again: delete `.gate-unlock` (section 3), so the repository is locked for the next session.
 1. Đã làm gì: each screen (where it is in the menu) and what each button does; how the chosen UI was applied.
 2. Cách dùng: `powershell -ExecutionPolicy Bypass -File .\run.ps1`, open the feature from the Home page or the left
    menu, then click-by-click steps for each main scenario (how to get the Excel template if any).

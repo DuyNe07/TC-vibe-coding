@@ -4,7 +4,14 @@ Most rules are enforced automatically by `tests/architecture/` (run by `scripts/
 Claude Code Stop hook (`.claude/settings.json` -> `scripts/hooks/stop_guard.sh`).
 
 ## A. Process
-1. You MUST read `docs/README.md` and every file in `docs/rules/` before your first change in a session.
+0. **The workflow gate** (full table in `CLAUDE.md`). This repository is LOCKED for writing by default; reading and
+   analysing it is always allowed. Phase 0 (default) may write only `docs/business/_sources/*-discovery.md`; phase 1
+   (the user pasted `docs/prompt/01-business-analysis.md`) may also write the business document and the analysis plan;
+   phase 2 (the user pasted `docs/prompt/02-implement-feature.md` AND `Status: Ready for implementation`) may write the
+   feature's own code. You MUST NOT write code, run `scripts/new_feature.py`, start the app or install packages before
+   phase 2, and MUST NOT create `.gate-unlock` or change `scripts/hooks/` to get around the guard.
+1. You MUST read `docs/README.md`, every file in `docs/rules/` and `docs/capabilities.md` before your first change in
+   a session, and MUST NOT promise the user a capability that `docs/capabilities.md` does not list.
 2. You MUST work from a business document `docs/business/<feature_key>.md`. If it is missing or incomplete,
    complete it from `_TEMPLATE.md` **with the user** before writing code.
 3. You MUST NOT invent business rules. Ambiguities go to section 10 "Open questions" of the business doc,
@@ -42,8 +49,10 @@ Claude Code Stop hook (`.claude/settings.json` -> `scripts/hooks/stop_guard.sh`)
 
 ## D. Code
 21. Python 3.11, full type hints, English identifiers/comments/docstrings/log messages.
-22. Texts shown to end users (labels, error messages) follow the language of the business document
-    (Vietnamese by default).
+22. Language of texts: **framework code** (`backend/core`, `backend/shared`) raises English messages; the texts of a
+    **feature** that the user reads (page labels, button labels, BR-xx messages, feature errors) follow the business
+    document (Vietnamese). The shared UI chrome in `frontend/core` and Home stays Vietnamese (the end users are
+    Vietnamese): do not translate it.
 23. Expected failures raise an `AppError` subclass with a clear, actionable message.
 24. Dependencies only in `requirements.txt`, exact pins (`==`). `run.ps1` is the only launcher.
 25. Never hard-code absolute paths or secrets. Use `get_settings()` and `.env`.
