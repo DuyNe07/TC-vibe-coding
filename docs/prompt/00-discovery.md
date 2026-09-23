@@ -63,7 +63,7 @@ When the user attaches or points to sample files, read them and repeat back what
 # PDF
 .venv/Scripts/python.exe -X utf8 -c "from pypdf import PdfReader; print('\n'.join(p.extract_text() or '' for p in PdfReader(r'PATH').pages))"
 ```
-(On macOS/Linux use `.venv/bin/python`. If `.venv` is missing: `py -3.11 -m venv .venv` then
+(On macOS/Linux use `.venv/bin/python`. If `.venv` is missing: `py -3.13 -m venv .venv` then
 `.venv/Scripts/python.exe -m pip install -r requirements.txt`. If a file cannot be read, say which one and ask the user
 to paste its content or to put it in `docs/business/_sources/`.)
 

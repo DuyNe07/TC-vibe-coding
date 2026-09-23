@@ -1,7 +1,8 @@
 # 06 - Coding Standards
 
 ## Python
-- Python 3.11 syntax (`X | None`, `list[int]`, `StrEnum`). No PEP 695 generics (3.12+).
+- Python 3.13 syntax (`X | None`, `list[int]`, `StrEnum`). Keep the `TypeVar` + `Generic[T]` style of the base
+  classes; do not introduce PEP 695 generics (`class Foo[T]`) - the framework stays in one style.
 - Full type hints on every function and method, including return types.
 - Keep files short (aim < 200 lines). Split by responsibility, not by size alone.
 - No wildcard imports, no relative imports beyond the feature, no module-level mutable state.

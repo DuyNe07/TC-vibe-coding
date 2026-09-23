@@ -54,7 +54,7 @@ Claude Code Stop hook (`.claude/settings.json` -> `scripts/hooks/stop_guard.sh`)
 20. Every service MUST log its important steps (what was received, counts, decisions) with `self.logger.info`.
 
 ## D. Code
-21. Python 3.11, full type hints, English identifiers/comments/docstrings/log messages.
+21. Python 3.13, full type hints, English identifiers/comments/docstrings/log messages.
 22. Language of texts: **framework code** (`backend/core`, `backend/shared`) raises English messages; the texts of a
     **feature** that the user reads (page labels, button labels, BR-xx messages, feature errors) follow the business
     document (Vietnamese). The shared UI chrome in `frontend/core` and Home stays Vietnamese (the end users are

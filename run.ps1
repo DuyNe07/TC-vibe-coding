@@ -1,6 +1,6 @@
 # =============================================================================
 # run.ps1 - ONE command to run the app (Windows PowerShell 5.1+ / PowerShell 7)
-#   1. Check .venv (create it with Python 3.11 if missing or wrong version)
+#   1. Check .venv (create it with Python 3.13 if missing or wrong version)
 #   2. Install packages from requirements.txt (only when missing / file changed)
 #   3. Start the Streamlit app and open the browser at http://localhost:<port>/home
 #
@@ -18,7 +18,7 @@ param(
 $ErrorActionPreference = "Stop"
 Set-Location -Path $PSScriptRoot
 
-$RequiredVersion = "3.11"
+$RequiredVersion = "3.13"
 $VenvDir = ".venv"
 $ReqFile = "requirements.txt"
 $StampFile = Join-Path $VenvDir ".requirements.sha256"

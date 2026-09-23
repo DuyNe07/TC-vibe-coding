@@ -28,7 +28,7 @@ Anything the user answers is enough: never ask a second time.
    .venv/Scripts/python.exe scripts/check.py
    .venv/Scripts/python.exe scripts/doctor.py
    ```
-   (On macOS/Linux use `.venv/bin/python`. If `.venv` is missing: `py -3.11 -m venv .venv` then
+   (On macOS/Linux use `.venv/bin/python`. If `.venv` is missing: `py -3.13 -m venv .venv` then
    `.venv/Scripts/python.exe -m pip install -r requirements.txt`.)
 4. Read the end of `logs/app.log` (or ask nothing and read the text the user pasted):
    ```

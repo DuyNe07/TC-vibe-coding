@@ -5,7 +5,8 @@ Bạn không cần biết lập trình: AI đọc bộ quy tắc trong `docs/` v
 
 ## 1. Chạy ứng dụng
 
-Yêu cầu: **Python 3.11** ([tải tại đây](https://www.python.org/downloads/), khi cài nhớ tick *Add python.exe to PATH*).
+Yêu cầu: **Python 3.13** ([tải tại đây](https://www.python.org/downloads/), khi cài nhớ tick *Add python.exe to PATH*).
+Nếu máy đang có môi trường `.venv` của phiên bản Python khác, `run.ps1` sẽ tự tạo lại và cài lại thư viện.
 
 Mở **PowerShell** trong thư mục dự án và chạy:
 

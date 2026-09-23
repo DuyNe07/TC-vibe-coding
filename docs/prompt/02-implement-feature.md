@@ -87,7 +87,7 @@ echo <key> > .gate-unlock
 rm .gate-unlock
 
 # Create the environment (only if the .venv folder is missing)
-py -3.11 -m venv .venv
+py -3.13 -m venv .venv
 .venv/Scripts/python.exe -m pip install -r requirements.txt
 
 # Install packages again (only on "No module named ..." errors)

@@ -1,5 +1,5 @@
 # =============================================================================
-# TC-vibe-coding - Python dependencies (Python 3.11)
+# TC-vibe-coding - Python dependencies (Python 3.13)
 # -----------------------------------------------------------------------------
 # RULES (see docs/rules/08-dependencies-and-running.md):
 #   * This is the ONLY dependency file. Do not create others.

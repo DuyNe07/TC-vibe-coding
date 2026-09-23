@@ -2,16 +2,22 @@
 [project]
 name = "tc-vibe-coding"
 version = "0.1.0"
-requires-python = ">=3.11,<3.12"
+requires-python = ">=3.13,<3.14"
 
 [tool.ruff]
-target-version = "py311"
+target-version = "py313"
 line-length = 120
 extend-exclude = [".venv", "data", "logs"]
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "UP", "B", "N", "SIM"]
-ignore = ["E501", "B024", "N818"]  # long lines ok; ABC without abstract methods ok; BusinessRuleViolation name ok
+ignore = [
+  "E501",   # long lines are ok (line-length is a guide, not a hard limit)
+  "B024",   # an ABC without abstract methods is ok (our base classes)
+  "N818",   # BusinessRuleViolation keeps its name (no "Error" suffix)
+  "UP046",  # keep TypeVar + Generic[T]: one style for the whole framework (see docs/rules/06)
+  "UP047",  # same for generic functions
+]
 
 [tool.ruff.lint.isort]
 known-first-party = ["backend", "frontend", "tests"]

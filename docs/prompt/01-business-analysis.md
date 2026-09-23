@@ -47,7 +47,7 @@ Sources, in this order:
    (keep what is still valid, never delete content without the user's agreement).
 To read Excel / Word / PDF files your tool cannot open directly, use the project's Python
 (`.venv/Scripts/python.exe` on Windows, `.venv/bin/python` otherwise; if `.venv` is missing run
-`py -3.11 -m venv .venv` then `.venv/Scripts/python.exe -m pip install -r requirements.txt`):
+`py -3.13 -m venv .venv` then `.venv/Scripts/python.exe -m pip install -r requirements.txt`):
 - Excel: `.venv/Scripts/python.exe -X utf8 -c "import pandas as pd; [print(n, d.head(30).to_string(), sep='\n') for n, d in pd.read_excel(r'PATH', sheet_name=None).items()]"`
 - Word: `.venv/Scripts/python.exe -X utf8 -c "import docx; d = docx.Document(r'PATH'); print('\n'.join(p.text for p in d.paragraphs)); [print([c.text for c in r.cells]) for t in d.tables for r in t.rows]"`
 - PDF: `.venv/Scripts/python.exe -X utf8 -c "from pypdf import PdfReader; print('\n'.join(p.extract_text() or '' for p in PdfReader(r'PATH').pages))"`

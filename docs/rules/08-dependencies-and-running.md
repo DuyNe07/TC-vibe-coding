@@ -11,7 +11,7 @@ powershell -ExecutionPolicy Bypass -File .\run.ps1 -Reinstall             # forc
 (`-ExecutionPolicy Bypass` is needed because Windows blocks unsigned scripts by default.)
 
 `run.ps1` steps:
-1. Check `.venv`; create it with Python 3.11 if missing (recreate it if it uses another Python version).
+1. Check `.venv`; create it with Python 3.13 if missing (recreate it if it uses another Python version).
 2. Install `requirements.txt` only when packages are missing or the file changed (hash stored in `.venv`).
 3. Create `.env` from `.env.example` if missing, create `data/` and `logs/`, pick a free port.
 4. Start Streamlit (ONE process) and open `http://localhost:<port>/home` as soon as the server answers.
@@ -25,6 +25,8 @@ Rules:
 
 ## Dependencies
 1. `requirements.txt` is the ONLY dependency file. Exact pins (`package==x.y.z`) + a comment saying why.
+   Every pin must have a wheel for Python 3.13 (`.python-version`, `requires-python` in `pyproject.toml`); check with
+   `python -m pip install --dry-run --only-binary=:all: --python-version 3.13 -r requirements.txt --target tmp`.
 2. Before adding a library, check it is not already covered: Excel (pandas, openpyxl, xlrd), Word
    (python-docx, docxtpl), PDF (pypdf), public web pages (requests, lxml - via `backend/shared/web`),
    charts (plotly, streamlit built-ins), validation (pydantic). What the app can do with them:
