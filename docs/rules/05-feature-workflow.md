@@ -44,7 +44,8 @@ and rule A.0 of `00-golden-rules.md`.
    - The feature's navigation = `manifest.py`: its pages appear in the sidebar menu and its card on Home.
 7. **Remove the scaffold** `ping` (dto, service, controller method, test, page call) once real use cases exist.
 8. **Test**: unit tests for every BR-xx and every service in `backend/features/<key>/tests/`.
-9. **Verify**: `python scripts/check.py` -> `ALL CHECKS PASSED`. Fix the code, never the tests.
+9. **Verify**: `python scripts/check.py` -> `ALL CHECKS PASSED`, then `python scripts/doctor.py` ->
+   `APP IS HEALTHY`. Fix the code, never the tests. Any failure: the self-repair loop of `10-self-repair.md`.
 10. **Run**: `run.ps1`, open the feature from `/home`, try each screen, check the log panel shows the steps.
 11. **Gap check**: re-read the business doc line by line; every traceability row must be done and tested.
 12. **Report** to the user in Vietnamese: what was built, how to use it, open questions; ask them to test.
@@ -59,6 +60,7 @@ Delete `backend/features/<key>/`, `frontend/features/<key>/`, `docs/business/<ke
 the user agrees). Nothing else references it.
 
 ## When something does not work
+Full procedure: `10-self-repair.md` (for an error reported by a user: `docs/prompt/03-fix-error.md`).
 1. Open the page's "📜 Nhật ký chạy (log)" panel (or `logs/app.log`) and read the last ERROR/WARNING.
-2. Reproduce with a unit test, fix, `python scripts/check.py`.
+2. Reproduce with a unit test, fix, `python scripts/check.py`, then `python scripts/doctor.py`.
 3. If the page shows old behaviour after edits, stop the app (Ctrl+C) and run `run.ps1` again.

@@ -1,11 +1,15 @@
 # 07 - Testing and Verification
 
-## One command
+## Two commands
 ```
 python scripts/check.py          # ruff lint + all tests. MUST print "ALL CHECKS PASSED"
 python scripts/check.py --fix    # auto-fix lint/format first
+python scripts/doctor.py         # the above + every feature loads + the app really starts. MUST print "APP IS HEALTHY"
+python scripts/doctor.py --skip-checks   # only the app part (faster while debugging the UI)
 ```
-The Claude Code Stop hook runs it automatically when code changed and blocks finishing while it fails.
+The Claude Code Stop hook runs `check.py` automatically when code changed and blocks finishing while it fails.
+`doctor.py` is what proves the app itself works: run it before every final report. Any failure is repaired by you,
+following `10-self-repair.md`.
 
 ## Tests you write (per feature, in `backend/features/<key>/tests/`)
 - Every business rule BR-xx: at least one passing and one failing case (`business.collect_violations`).

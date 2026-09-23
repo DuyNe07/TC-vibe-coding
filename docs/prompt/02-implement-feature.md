@@ -97,6 +97,10 @@ py -3.11 -m venv .venv
 .venv/Scripts/python.exe scripts/check.py --fix
 .venv/Scripts/python.exe scripts/check.py
 
+# End-to-end self-check - MUST end with "APP IS HEALTHY" (checks + every feature loads + the app really starts)
+.venv/Scripts/python.exe scripts/doctor.py
+.venv/Scripts/python.exe scripts/doctor.py --skip-checks
+
 # Tests of one feature only (faster while working)
 .venv/Scripts/python.exe -X utf8 -m pytest backend/features/<key>/tests -q
 
@@ -152,20 +156,26 @@ and use that port in the health check and stop commands.
    calculation/decision `BR-xx` = a named method of a `BaseBusiness` class whose docstring starts with `BR-xx`.
    One screen = one page class (or one tab, if the UI concept groups screens as tabs).
 6. **Tests are law.** Never edit, skip or weaken tests in `tests/`, never add `# noqa`, `pytest.skip`, `xfail` or config
-   ignores. Fix YOUR code until `scripts/check.py` prints `ALL CHECKS PASSED`.
-7. **Logging.** Never `print()`. Services log main steps with `self.logger.info(...)`. Pages keep the log panel.
-8. **Language.** Code, identifiers, comments, docstrings, logs: English. Everything the user sees: Vietnamese, from the
+   ignores. Fix YOUR code until `scripts/check.py` prints `ALL CHECKS PASSED` and `scripts/doctor.py` prints
+   `APP IS HEALTHY`.
+7. **You repair every failure yourself**, following `docs/rules/10-self-repair.md` (read it): diagnose from evidence
+   (command output, `logs/app.log`), fix the smallest thing in the right layer of your feature, re-verify, and write
+   `symptom -> cause -> fix -> verification` in the plan's `## Fix log`. Same failure 3 times: change approach; after 5
+   attempts: implement the simplest supported behaviour that keeps the business rule, record
+   `Giả định (triển khai): ...` and report it. Never hide a failure and never stop with a broken app.
+8. **Logging.** Never `print()`. Services log main steps with `self.logger.info(...)`. Pages keep the log panel.
+9. **Language.** Code, identifiers, comments, docstrings, logs: English. Everything the user sees: Vietnamese, from the
    document.
-9. **No conflict with existing work.** Write ONLY in `backend/features/<key>/`, `frontend/features/<key>/`,
+10. **No conflict with existing work.** Write ONLY in `backend/features/<key>/`, `frontend/features/<key>/`,
    `docs/plans/<key>-*.md` and `docs/business/<key>.md` (only: the UI concept block and new UCs of Step 0, sections
    10 and 11, `Status`). Never modify other features, `sample_product_import`, `backend/core/`, `backend/shared/`,
    `frontend/core/`, `frontend/app.py`, `frontend/home/`, `scripts/`, `tests/`, `run.ps1`, `requirements.txt`,
    `.streamlit/`, `conftest.py`, `pyproject.toml`. If something seems missing in the framework, build it inside the
    feature.
-10. **Existing feature** (`backend/features/<key>/` already exists): do NOT scaffold, do NOT delete folders. Update in
+11. **Existing feature** (`backend/features/<key>/` already exists): do NOT scaffold, do NOT delete folders. Update in
     place to match the document. Keep stored data readable: new model fields MUST have defaults; for a removed/renamed
     field add a small conversion in the repository (models use `extra="forbid"`). Never delete `data/<key>/`.
-11. Do not `git commit` / `git push`.
+12. Do not `git commit` / `git push`.
 
 ## 5. Step 1 - Preflight
 0. Open the gate: write the in-scope feature keys into `.gate-unlock` (section 3). Without it every write to code is
@@ -189,7 +199,8 @@ resume from the first unchecked step (verify earlier steps still pass the qualit
    `| Spec item | Description (VI) | Code element (file :: class/method) | Test (file :: test) | Status ☐/✅ |`
 4. **Controller contract** (binding for every role): per UC `def <use_case>(self, request: <X>Request) -> <X>Response`
    with the DTO file name and the main fields. Pages list: page class, slug, screen.
-5. Checkboxes, ticked as you go: `☐ Step 0 UI concept recorded`, `☐ Scaffold`, `☐ Backend (section 9) - ALL CHECKS
+5. A `## Fix log` section (filled during the work: symptom -> cause -> fix -> verification).
+6. Checkboxes, ticked as you go: `☐ Step 0 UI concept recorded`, `☐ Scaffold`, `☐ Backend (section 9) - ALL CHECKS
    PASSED`, `☐ UI design (section 10)`, `☐ UI build (section 11) - ALL CHECKS PASSED`, `☐ Gateway registration
    check`, `☐ Navigation check`, `☐ Scaffold ping removed`, `☐ Document updated`, `☐ Verify (Step 5)`, `☐ Report`;
    plus the implementation assumptions.
@@ -197,7 +208,7 @@ resume from the first unchecked step (verify earlier steps still pass the qualit
 ## 7. Step 3 - Build with sub-agents (backend and UI)
 | Role | Writes ONLY in | Job |
 |---|---|---|
-| Lead (you) | `docs/business/<key>.md` (rule 9), `docs/plans/<key>-implementation-plan.md` | Steps 0-2, scaffold, start the sub-agents, check their work, Step 4, Step 5, report |
+| Lead (you) | `docs/business/<key>.md` (rule 10), `docs/plans/<key>-implementation-plan.md` | Steps 0-2, scaffold, start the sub-agents, check their work, Step 4, Step 5, report |
 | Backend sub-agent | `backend/features/<key>/` | section 9: the whole business logic, top layer = the controller |
 | UI-design sub-agent | `docs/plans/<key>-ui-design.md` | section 10: study the Streamlit docs and design every screen (no Python) |
 | UI-build sub-agent | `frontend/features/<key>/` | section 11: pages, feature widgets, manifest (= the feature's navigation) |
@@ -371,7 +382,9 @@ Read first: `CLAUDE.md`, `docs/rules/00`-`03`, `06`, `07`, `09`, the business do
   re-read the rule in `docs/rules/` and compare with the reference feature before trying again.
 
 ## 13. Step 5 - Verify (lead; all mandatory, repeat fixes until everything passes)
-1. Quality gate prints `ALL CHECKS PASSED` (lint + architecture + all features' unit tests + page render tests).
+1. Quality gate prints `ALL CHECKS PASSED` (lint + architecture + all features' unit tests + page render tests), then
+   `scripts/doctor.py` prints `APP IS HEALTHY`. On any failure: the self-repair loop of `docs/rules/10-self-repair.md`
+   (and add the entry to the plan's `## Fix log`).
 2. Gap check: re-read the document line by line; every matrix row is ✅ with a real code element and a test (UI-only
    rows: covered by the page render test or the app check). The screens match `Giao diện đã chốt`. Implement anything
    missing.
@@ -386,7 +399,8 @@ Read first: `CLAUDE.md`, `docs/rules/00`-`03`, `06`, `07`, `09`, the business do
 1. Đã làm gì: each screen (where it is in the menu) and what each button does; how the chosen UI was applied.
 2. Cách dùng: `powershell -ExecutionPolicy Bypass -File .\run.ps1`, open the feature from the Home page or the left
    menu, then click-by-click steps for each main scenario (how to get the Excel template if any).
-3. Kết quả kiểm tra: `ALL CHECKS PASSED`; numbers of UC / BR / AC implemented and tested.
+3. Kết quả kiểm tra: `ALL CHECKS PASSED` and `APP IS HEALTHY` (paste both lines); numbers of UC / BR / AC implemented
+   and tested; the problems you fixed on the way (one line each, from the `## Fix log`).
 4. Giả định khi triển khai (from section 10), in plain words; pre-existing problems outside the scope, if any.
 5. Muốn thay đổi: nghiệp vụ -> Prompt 1 rồi Prompt 2; chỉ giao diện -> write "Đổi giao diện chức năng <tên>" and paste
    Prompt 2 in the same message (the UI questions come back with the current UI as the proposal). The feature is

@@ -19,6 +19,7 @@ lines which phase we are in and what the next step is.
 | 0. Discovery (default) | nothing - this is the default | ONLY `docs/business/_sources/*-discovery.md` |
 | 1. Business analysis | the user pastes [docs/prompt/01-business-analysis.md](docs/prompt/01-business-analysis.md) (key `TC-UNLOCK-ANALYSIS`) | + `docs/business/<key>.md`, `docs/plans/business-analysis-plan.md` |
 | 2. Implementation | the user pastes [docs/prompt/02-implement-feature.md](docs/prompt/02-implement-feature.md) (key `TC-UNLOCK-IMPLEMENT`) **and** the document's `Status` is `Ready for implementation` | + `backend/features/<key>/`, `frontend/features/<key>/`, `docs/plans/<key>-*.md`, and in the document: section 8 UI block, new UCs of Step 0, sections 10-11, `Status` |
+| 2b. Repair | the user pastes [docs/prompt/03-fix-error.md](docs/prompt/03-fix-error.md) (key `TC-UNLOCK-IMPLEMENT`) because something does not work | the same folders, for the broken feature only |
 
 Rules of the gate:
 1. A key counts as present only when the user pasted that prompt in THIS session, or explicitly told you to follow
@@ -30,8 +31,8 @@ Rules of the gate:
 4. Mechanical guard: the `PreToolUse` hook `scripts/hooks/gate_guard.sh` refuses every write to code paths while the
    file `.gate-unlock` does not exist. Prompt 2 creates that file at its first step and deletes it at its last step.
    Never create it in phase 0 or 1, never disable or edit the hooks.
-5. Questions to the user are about the application only (never about code), and only in phase 0, phase 1 and at
-   Step 0 of Prompt 2 (the UI concept). Never ask anything else during implementation.
+5. Questions to the user are about the application only (never about code), and only in phase 0, phase 1, at Step 0 of
+   Prompt 2 (the UI concept) and at Step 0 of Prompt 3 (what went wrong). Never ask anything else while working.
 
 ## The 3-step flow (the only allowed path)
 1. [docs/prompt/00-discovery.md](docs/prompt/00-discovery.md) - understand the business with the user; writes only a
@@ -40,6 +41,8 @@ Rules of the gate:
    `docs/business/<key>.md` (`Status: Ready for implementation`).
 3. [docs/prompt/02-implement-feature.md](docs/prompt/02-implement-feature.md) - ask ONE round about the UI, then build
    backend + UI automatically (sub-agents when available) and verify.
+- Anything broken, now or later: [docs/prompt/03-fix-error.md](docs/prompt/03-fix-error.md) - repair it with the
+  self-repair loop of [docs/rules/10-self-repair.md](docs/rules/10-self-repair.md).
 
 ## Essentials (details in the docs)
 - ONE process: `run.ps1` (PowerShell) starts Streamlit only (no API/HTTP). Pages run business actions through
@@ -52,7 +55,9 @@ Rules of the gate:
 - Every class inherits its layer's base class from `backend.core.base`; one use case = one controller
   method = one service.
 - Never `print()`: use `self.logger`; logs go to `logs/app.log` and the on-screen log panel.
-- Finish every task with `python scripts/check.py` -> `ALL CHECKS PASSED` (never weaken tests).
+- Finish every task with `python scripts/check.py` -> `ALL CHECKS PASSED` and `python scripts/doctor.py` ->
+  `APP IS HEALTHY` (never weaken tests). A failure is YOUR job to fix: follow
+  [docs/rules/10-self-repair.md](docs/rules/10-self-repair.md), never hand a broken app back to the user.
 - Talk to the user in Vietnamese, simply, without jargon.
 
 Python: `.venv/Scripts/python.exe` (Windows) / `.venv/bin/python` (macOS/Linux), created by `powershell -ExecutionPolicy Bypass -File .\run.ps1`.

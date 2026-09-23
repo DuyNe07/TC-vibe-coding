@@ -18,7 +18,13 @@ Claude Code Stop hook (`.claude/settings.json` -> `scripts/hooks/stop_guard.sh`)
    with the safe default you chose, and you tell the user.
 4. You MUST create features ONLY with `python scripts/new_feature.py <feature_key> --title "..."`.
    Never create feature folders by hand or copy another feature folder.
-5. You MUST finish every task with `python scripts/check.py` printing `ALL CHECKS PASSED`.
+5. You MUST finish every task with `python scripts/check.py` printing `ALL CHECKS PASSED` **and**
+   `python scripts/doctor.py` printing `APP IS HEALTHY` (quality gate + every feature loads + the app really starts).
+   Both outputs go into your report; never claim success without them.
+5b. When anything fails, you MUST repair it yourself following `10-self-repair.md`: diagnose from evidence (command
+   output, `logs/app.log`), fix the smallest thing in the right layer of YOUR feature, re-verify, and write the fix in
+   the plan's `## Fix log`. Changing tests, hiding errors, or dropping a requirement to get a green output is
+   forbidden.
 6. You MUST NOT edit, skip, weaken or delete tests in `tests/architecture/` or `tests/core/`, and MUST NOT add
    `# noqa`, `pytest.skip`, `xfail` or config ignores to pass a check. Fix the code.
 
@@ -58,6 +64,7 @@ Claude Code Stop hook (`.claude/settings.json` -> `scripts/hooks/stop_guard.sh`)
 25. Never hard-code absolute paths or secrets. Use `get_settings()` and `.env`.
 
 ## Definition of Done (all MUST be true)
+- [ ] `python scripts/doctor.py` prints `APP IS HEALTHY` (the app starts and every feature loads).
 - [ ] `docs/business/<key>.md` is complete and section 11 "Implementation map" is filled.
 - [ ] Every BR-xx is implemented in `business/` and has at least one unit test.
 - [ ] Every UC-xx is one method of the feature's controller + one service; pages call it via `gateway.open`.

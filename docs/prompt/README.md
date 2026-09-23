@@ -10,13 +10,18 @@ Không cần sửa gì trong prompt.
 | 1 | Dán toàn bộ [01-business-analysis.md](01-business-analysis.md). Trả lời câu hỏi của AI (chỉ hỏi về cách ứng dụng hoạt động, không hỏi về code). Đọc bản tóm tắt cuối và trả lời "đồng ý" để chốt | Tài liệu `docs/business/<tên_chức_năng>.md` (tiếng Việt), trạng thái `Ready for implementation` |
 | 2 | Dán toàn bộ [02-implement-feature.md](02-implement-feature.md). AI đưa ra đề xuất giao diện (có hình phác) và hỏi **một lượt**: bảng như Excel chỉ xem hay sửa trực tiếp, nhập bằng form / bảng / file Excel, bộ lọc, số liệu tổng hợp, biểu đồ... Trả lời theo số hoặc gõ "ok" | AI tự lập kế hoạch (`docs/plans/`), chia việc cho AI phụ (backend và giao diện, chạy song song), chạy toàn bộ kiểm tra, rồi hướng dẫn cách dùng |
 | 3 | Chạy `powershell -ExecutionPolicy Bypass -File .\run.ps1` và thử theo hướng dẫn | Chức năng xuất hiện ở Trang chủ |
+| Khi gặp lỗi | Mở khung "📜 Nhật ký chạy (log)" ở cuối trang, bấm copy, dán vào chat kèm toàn bộ [03-fix-error.md](03-fix-error.md) | AI tự tìm nguyên nhân, sửa, chạy lại kiểm tra và báo lại bằng tiếng Việt |
 
 **Nếu không dán được vì prompt quá dài** (một số công cụ giới hạn độ dài): gõ một dòng thay thế:
 - Bước 0.5: `Đọc file docs/prompt/00-discovery.md và làm đúng từng bước trong đó.`
 - Bước 1: `Đọc file docs/prompt/01-business-analysis.md và làm đúng từng bước trong đó.`
 - Bước 2: `Đọc file docs/prompt/02-implement-feature.md và làm đúng từng bước trong đó.`
+- Khi lỗi: `Đọc file docs/prompt/03-fix-error.md và làm đúng từng bước trong đó.`
 
 Lưu ý:
+- **AI tự sửa khi gặp lỗi.** Trong lúc làm, nếu kiểm tra không đạt hoặc app không chạy, AI phải tự tìm nguyên nhân và
+  sửa (trong phạm vi chức năng của nó) đến khi cả hai lệnh kiểm tra đều đạt; AI không được sửa test hay giấu lỗi để báo
+  "xong". Quy tắc: [docs/rules/10-self-repair.md](../rules/10-self-repair.md).
 - **AI bị chặn viết code cho đến bước 2.** Trước đó, dù bạn có yêu cầu, AI cũng chỉ trao đổi và viết tài liệu (có một
   đoạn kiểm tra tự động chặn lại). Nhờ vậy AI không "làm tắt" khi chưa hiểu đúng nghiệp vụ.
 - Muốn biết app làm được gì (Excel, Word, PDF, lấy dữ liệu từ web, tính toán...): xem

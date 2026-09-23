@@ -51,3 +51,14 @@ def test_guard_refuses_code_and_allows_documents_when_locked() -> None:
     assert _run_guard(str(ROOT / "frontend" / "features" / "demo" / "pages" / "list_page.py")) == 2
     assert _run_guard("docs/business/demo.md") == 0
     assert _run_guard("docs/business/_sources/demo-discovery.md") == 0
+
+
+def test_the_workflow_documents_exist_with_their_gate_keys() -> None:
+    prompts = ROOT / "docs" / "prompt"
+    assert (prompts / "00-discovery.md").is_file(), "Prompt 0.5 (discovery) is missing"
+    assert "TC-UNLOCK-ANALYSIS" in (prompts / "01-business-analysis.md").read_text(encoding="utf-8")
+    for name in ("02-implement-feature.md", "03-fix-error.md"):
+        assert "TC-UNLOCK-IMPLEMENT" in (prompts / name).read_text(encoding="utf-8"), f"{name} lost its gate key"
+    assert (ROOT / "docs" / "capabilities.md").is_file(), "the capability catalogue is missing"
+    assert (ROOT / "docs" / "rules" / "10-self-repair.md").is_file(), "the self-repair rules are missing"
+    assert (ROOT / "scripts" / "doctor.py").is_file(), "scripts/doctor.py is missing"

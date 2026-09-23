@@ -22,7 +22,7 @@ TC-vibe-coding/
 │   ├── rules/                  # mandatory rules (this folder)
 │   ├── business/               # one business document per feature: <feature_key>.md (+ _sources/ raw material)
 │   ├── plans/                  # plans written by the AI before coding: <feature_key>-implementation-plan.md
-│   └── prompt/                 # ready-made prompts for users (00 discovery, 01 analysis, 02 implementation)
+│   └── prompt/                 # prompts for users: 00 discovery, 01 analysis, 02 implementation, 03 fix an error
 │
 ├── backend/                    # pure Python, no Streamlit
 │   ├── core/                   # FRAMEWORK - do not modify for a feature
@@ -64,6 +64,7 @@ TC-vibe-coding/
 ├── scripts/
 │   ├── new_feature.py          # scaffold a feature (the only way to create one)
 │   ├── check.py                # lint + all tests = Definition of Done
+│   ├── doctor.py               # end-to-end self-check: checks + features load + the app really starts
 │   └── hooks/                  # Claude Code hooks: session_start.sh + gate_guard.sh (workflow gate),
 │                               # stop_guard.sh (runs check.py before finishing)
 ├── tests/

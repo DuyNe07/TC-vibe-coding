@@ -35,6 +35,7 @@ is not. The only allowed path has 3 steps, each started by the user pasting a pr
 | 0.5 Discovery | [prompt/00-discovery.md](prompt/00-discovery.md) | only `business/_sources/*-discovery.md` |
 | 1 Business analysis | [prompt/01-business-analysis.md](prompt/01-business-analysis.md) (key `TC-UNLOCK-ANALYSIS`) | + `business/<key>.md`, `plans/business-analysis-plan.md` |
 | 2 Implementation | [prompt/02-implement-feature.md](prompt/02-implement-feature.md) (key `TC-UNLOCK-IMPLEMENT`, document `Status: Ready for implementation`) | + the feature's code in `backend/features/<key>/` and `frontend/features/<key>/` |
+| 2b Repair (when needed) | [prompt/03-fix-error.md](prompt/03-fix-error.md) (same key) | the same folders, for the broken feature |
 
 Details and the mechanical guard (`scripts/hooks/gate_guard.sh`, file `.gate-unlock`): [CLAUDE.md](../CLAUDE.md) and
 rule A.0 of [rules/00-golden-rules.md](rules/00-golden-rules.md).
@@ -53,6 +54,7 @@ rule A.0 of [rules/00-golden-rules.md](rules/00-golden-rules.md).
 | 7 | [rules/07-testing-and-verification.md](rules/07-testing-and-verification.md) | Tests and `scripts/check.py` |
 | 8 | [rules/08-dependencies-and-running.md](rules/08-dependencies-and-running.md) | `requirements.txt`, `run.ps1`, config, folders |
 | 9 | [rules/09-logging.md](rules/09-logging.md) | Logs to file + log panel on screen |
+| 10 | [rules/10-self-repair.md](rules/10-self-repair.md) | How you repair failures yourself, and what is forbidden |
 | - | [capabilities.md](capabilities.md) | What the app can and cannot do - never promise more |
 | - | [business/README.md](business/README.md) | How to read and update business documents |
 
@@ -74,7 +76,8 @@ rule A.0 of [rules/00-golden-rules.md](rules/00-golden-rules.md).
 | Build the UI | `frontend/core/components` (panel, stat_row, data_table, file_upload, download_button, ...) |
 | Log something | `self.logger.info(...)` in services/pages; it appears in the page's log panel |
 | Add a library | Pinned line in `requirements.txt` |
-| Verify your work | `python scripts/check.py` must print `ALL CHECKS PASSED` |
+| Verify your work | `python scripts/check.py` -> `ALL CHECKS PASSED`, then `python scripts/doctor.py` -> `APP IS HEALTHY` |
+| Something fails / the app errors | Follow [rules/10-self-repair.md](rules/10-self-repair.md) (for a user-reported error: [prompt/03-fix-error.md](prompt/03-fix-error.md)) |
 | Run the app | `powershell -ExecutionPolicy Bypass -File .\run.ps1` (opens http://localhost:8501/home) |
 
 Use the virtual-env Python: `.venv/Scripts/python.exe` (Windows) or `.venv/bin/python` (macOS/Linux).

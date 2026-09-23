@@ -43,8 +43,12 @@ Chức năng mẫu **"Nhập sản phẩm từ Excel (mẫu)"** cho thấy một
 
 ## 3. Khi có lỗi
 
-Cuối mỗi trang có khung **📜 Nhật ký chạy (log)**: mở ra, bấm biểu tượng copy (hoặc *Tải log*) và gửi
-cho AI kèm mô tả lỗi. Toàn bộ log cũng nằm trong file `logs/app.log`.
+Cuối mỗi trang có khung **📜 Nhật ký chạy (log)**: mở ra, bấm biểu tượng copy (hoặc *Tải log*), rồi dán vào chat
+cùng toàn bộ [docs/prompt/03-fix-error.md](docs/prompt/03-fix-error.md). AI sẽ tự tìm nguyên nhân, sửa trong phạm vi
+chức năng đó, chạy lại toàn bộ kiểm tra rồi báo lại bằng tiếng Việt. Toàn bộ log cũng nằm trong file `logs/app.log`.
+
+Muốn tự kiểm tra xem app có khoẻ không: `.venv\Scripts\python.exe scripts\doctor.py` — lệnh này chạy toàn bộ kiểm
+tra, nạp thử mọi chức năng và khởi động app; kết quả cuối phải là `APP IS HEALTHY`.
 
 ## 4. Cấu trúc thư mục (tóm tắt)
 
