@@ -11,6 +11,7 @@ Không cần sửa gì trong prompt.
 | 2 | Dán toàn bộ [02-implement-feature.md](02-implement-feature.md). AI đưa ra đề xuất giao diện (có hình phác) và hỏi **một lượt**: bảng như Excel chỉ xem hay sửa trực tiếp, nhập bằng form / bảng / file Excel, bộ lọc, số liệu tổng hợp, biểu đồ... Trả lời theo số hoặc gõ "ok" | AI tự lập kế hoạch (`docs/plans/`), chia việc cho AI phụ (backend và giao diện, chạy song song), chạy toàn bộ kiểm tra, rồi hướng dẫn cách dùng |
 | 3 | Chạy `powershell -ExecutionPolicy Bypass -File .\run.ps1` và thử theo hướng dẫn | Chức năng xuất hiện ở Trang chủ |
 | Khi gặp lỗi | Mở khung "📜 Nhật ký chạy (log)" ở cuối trang, bấm copy, dán vào chat kèm toàn bộ [03-fix-error.md](03-fix-error.md) | AI tự tìm nguyên nhân, sửa, chạy lại kiểm tra và báo lại bằng tiếng Việt |
+| Gửi code cho người kiểm tra | Dán toàn bộ [04-push-to-github.md](04-push-to-github.md), trả lời một lượt câu hỏi (repo, tên nhánh, tên/email, tài khoản GitHub + mã truy cập) | AI tạo nhánh mới, commit, lấy code mới nhất trên GitHub về gộp vào (tự xử lý xung đột), rồi đẩy lên, kèm link để mở Pull Request |
 
 **Nếu không dán được vì prompt quá dài** (một số công cụ giới hạn độ dài): gõ một dòng thay thế:
 - Bước 0.5: `Đọc file docs/prompt/00-discovery.md và làm đúng từng bước trong đó.`
