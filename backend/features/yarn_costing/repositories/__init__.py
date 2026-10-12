@@ -1,0 +1,1 @@
+"""Persistence (subclass JsonFileRepository[MyEntity])."""
