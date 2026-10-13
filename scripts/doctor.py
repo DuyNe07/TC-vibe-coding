@@ -133,6 +133,17 @@ def main() -> int:
         checks_ok = result.returncode == 0
 
     features_ok, problems = run_feature_check()
+    migrations = subprocess.run(  # noqa: S603 - fixed command
+        [sys.executable, "scripts/migrate.py", "status"],
+        cwd=ROOT,
+        env={**os.environ, "PYTHONUTF8": "1", "PYTHONIOENCODING": "utf-8"},
+        capture_output=True,
+        text=True,
+    )
+    print("\n=== Database migrations ===")
+    print(migrations.stdout.strip() or migrations.stderr.strip()[-2000:])
+    if migrations.returncode != 0:
+        problems.append("Database is not up to date: run python scripts/migrate.py")
     app_ok, app_problems = run_app_check(_free_port(args.port))
     problems += app_problems
 

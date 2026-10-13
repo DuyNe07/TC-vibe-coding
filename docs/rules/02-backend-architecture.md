@@ -131,6 +131,16 @@ JSON document in table `<developer>__<feature_key>__item` (created automatically
   keeps the result in RAM (LRU, 256 results) until any data is written, so page reruns do not recompute lists, price
   tables or generated files. Never on a use case that writes, reads an uploaded file, or depends on the current user.
 - `JsonFileRepository` (files in `data/<key>/`) remains for file-shaped data only; `InMemoryRepository` for tests.
+- **Migrations (Alembic, `backend/core/migrate.py`).** `python scripts/migrate.py` applies pending revisions (run.ps1
+  and the Docker image run it before the app; `scripts/doctor.py` fails while some are pending). Each feature has its
+  own chain in `backend/features/<key>/migrations/` with its own version table, so branches sharing the database never
+  see each other. Create a revision with `python scripts/migrate.py new <key> "what changes"` and fill `upgrade()` /
+  `downgrade()` with `backend.core.migration_ops` (`feature_table`, `create_document_table`, `update_documents`,
+  `rename_table`, `drop_table`); never import the feature's models in a revision.
+  A revision is REQUIRED when stored data must change: a field renamed / removed / made required, a value format
+  changed, a table no longer used. Until the schema is frozen ("chốt"), `APP_DB_AUTO_CREATE=true` (default) also
+  creates new tables on first use; after "chốt" it is set to false and every new table needs a revision too
+  (`create_document_table(ops.feature_table(key, "item"))`).
 
 ## Users and permissions (framework: `backend/core/access.py`, `backend/core/current_user.py`)
 - Login is required for every page. Built-in administrator: `u-admin` (first password `u-admin`), full rights.

@@ -15,11 +15,12 @@ from collections.abc import Coroutine
 from functools import cache
 from typing import Any, TypeVar
 
-from sqlalchemy import JSON, URL, Column, MetaData, String, Table
+from sqlalchemy import JSON, URL, Column, MetaData, String, Table, inspect
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
 
 from backend.core.config import get_settings
+from backend.core.exceptions import ConfigurationError
 
 T = TypeVar("T")
 
@@ -120,11 +121,17 @@ def document_table(name: str) -> Table:
 
 
 async def ensure_table(table: Table) -> None:
-    """CREATE TABLE IF NOT EXISTS, once per process and database."""
+    """CREATE TABLE IF NOT EXISTS (only checks it exists when APP_DB_AUTO_CREATE is false), once per process and db."""
     current = engine()
     marker = (str(current.url), table.name)
     if marker in _created_tables:
         return
     async with current.begin() as connection:
-        await connection.run_sync(table.create, checkfirst=True)
+        if get_settings().db_auto_create:
+            await connection.run_sync(table.create, checkfirst=True)
+        elif not await connection.run_sync(lambda sync: inspect(sync).has_table(table.name)):
+            raise ConfigurationError(
+                f"Table {table.name!r} does not exist and APP_DB_AUTO_CREATE is false: add a migration revision "
+                '(python scripts/migrate.py new <feature_key> "...") and run python scripts/migrate.py'
+            )
     _created_tables.add(marker)

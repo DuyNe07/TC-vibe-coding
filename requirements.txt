@@ -21,6 +21,7 @@ sqlalchemy==2.1.4          # Async engine + SQL for every repository
 greenlet==3.5.6            # Required by SQLAlchemy's asyncio extension
 asyncpg==0.32.0            # Async PostgreSQL driver (POSTGRES_* in .env)
 aiosqlite==0.22.1          # Async SQLite driver (tests, and local fallback without PostgreSQL)
+alembic==1.20.0            # Database migrations, one chain per feature (backend/core/migrate.py, scripts/migrate.py)
 
 # ---- Data processing --------------------------------------------------------
 pandas==3.0.6              # Tabular data manipulation

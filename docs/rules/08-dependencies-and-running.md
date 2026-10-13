@@ -14,7 +14,8 @@ powershell -ExecutionPolicy Bypass -File .\run.ps1 -Reinstall             # forc
 1. Check `.venv`; create it with Python 3.13 if missing (recreate it if it uses another Python version).
 2. Install `requirements.txt` only when packages are missing or the file changed (hash stored in `.venv`).
 3. Create `.env` from `.env.example` if missing, create `data/` and `logs/`, pick a free port.
-4. Start Streamlit (ONE process) and open `http://localhost:<port>/home` as soon as the server answers.
+4. Bring the database up to date: `scripts/migrate.py` (Alembic revisions, docs/rules/02 "Migrations").
+5. Start Streamlit (ONE process) and open `http://localhost:<port>/home` as soon as the server answers.
 Stop with Ctrl+C.
 
 Rules:

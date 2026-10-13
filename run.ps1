@@ -138,7 +138,12 @@ if (-not $NoBrowser) {
     }
 }
 
-# ---- 5. Start the app (one Streamlit process) ---------------------------------
+# ---- 5. Bring the database up to date (Alembic revisions, scripts/migrate.py) ----
+Write-Step "Updating the database (migrations)"
+& $VenvPython "scripts/migrate.py"
+if ($LASTEXITCODE -ne 0) { throw "Database migration failed - see the message above" }
+
+# ---- 6. Start the app (one Streamlit process) ---------------------------------
 Write-Step "Starting app at $Url  (press Ctrl+C to stop)"
 try {
     & $VenvPython -m streamlit run "frontend/app.py" --server.port $Port --server.headless true

@@ -22,6 +22,9 @@ class Settings(BaseSettings):
 
     session_hours: int = 12  # a login survives page reloads (F5) for this long
     db_cache_seconds: int = 30  # RAM cache of tables / read-only use cases; changes by OTHER processes show after this
+    # true until the schema is frozen ("chốt"): repositories create missing tables on first use.
+    # false afterwards: only migrations (python scripts/migrate.py, backend/core/migrate.py) create or change tables.
+    db_auto_create: bool = True
 
     # Database (backend/core/db.py). APP_DATABASE_URL wins; else PostgreSQL from POSTGRES_*; else data/app.db (SQLite)
     database_url: str = ""

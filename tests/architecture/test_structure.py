@@ -15,6 +15,7 @@ from tests.architecture.helpers import (
 
 BACKEND_LAYERS = ("models", "dto", "business", "builders", "repositories", "services", "controllers", "tests")
 BACKEND_ROOT_FILES = {"__init__.py", "constants.py", "exceptions.py"}
+BACKEND_OPTIONAL = {"migrations"}  # Alembic revisions of the feature (backend/core/migrate.py), only once it needs one
 FRONTEND_LAYERS = ("pages", "components")
 FRONTEND_ROOT_FILES = {"__init__.py", "manifest.py"}
 
@@ -60,8 +61,11 @@ def test_backend_feature_layout(key: str) -> None:
     assert root_py >= BACKEND_ROOT_FILES, f"{rel(base)} must contain {sorted(BACKEND_ROOT_FILES)}"
     extra = root_py - BACKEND_ROOT_FILES
     assert not extra, f"{rel(base)}: move {sorted(extra)} into a layer folder ({', '.join(BACKEND_LAYERS)})"
-    unknown_dirs = {p.name for p in base.iterdir() if p.is_dir() and p.name != "__pycache__"} - set(BACKEND_LAYERS)
-    assert not unknown_dirs, f"{rel(base)}: unknown folders {sorted(unknown_dirs)}; allowed: {BACKEND_LAYERS}"
+    folders = {p.name for p in base.iterdir() if p.is_dir() and p.name != "__pycache__"}
+    unknown_dirs = folders - set(BACKEND_LAYERS) - BACKEND_OPTIONAL
+    assert not unknown_dirs, (
+        f"{rel(base)}: unknown folders {sorted(unknown_dirs)}; allowed: {BACKEND_LAYERS} + migrations"
+    )
 
 
 @pytest.mark.parametrize("key", FE_KEYS)

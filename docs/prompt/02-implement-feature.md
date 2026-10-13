@@ -275,6 +275,8 @@ Read first: `CLAUDE.md`, `docs/rules/00`-`03`, `06`, `07`, `09`, the business do
    decisions, state transitions. Pure. Write the BR unit tests now (a passing and a failing case each).
 3. **constants.py / exceptions.py** - UPPER_CASE constants only (column specs, limits); errors inherit `AppError` /
    `FileProcessingError` with Vietnamese messages.
+   Changing what an EXISTING entity stores (rename / remove / require a field, new value format, table dropped) needs a
+   migration revision: `python scripts/migrate.py new <key> "..."` + `backend.core.migration_ops` (rules/02 "Migrations").
    Actors with different rights inside the app = manifest `roles` + a BR that reads `self.current_user.roles_in(key)`
    (rules/02 "Roles inside an app"); never an in-app login, access code or user list.
 4. **repositories/** - `class XRepository(SqlRepository[X])` (table `<developer>__<key>__x`, created automatically) + simple queries.

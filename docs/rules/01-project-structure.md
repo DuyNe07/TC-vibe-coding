@@ -29,6 +29,9 @@ TC-vibe-coding/
 │   │   ├── base/               # BaseEntity, BaseDTO, BaseRepository, BaseBusiness, BaseBuilder,
 │   │   │                       # BaseService, BaseController, SqlRepository (database)
 │   │   ├── db.py               # async SQLAlchemy engine (PostgreSQL / SQLite) + db.run()
+│   │   ├── migrate.py          # Alembic runner: one chain for core + one per feature (scripts/migrate.py)
+│   │   ├── migration_ops.py    # helpers for revisions (JSON documents: update_documents, drop_table...)
+│   │   ├── migrations/         # Alembic env.py + template + the framework's revisions (versions/)
 │   │   ├── access.py           # users, groups, permissions, login (AccessManager)
 │   │   ├── current_user.py     # CurrentUser of this run + permission keys
 │   │   ├── gateway.py          # gateway.open(XxxController): the ONE way pages call a business
@@ -49,6 +52,7 @@ TC-vibe-coding/
 │           ├── repositories/   # persistence
 │           ├── services/       # one file = one use case
 │           ├── controllers/    # <feature_key>_controller.py: the ONE top-layer class, opened via the gateway
+│           ├── migrations/     # (optional) Alembic revisions 0001_...py of this feature (scripts/migrate.py new)
 │           └── tests/          # unit tests of this feature
 │
 ├── frontend/                   # Streamlit UI
@@ -69,6 +73,7 @@ TC-vibe-coding/
 │   ├── new_feature.py          # scaffold a feature (the only way to create one)
 │   ├── check.py                # lint + all tests = Definition of Done
 │   ├── doctor.py               # end-to-end self-check: checks + features load + the app really starts
+│   ├── migrate.py              # database migrations: apply / status / new revision
 │   └── hooks/                  # Claude Code hooks: session_start.sh + gate_guard.sh (workflow gate),
 │                               # stop_guard.sh (runs check.py before finishing)
 ├── tests/

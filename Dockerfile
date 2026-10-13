@@ -12,5 +12,5 @@ RUN useradd --create-home app && mkdir -p data logs && chown -R app:app data log
 USER app
 
 EXPOSE 8501
-CMD ["python", "-m", "streamlit", "run", "frontend/app.py", "--server.address=0.0.0.0", "--server.port=8501", \
-     "--server.headless=true", "--server.runOnSave=false", "--server.fileWatcherType=none"]
+# migrations first (scripts/migrate.py), then the app; exec keeps Streamlit as PID 1 for docker stop
+CMD ["sh", "-c", "python scripts/migrate.py && exec python -m streamlit run frontend/app.py --server.address=0.0.0.0 --server.port=8501 --server.headless=true --server.runOnSave=false --server.fileWatcherType=none"]
