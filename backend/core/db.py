@@ -38,7 +38,9 @@ def _background_loop() -> asyncio.AbstractEventLoop:
     global _loop
     with _guard:
         if _loop is None:
-            _loop = asyncio.new_event_loop()
+            # Selector loop on every OS: Windows' default Proactor loop prints WinError 10054 tracebacks whenever
+            # the server drops an idle connection.
+            _loop = asyncio.SelectorEventLoop()
             threading.Thread(target=_loop.run_forever, name="tc-db-loop", daemon=True).start()
         return _loop
 
@@ -70,7 +72,8 @@ def engine() -> AsyncEngine:
     url = database_url()
     with _guard:
         if url not in _engines:
-            _engines[url] = create_async_engine(url, pool_pre_ping=True)
+            # recycle before servers/firewalls cut idle connections; pre_ping replaces any that died anyway
+            _engines[url] = create_async_engine(url, pool_pre_ping=True, pool_recycle=300)
         return _engines[url]
 
 
