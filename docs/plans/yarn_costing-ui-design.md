@@ -1,5 +1,10 @@
 # UI design: yarn_costing
 
+> **Cập nhật 2026-10-13:** khối "Người thao tác" (chọn nhóm + mã nội bộ + tên, UC-01, UC-39, BR-46, `ActorDTO`) đã
+> bỏ. Người thao tác = tài khoản đăng nhập; quyền theo nhóm = vai trò của ứng dụng (SALES, XS1, XS4, KT, SO) do quản
+> trị viên tick ở `/admin`; màn hình 8 là "Nhật ký thao tác". Nguồn đúng: `docs/business/yarn_costing.md` (mục 2,
+> BR-46..49, mục 10). Các đoạn bên dưới còn nhắc `actor` là lịch sử, không làm theo.
+
 Nguồn: `docs/business/yarn_costing.md` (mục 4-9, nhất là mục 8 "Giao diện đã chốt"), `docs/plans/yarn_costing-implementation-plan.md`
 mục 2 (Controller contract + bảng Pages). Streamlit đã cài: **1.64.0** (kết quả kiểm tra ở mục 0.9). Không thêm thư viện;
 biểu đồ dùng `st.bar_chart` / `st.line_chart`.

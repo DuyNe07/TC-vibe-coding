@@ -1,5 +1,10 @@
 # Implementation plan: yarn_costing
 
+> **Cập nhật 2026-10-13:** khối "Người thao tác" (chọn nhóm + mã nội bộ + tên, UC-01, UC-39, BR-46, `ActorDTO`) đã
+> bỏ. Người thao tác = tài khoản đăng nhập; quyền theo nhóm = vai trò của ứng dụng (SALES, XS1, XS4, KT, SO) do quản
+> trị viên tick ở `/admin`; màn hình 8 là "Nhật ký thao tác". Nguồn đúng: `docs/business/yarn_costing.md` (mục 2,
+> BR-46..49, mục 10). Các đoạn bên dưới còn nhắc `actor` là lịch sử, không làm theo.
+
 ## 0. Summary
 Chức năng "Tính giá sợi" thay thế hai file Excel tính giá sợi S1 / S4: Sales tạo yêu cầu (mã tự sinh), xưởng nhập NSM +
 tỷ lệ pha, app kiểm tra khớp rồi tính chi phí sản xuất/kg (5 khoản, VND, USD), tự tạo dòng thí nghiệm, CK/PP, ĐCNSM; kế
