@@ -69,8 +69,14 @@ class ProductListPage(BasePage):
                 key=self.key("table"),
             )
             if data.items:
-                export = products.export_products(ExportProductsRequest(keyword=keyword, stock_status=status))
-                download_button(export, label="Xuất Excel", key=self.key("export"), primary=True)
+                request = ExportProductsRequest(keyword=keyword, stock_status=status)
+                download_button(  # the file is built only when the user clicks
+                    lambda: products.export_products(request),
+                    label="Xuất Excel",
+                    key=self.key("export"),
+                    primary=True,
+                    file_name="ton-kho.xlsx",
+                )
         with chart_col, panel("Tồn kho", icon="📊"):
             counts = {"Hết hàng": summary.out_of_stock, "Sắp hết": summary.low_stock, "Còn hàng": summary.in_stock}
             if summary.product_count:

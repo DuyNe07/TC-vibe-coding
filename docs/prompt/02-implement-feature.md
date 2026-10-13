@@ -310,7 +310,7 @@ Read first: `CLAUDE.md`, `docs/rules/00`-`03`, `06`, `07`, `09`, the business do
    **Design with the newest native elements** of the table "Look & feel: native Streamlit 1.64 only" in rules/04:
    statuses as `st.badge`, short filters as `st.segmented_control` / `st.pills`, button rows in
    `st.container(horizontal=True)`, heavy tabs/expanders LAZY (`key=`, `on_change="rerun"`, `if tab.open:`), every
-   export as `download_button(lambda: ..., file_name=...)`, filters the user comes back to with
+   export that cannot fail as `download_button(lambda: ..., file_name=...)`, filters the user comes back to with
    `persist_state="session"`, `st.toast` after a save. No HTML/CSS: the theme already gives the TC colours and font.
 5. Write `docs/plans/<key>-ui-design.md`, per screen in menu order: page class (`XxxPage`), slug (kebab-case, not for
    the first page), title, icon, description (VI); the text sketch; blocks from top to bottom, each with the exact call

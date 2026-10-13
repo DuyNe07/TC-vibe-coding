@@ -60,7 +60,7 @@ else:
 | `frame_to_records(df)` | DataFrame -> list of dicts without NaN/numpy values (always use it before building DTOs) |
 | `file_upload(label, types=, key=)` | returns `UploadedFileDTO` (bytes) or None |
 | `download_button(file_dto, label=, key=)` | download a `FileDownloadDTO` already built |
-| `download_button(lambda: feature.export(req), label=, key=, file_name="x.xlsx")` | build the file only when the user clicks (use it for every export: reruns stay fast) |
+| `download_button(lambda: feature.export(req), label=, key=, file_name="x.xlsx")` | build the file only when the user clicks (reruns stay fast). It runs off-screen: only for exports that cannot raise an `AppError` (inputs already checked); otherwise build it inside `if st.button(...)` |
 | `empty_state(msg, hint)`, `section_title(text)` | helpers |
 | `show_error(exc)`, `show_success(msg)` | feedback |
 | `render_sidebar_nav`, `render_footer` | used by AppShell only |

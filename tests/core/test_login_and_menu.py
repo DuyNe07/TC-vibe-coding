@@ -81,3 +81,30 @@ def test_sample_feature_is_hidden_once_a_real_feature_exists() -> None:
     real = sample.__class__(**{**sample.__dict__, "key": "real_feature", "sample": False})
     assert FeatureRegistry(features=[sample]).visible_features() == [sample]  # alone: shown as a demo
     assert FeatureRegistry(features=[sample, real]).visible_features() == [real]
+
+
+def test_deferred_download_builds_on_click_as_the_user_who_clicked(monkeypatch) -> None:
+    from concurrent.futures import ThreadPoolExecutor
+
+    import streamlit as st
+
+    from backend.core.base import FileDownloadDTO
+    from backend.core.current_user import CurrentUser, get_current_user, set_current_user
+    from frontend.core.components import download_button
+
+    shown, built_by = {}, []
+    monkeypatch.setattr(st, "download_button", lambda label, **kwargs: shown.update(kwargs))
+
+    def build() -> FileDownloadDTO:
+        built_by.append(get_current_user())
+        return FileDownloadDTO(filename="x.xlsx", content=b"abc")
+
+    clicker = CurrentUser("an")
+    set_current_user(clicker)
+    download_button(build, label="Xuất Excel", key="dl", file_name="bao-cao.xlsx")
+    set_current_user(None)
+    assert not built_by, "the file must not be built while the page renders"
+    # Streamlit calls the function on its own thread when the user clicks
+    assert ThreadPoolExecutor(1).submit(shown["data"]).result() == b"abc"
+    assert built_by == [clicker]
+    assert shown["file_name"] == "bao-cao.xlsx"

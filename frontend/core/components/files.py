@@ -6,6 +6,7 @@ from collections.abc import Callable, Sequence
 import streamlit as st
 
 from backend.core.base import FileDownloadDTO, UploadedFileDTO
+from backend.core.current_user import get_current_user, set_current_user
 
 
 def file_upload(label: str, *, types: Sequence[str], key: str, help: str | None = None) -> UploadedFileDTO | None:
@@ -29,8 +30,13 @@ def download_button(
     if callable(file):
         if not file_name:
             raise ValueError("download_button(<function>) needs file_name")
-        build = file
-        data, name, mime = (lambda: build().content), file_name, mimetypes.guess_type(file_name)[0]
+        build, user = file, get_current_user()
+
+        def data() -> bytes:  # Streamlit runs it on another thread: restore who clicked (permissions, logs)
+            set_current_user(user)
+            return build().content
+
+        name, mime = file_name, mimetypes.guess_type(file_name)[0]
     else:
         data, name, mime = file.content, file.filename, file.mime_type
     st.download_button(
