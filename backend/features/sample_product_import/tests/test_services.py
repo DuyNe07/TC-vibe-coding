@@ -27,8 +27,8 @@ def excel(rows: list[list]) -> UploadedFileDTO:
 
 
 @pytest.fixture
-def repository(tmp_path) -> ProductRepository:
-    return ProductRepository(file_path=tmp_path / "products.json")
+def repository() -> ProductRepository:
+    return ProductRepository()  # conftest gives every test its own empty database
 
 
 def test_template_is_a_valid_import_file(repository) -> None:

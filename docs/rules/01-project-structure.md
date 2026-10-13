@@ -27,7 +27,10 @@ TC-vibe-coding/
 ├── backend/                    # pure Python, no Streamlit
 │   ├── core/                   # FRAMEWORK - do not modify for a feature
 │   │   ├── base/               # BaseEntity, BaseDTO, BaseRepository, BaseBusiness, BaseBuilder,
-│   │   │                       # BaseService, BaseController
+│   │   │                       # BaseService, BaseController, SqlRepository (database)
+│   │   ├── db.py               # async SQLAlchemy engine (PostgreSQL / SQLite) + db.run()
+│   │   ├── access.py           # users, groups, permissions, login (AccessManager)
+│   │   ├── current_user.py     # CurrentUser of this run + permission keys
 │   │   ├── gateway.py          # gateway.open(XxxController): the ONE way pages call a business
 │   │   ├── config.py           # get_settings()
 │   │   ├── logger.py           # get_logger(), read_log_entries()
@@ -50,7 +53,8 @@ TC-vibe-coding/
 │
 ├── frontend/                   # Streamlit UI
 │   ├── app.py                  # entry point (never edit to add a feature)
-│   ├── core/                   # FRAMEWORK: AppShell, Router, BasePage, FeatureManifest, theme, branding
+│   ├── core/                   # FRAMEWORK: AppShell, Router, BasePage, FeatureManifest, theme, branding,
+│   │                           # auth.py (login), admin_page.py (users & permissions, /admin)
 │   ├── public/                 # static assets: logo.png (browser tab icon), Logo_TC.png (UI logo)
 │   │   └── components/         # shared UI: header, panel, sidebar menu, footer, table, files, log panel
 │   ├── home/home_page.py       # /home: feature cards (generated)
@@ -70,7 +74,7 @@ TC-vibe-coding/
 ├── tests/
 │   ├── architecture/           # enforces these rules (never edit)
 │   └── core/                   # tests of the framework
-├── data/                       # runtime data, git-ignored (data/<feature_key>/...)
+├── data/                       # runtime files, git-ignored (data/<feature_key>/..., data/app.db without PostgreSQL)
 └── logs/                       # runtime logs, git-ignored (logs/app.log)
 ```
 

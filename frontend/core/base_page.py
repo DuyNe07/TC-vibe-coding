@@ -5,6 +5,7 @@
         icon = "📋"
         slug = "orders"                 # required for every page except the feature's first page
         description = "Tra cứu và xuất danh sách đơn hàng."
+        menu_group = "Kinh doanh"       # optional: sub-group of the page inside the feature's menu block
 
         def render(self) -> None:
             orders = gateway.open(OrderController)          # top layer of the business, via the gateway
@@ -21,6 +22,7 @@ from typing import ClassVar
 
 from pydantic import ValidationError as PydanticValidationError
 
+from backend.core.current_user import CurrentUser, get_current_user
 from backend.core.exceptions import AppError, InvalidInputError
 from backend.core.logger import get_logger
 from frontend.core.components.feedback import show_error, show_unexpected_error
@@ -35,6 +37,7 @@ class BasePage(ABC):
     slug: ClassVar[str] = ""
     description: ClassVar[str] = ""
     show_log_panel: ClassVar[bool] = True  # log panel at the bottom of the page (keep True for features)
+    menu_group: ClassVar[str] = ""  # sub-group label in the sidebar menu (e.g. "Sales", "Phòng SO"); "" = none
 
     def __init_subclass__(cls, **kwargs: object) -> None:
         super().__init_subclass__(**kwargs)
@@ -79,6 +82,11 @@ class BasePage(ABC):
         """Draw the page body. Call ONLY the controller of this feature for data/actions."""
 
     # ---- helpers ----
+    @property
+    def current_user(self) -> CurrentUser | None:
+        """The logged-in user (who opened the page). Pages the user may not open are never shown."""
+        return get_current_user()
+
     def key(self, name: str) -> str:
         """Unique widget key: ``st.text_input(..., key=self.key("keyword"))``."""
         return self.state.key(f"{type(self).__name__}.{name}")

@@ -28,16 +28,19 @@ Rules:
    Every pin must have a wheel for Python 3.13 (`.python-version`, `requires-python` in `pyproject.toml`); check with
    `python -m pip install --dry-run --only-binary=:all: --python-version 3.13 -r requirements.txt --target tmp`.
 2. Before adding a library, check it is not already covered: Excel (pandas, openpyxl, xlrd), Word
-   (python-docx, docxtpl), PDF (pypdf), public web pages (requests, lxml - via `backend/shared/web`),
+   (python-docx, docxtpl), PDF (pypdf), public web pages (requests, lxml - via `backend/shared/web`), database
+   (sqlalchemy async + asyncpg/aiosqlite - via `SqlRepository`),
    charts (plotly, streamlit built-ins), validation (pydantic). What the app can do with them:
    `docs/capabilities.md`.
 3. After adding one, run `run.ps1` again (it auto-installs) or `.venv/Scripts/python.exe -m pip install -r requirements.txt`.
 
 ## Configuration
-- `.env` (created from `.env.example`, git-ignored): `APP_NAME`, `APP_ENV`, `APP_LOG_LEVEL`, `APP_DATA_DIR`, `APP_PORT`.
+- `.env` (created from `.env.example`, git-ignored): `APP_NAME`, `APP_ENV`, `APP_LOG_LEVEL`, `APP_DATA_DIR`, `APP_PORT`,
+  and the database: `POSTGRES_IP`, `POSTGRES_PORT`, `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD` (empty = local
+  SQLite file `data/app.db`). Never commit the password.
 - Read settings with `get_settings()` (`backend/core/config.py`). New settings go there with a default.
 - Streamlit options: `.streamlit/config.toml`.
 
 ## Runtime folders (git-ignored)
-- `data/<feature_key>/` - files written by repositories and features.
+- `data/<feature_key>/` - files written by features (`data/app.db` when no PostgreSQL is configured).
 - `logs/app.log` - application log (see 09).

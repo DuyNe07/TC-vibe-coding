@@ -49,8 +49,8 @@ Rules of the gate:
   `gateway.open(XxxController)`; each feature exposes ONE controller (top layer) from its package root.
 - Work from `docs/business/<feature_key>.md`. Never invent business rules.
 - Never promise a capability that [docs/capabilities.md](docs/capabilities.md) does not list (Excel/Word/PDF, stored
-  data, Excel-like tables, Python calculations, fetching public web pages; NO login, e-mail, scheduled jobs, ERP/SQL
-  connection, Google search).
+  data in the app database, login + permissions per feature/screen, Excel-like tables, Python calculations, fetching
+  public web pages; NO e-mail, scheduled jobs, ERP/external SQL connection, Google search).
 - Create features ONLY with `python scripts/new_feature.py <feature_key> --title "..."` (phase 2 only).
 - Every class inherits its layer's base class from `backend.core.base`; one use case = one controller
   method = one service.

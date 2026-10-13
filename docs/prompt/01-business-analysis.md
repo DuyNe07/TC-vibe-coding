@@ -62,9 +62,10 @@ What the application can do (write documents that fit it):
 - Each feature is opened from the Home page and has one or more screens: forms, filters, tables, KPI tiles, charts,
   buttons, upload/download of files.
 - Files: read/write Excel (.xlsx/.xls/.csv), Word (.docx, including templates with placeholders), read PDF text.
-- Data is stored inside the application, per feature. There is NO login/permission system and NO connection to other
-  systems (email, ERP, other databases). If the business needs one, ask how the feature should behave without it
-  (e.g. "ai cũng xem được", "nhập tay tên người duyệt") and write the answer in the document.
+- Data is stored in the application database, per feature. Users log in; the administrator grants each user or
+  group the features / screens they may open (framework, nothing to design). Write in the document which user groups
+  use which screen (section 8) so the administrator knows what to grant. There is NO connection to other systems
+  (email, ERP, other databases).
 
 ## 4. Step 3 - Analysis plan -> STOP
 Write `docs/plans/business-analysis-plan.md` and show the user a short Vietnamese summary:

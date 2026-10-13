@@ -1,7 +1,8 @@
 """Base classes for persistence (``repositories/`` folder).
 
 ``BaseRepository`` implements the CRUD API once (template method); storage subclasses only
-implement ``_load`` / ``_save``. Features subclass ``JsonFileRepository[MyEntity]``.
+implement ``_load`` / ``_save``. Features subclass ``SqlRepository[MyEntity]`` (database, the default);
+``JsonFileRepository`` (files in data/) and ``InMemoryRepository`` (tests) keep the same API.
 """
 
 import json
@@ -12,11 +13,14 @@ from collections.abc import Callable, Iterable
 from pathlib import Path
 from typing import ClassVar, Generic, TypeVar
 
+from sqlalchemy import delete, insert, select
+
+from backend.core import db
 from backend.core.base._generics import generic_args
 from backend.core.base.base_model import BaseEntity
 from backend.core.config import get_settings
 from backend.core.exceptions import ConfigurationError, ConflictError, NotFoundError
-from backend.core.naming import feature_key_from_module
+from backend.core.naming import feature_key_from_module, to_snake_case
 
 TEntity = TypeVar("TEntity", bound=BaseEntity)
 
@@ -176,3 +180,108 @@ class JsonFileRepository(BaseRepository[TEntity]):
         tmp = self.file_path.with_suffix(self.file_path.suffix + ".tmp")
         tmp.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
         os.replace(tmp, self.file_path)  # atomic write
+
+
+_CHUNK = 500  # ids per IN (...) clause, below every driver's parameter limit
+
+
+def _chunks(values: list[str]) -> list[list[str]]:
+    return [values[start : start + _CHUNK] for start in range(0, len(values), _CHUNK)]
+
+
+class SqlRepository(BaseRepository[TEntity]):
+    """Persists entities in the app database (PostgreSQL; SQLite in tests): one table per repository,
+    one JSON document per entity. DEFAULT storage of every feature::
+
+        class ProductRepository(SqlRepository[Product]):
+            pass  # table "sample_product_import__product"; set table_name = "..." to choose another name
+
+    Same API as ``JsonFileRepository``; each call is one async SQLAlchemy transaction run through ``db.run``.
+    """
+
+    table_name: ClassVar[str] = ""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.table = db.document_table(self.table_name or self._default_table_name())
+
+    def _default_table_name(self) -> str:
+        feature_key = feature_key_from_module(type(self).__module__) or "core"
+        return f"{feature_key}__{to_snake_case(type(self).__name__.removesuffix('Repository'))}"
+
+    # ---- async primitives ----
+    async def _fetch(self, ids: list[str] | None = None) -> dict[str, TEntity]:
+        await db.ensure_table(self.table)
+        statements = (
+            [select(self.table)]
+            if ids is None
+            else [select(self.table).where(self.table.c.id.in_(chunk)) for chunk in _chunks(ids)]
+        )
+        async with db.engine().connect() as connection:
+            rows = [row for statement in statements for row in (await connection.execute(statement)).all()]
+        return {row.id: self.entity_type.model_validate(row.data) for row in rows}  # type: ignore[misc]
+
+    async def _write(self, entities: list[TEntity], delete_ids: list[str] | None = None) -> int:
+        """Delete ``delete_ids`` (all rows when None), then insert ``entities``; one transaction. Returns rows deleted."""
+        await db.ensure_table(self.table)
+        deleted = 0
+        async with db.engine().begin() as connection:
+            if delete_ids is None:
+                deleted = (await connection.execute(delete(self.table))).rowcount
+            for chunk in _chunks(delete_ids or []):
+                deleted += (await connection.execute(delete(self.table).where(self.table.c.id.in_(chunk)))).rowcount
+            if entities:
+                rows = [{"id": e.id, "data": e.model_dump(mode="json")} for e in entities]
+                await connection.execute(insert(self.table), rows)
+        return deleted
+
+    # ---- storage primitives (whole table; used by list_all / find / find_one) ----
+    # ponytail: queries load the whole table and filter in Python; add SQL filters on `data` past ~100k rows
+    def _load(self) -> dict[str, TEntity]:
+        return db.run(self._fetch())
+
+    def _save(self, items: dict[str, TEntity]) -> None:
+        db.run(self._write(list(items.values())))
+
+    # ---- row-level API (no full-table rewrite) ----
+    def get(self, entity_id: str) -> TEntity | None:
+        return db.run(self._fetch([entity_id])).get(entity_id)
+
+    def exists(self, entity_id: str) -> bool:
+        return self.get(entity_id) is not None
+
+    def count(self) -> int:
+        return len(self._load())
+
+    def add(self, entity: TEntity) -> TEntity:
+        with self._lock:
+            if self.exists(entity.id):
+                raise ConflictError(f"Entity {self.entity_type.__name__} with id '{entity.id}' already exists.")
+            db.run(self._write([entity], [entity.id]))
+        return entity
+
+    def update(self, entity: TEntity) -> TEntity:
+        with self._lock:
+            if not self.exists(entity.id):
+                raise NotFoundError(f"Can not find entity {self.entity_type.__name__} with id '{entity.id}'.")
+            entity.touch()
+            db.run(self._write([entity], [entity.id]))
+        return entity
+
+    def save_many(self, entities: Iterable[TEntity]) -> list[TEntity]:
+        saved = list(entities)
+        ids = [entity.id for entity in saved]
+        with self._lock:
+            existing = db.run(self._fetch(ids))
+            for entity in saved:
+                if entity.id in existing:
+                    entity.touch()
+            db.run(self._write(saved, ids))
+        return saved
+
+    def delete(self, entity_id: str) -> None:
+        if db.run(self._write([], [entity_id])) == 0:
+            raise NotFoundError(f"Can not find entity {self.entity_type.__name__} with id '{entity_id}'.")
+
+    def clear(self) -> None:
+        db.run(self._write([]))

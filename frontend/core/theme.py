@@ -41,6 +41,8 @@ _CSS = f"""
   .tc-brand-sub {{ font-size: .72rem; opacity: .6; }}
   .tc-nav-group {{ font-size: .7rem; font-weight: 700; text-transform: uppercase; letter-spacing: .06em;
                    opacity: .55; margin: .9rem 0 .15rem .2rem; }}
+  .tc-nav-sub {{ font-size: .72rem; font-weight: 650; opacity: .6; margin: .45rem 0 0 .1rem; }}
+  section[data-testid="stSidebar"] details summary p {{ font-weight: 600; }}
 
   /* ---- footer ---- */
   .tc-footer {{ margin-top: 3rem; padding: 1rem 0 .4rem 0; border-top: 1px solid rgba(128,128,128,.22);

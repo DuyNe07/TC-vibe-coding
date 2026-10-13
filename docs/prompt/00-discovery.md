@@ -35,7 +35,7 @@ From `docs/capabilities.md`, explain in plain Vietnamese (10-15 lines, no librar
 tra/xuất/file mẫu), Word và PDF, lưu dữ liệu trong app (thêm/sửa/xoá/tìm, trạng thái duyệt), giao diện (bảng như Excel
 chỉ xem hoặc sửa trực tiếp, bộ lọc, ô số liệu, biểu đồ, tải lên / tải về), tính toán bằng Python (công thức, làm tròn,
 đối chiếu, tổng hợp), lấy dữ liệu từ trang web công khai (tải trang, lấy bảng, tải file trên mạng về), và những việc
-**không** làm được (đăng nhập/phân quyền, gửi email, chạy tự động theo giờ, nối trực tiếp ERP/SQL, tìm kiếm Google tự
+**không** làm được (gửi email, chạy tự động theo giờ, nối trực tiếp ERP/SQL, tìm kiếm Google tự
 động, trang cần đăng nhập hoặc chạy JavaScript, dữ liệu hàng triệu dòng).
 End with: "Bạn kể cho tôi công việc hiện tại và mong muốn nhé - kể tự nhiên như nói với đồng nghiệp là được."
 **STOP** (unless the user already described their need: then go to Step 3).

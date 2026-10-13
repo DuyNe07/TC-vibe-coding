@@ -1,11 +1,9 @@
-from backend.core.base import JsonFileRepository
+from backend.core.base import SqlRepository
 from backend.features.sample_product_import.models.product import Product
 
 
-class ProductRepository(JsonFileRepository[Product]):
-    """Stored in data/sample_product_import/products.json."""
-
-    storage_file = "products.json"
+class ProductRepository(SqlRepository[Product]):
+    """Stored in database table sample_product_import__product."""
 
     def index_by_code(self) -> dict[str, Product]:
         return {p.code: p for p in self.list_all()}

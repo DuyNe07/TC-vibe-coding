@@ -9,6 +9,7 @@
 Every call goes through ``Gateway.call`` -> middlewares -> controller method -> service -> ...
 It logs "<Controller>.<action> done in N ms" (or the failure) into the feature's log.
 
+Permissions: ``PermissionMiddleware`` (registered below) refuses calls to a feature the current user may not open.
 Extension point: register a ``GatewayMiddleware`` (permissions, audit trail, caching, remote transport...)
 with ``gateway.use(...)`` in the framework - features and pages do not change.
 """
@@ -21,7 +22,8 @@ from dataclasses import dataclass
 from typing import Any, TypeVar, cast
 
 from backend.core.base.base_controller import BaseController
-from backend.core.exceptions import AppError, ConfigurationError
+from backend.core.current_user import get_current_user
+from backend.core.exceptions import AppError, ConfigurationError, PermissionDeniedError
 from backend.core.logger import get_logger
 
 TController = TypeVar("TController", bound=BaseController)
@@ -44,6 +46,16 @@ class GatewayMiddleware(ABC):
 
     @abstractmethod
     def handle(self, call: GatewayCall, proceed: Callable[[GatewayCall], Any]) -> Any: ...
+
+
+class PermissionMiddleware(GatewayMiddleware):
+    """A logged-in user may call a feature's controller only with a permission on that feature (or as admin)."""
+
+    def handle(self, call: GatewayCall, proceed: Callable[[GatewayCall], Any]) -> Any:
+        user = get_current_user()
+        if user is not None and call.feature_key and not user.can_open_feature(call.feature_key):
+            raise PermissionDeniedError(f"User '{user.username}' has no permission on feature '{call.feature_key}'.")
+        return proceed(call)
 
 
 class Gateway:
@@ -122,3 +134,4 @@ class _ControllerProxy:
 
 
 gateway = Gateway()
+gateway.use(PermissionMiddleware())

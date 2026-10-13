@@ -1,7 +1,9 @@
 # 04 - Frontend (Streamlit)
 
 ## How the UI is assembled (never edit these to add a feature)
-- `frontend/app.py` -> `AppShell` (page config, theme, **sidebar menu**, current page, **footer**).
+- `frontend/app.py` -> `AppShell` (page config, theme, **login**, **sidebar menu**, current page, **footer**).
+- Login + permissions are framework features (`frontend/core/auth.py`, `frontend/core/admin_page.py`): a user only
+  sees the features/pages granted to them; pages never check permissions themselves.
 - `Router` builds URLs from the manifests found in `frontend/features/*/manifest.py`:
   `/` -> `/home`; `/home` = Home (feature cards); `/<feature-key-with-dashes>` = feature landing page;
   `/<feature>-<slug>` = other pages.
@@ -104,5 +106,7 @@ of the business document (agreed with the user at the start of Prompt 2) decides
 8. Layout: header (automatic) -> filters/inputs in panels -> KPIs -> tables/charts -> actions, following the
    feature's `### Giao diện đã chốt (UI concept)`. Keep it simple.
 9. A feature's navigation = its manifest: the pages listed in `FEATURE.pages` appear automatically in the sidebar
-   menu under the feature (first page = the feature entry, others as `↳` sub-items) and the feature card appears on
-   Home. Never edit the sidebar, Home or router to add a feature.
+   menu as one collapsible block per feature (click the arrow to show its pages; a one-page feature is a plain link)
+   and the feature card appears on Home. Set `menu_group = "Sales"` on a page class to show it under a sub-group label
+   inside the block (pages of a group must be consecutive in `FEATURE.pages`). Only the pages the user may open are
+   shown. Never edit the sidebar, Home or router to add a feature.

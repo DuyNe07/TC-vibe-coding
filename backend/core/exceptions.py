@@ -67,3 +67,8 @@ class BusinessRuleViolation(AppError):
 
 class ConfigurationError(Exception):
     """Developer mistake (wrong wiring / inheritance). Not shown as a friendly message; fix the code."""
+
+
+class PermissionDeniedError(AppError):
+    code = "PERMISSION_DENIED"
+    default_message = "You do not have permission to use this function. Ask the administrator to grant it."

@@ -20,6 +20,7 @@ from pydantic import ValidationError as PydanticValidationError
 
 from backend.core.base._generics import generic_args, is_abstract
 from backend.core.base.base_dto import BaseRequestDTO, BaseResponseDTO
+from backend.core.current_user import CurrentUser, get_current_user
 from backend.core.exceptions import ConfigurationError, InvalidInputError
 from backend.core.logger import get_logger
 
@@ -49,6 +50,12 @@ class BaseService(ABC, Generic[TRequest, TResponse]):
     @property
     def logger(self) -> logging.Logger:
         return get_logger(type(self).__module__)
+
+    @property
+    def current_user(self) -> CurrentUser | None:
+        """The logged-in user (None in tests and scripts): use it for "who did it" fields, not for access checks
+        (the gateway already refuses features the user may not open)."""
+        return get_current_user()
 
     def handle(self, payload: Any = None) -> TResponse:
         """Called by the controller: validate the request -> execute() -> check the response type.

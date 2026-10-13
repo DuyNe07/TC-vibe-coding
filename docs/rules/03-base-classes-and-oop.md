@@ -9,7 +9,7 @@ Every class you write inherits the base class of its folder. Import bases ONLY f
 | `dto/` | `BaseRequestDTO`, `BaseResponseDTO`, `BaseDTO` (nested), or `StrEnum` | `backend.core.base` |
 | `business/` | `BaseBusinessRule[T]` (one rule) or `BaseBusiness[T]` (a capability) | `backend.core.base` |
 | `builders/` | `BaseBuilder[Output]` | `backend.core.base` |
-| `repositories/` | `JsonFileRepository[Entity]` (or `InMemoryRepository` for tests) | `backend.core.base` |
+| `repositories/` | `SqlRepository[Entity]` (database, default), `JsonFileRepository[Entity]` (files) or `InMemoryRepository` (tests) | `backend.core.base` |
 | `services/` | `BaseService[Request, Response]` | `backend.core.base` |
 | `controllers/` | `BaseController` | `backend.core.base` |
 | `exceptions.py` | `AppError` or a subclass | `backend.core.exceptions` |
@@ -59,8 +59,7 @@ class ProductImportBusiness(BaseBusiness[ImportRow]):
 
 ### Repository
 ```python
-class ProductRepository(JsonFileRepository[Product]):
-    storage_file = "products.json"  # -> data/<feature_key>/products.json
+class ProductRepository(SqlRepository[Product]):  # -> table sample_product_import__product
 
     def index_by_code(self) -> dict[str, Product]:
         return {p.code: p for p in self.list_all()}
@@ -123,4 +122,4 @@ data = products.list_products(ListProductsRequest(keyword="A"))
 3. One class = one responsibility. One service per file. One rule per rule class.
 4. Composition for collaborators: services receive repositories/builders/business objects; they don't inherit them.
 5. No module-level mutable state; no singletons in features.
-6. Type hints everywhere; generics declare their types (`BaseService[Req, Res]`, `JsonFileRepository[Entity]`).
+6. Type hints everywhere; generics declare their types (`BaseService[Req, Res]`, `SqlRepository[Entity]`).

@@ -20,7 +20,7 @@ backend/features/<key>/controllers/     (TOP layer of the business: 1 method = 1
 backend/features/<key>/services/        (orchestrates one use case)
         ├── builders/      convert: file -> models, models -> DTO / Excel / Word
         ├── business/      business rules BR-xx + calculations (pure)
-        └── repositories/  save / load data (data/<key>/*.json)
+        └── repositories/  save / load data (database: SqlRepository -> PostgreSQL)
 
 logs/app.log  <── the gateway logs every call ──> "📜 Nhật ký chạy" panel at the bottom of each page
 ```
@@ -74,6 +74,8 @@ rule A.0 of [rules/00-golden-rules.md](rules/00-golden-rules.md).
 | Read/write Excel, Word, PDF | `backend/shared/file_io` (ExcelReader/ExcelWriter, WordReader/WordWriter/WordTemplateRenderer, PdfTextReader) |
 | Take data from a public web page | `backend/shared/web` (`fetch_page(url).tables()`, `fetch_file(url)`) - from builders/services only |
 | Build the UI | `frontend/core/components` (panel, stat_row, data_table, file_upload, download_button, ...) |
+| Restrict who sees a feature / page | Nothing to code: the admin grants it on `/admin` (rules 02 "Users and permissions") |
+| Group pages in the menu | `menu_group = "..."` on the page class (rules 04 #9) |
 | Log something | `self.logger.info(...)` in services/pages; it appears in the page's log panel |
 | Add a library | Pinned line in `requirements.txt` |
 | Verify your work | `python scripts/check.py` -> `ALL CHECKS PASSED`, then `python scripts/doctor.py` -> `APP IS HEALTHY` |

@@ -4,8 +4,8 @@
 1. **All-in-one**: ONE Streamlit process. The backend is a Python package imported by the pages.
    No API server, no HTTP, no JSON between UI and backend. Do not add one.
 2. **One gateway**: every page runs business actions through `backend.core.gateway.gateway`.
-   It is the single, uniform calling mechanism (logs every call; future permissions/audit/caching are added
-   there as middlewares without touching features).
+   It is the single, uniform calling mechanism (logs every call, and its `PermissionMiddleware` refuses a feature
+   the logged-in user may not open; audit/caching are added there as middlewares without touching features).
 3. **Each business is packaged**: a feature exposes ONE top layer - its controller - exported by the
    package root `backend/features/<key>/__init__.py`. Everything below it is internal to the feature.
 
@@ -33,7 +33,7 @@ Gateway (backend/core/gateway.py)          uniform mechanism: middlewares + log 
 │ 2. services/     XxxService          one use case: orchestrates the layers below      │
 │ 3. business/     rules BR-xx + decisions (pure)                                        │
 │    builders/     conversions: file -> models, models -> DTO / Excel / Word             │
-│    repositories/ load / save entities (data/<key>/*.json)                              │
+│    repositories/ load / save entities (database table <key>__<name>)                   │
 │ 4. models/       entities, value objects, enums                                        │
 │    dto/          input / output of use cases (shared with the page)                    │
 └────────────────────────────────────────────────────────────────────────────────────┘
@@ -113,5 +113,22 @@ Raise, never return error codes.
 Any other exception is shown as an unexpected error with its traceback, and logged.
 
 ## Persistence
-Default storage = JSON files: `class ItemRepository(JsonFileRepository[Item]): storage_file = "items.json"`
-stores `data/<feature_key>/items.json` (atomic, thread-safe). Do not add a database unless the user asks.
+Default storage = the app database: `class ItemRepository(SqlRepository[Item]): pass` stores every `Item` as one
+JSON document in table `<feature_key>__item` (created automatically; `table_name = "..."` to choose the name).
+- Database = PostgreSQL from `POSTGRES_IP/PORT/DB/USER/PASSWORD` in `.env`; without them a local SQLite file
+  `data/app.db`; `APP_DATABASE_URL` overrides both. Tests always get a throw-away SQLite database (`conftest.py`).
+- `backend/core/db.py` runs SQLAlchemy 2 **async** (asyncpg / aiosqlite) on one background event loop; repositories
+  keep a plain sync API (`get`, `list_all`, `find`, `add`, `update`, `save`, `save_many`, `delete`, `clear`), so
+  services stay synchronous. Features never import `sqlalchemy` or `backend.core.db` directly.
+- `JsonFileRepository` (files in `data/<key>/`) remains for file-shaped data only; `InMemoryRepository` for tests.
+
+## Users and permissions (framework: `backend/core/access.py`, `backend/core/current_user.py`)
+- Login is required for every page. Built-in administrator: `u-admin` (first password `u-admin`), full rights.
+- Permission keys: `"<feature_key>"` = the whole feature, `"<feature_key>/<page_slug>"` = one page (landing page
+  without slug: `"<feature_key>/main"`). A user's rights = personal keys + keys of all their groups (union).
+- Enforcement is automatic: the router registers only the pages the user may open (menu, Home and URLs), and the
+  gateway refuses any controller call of a feature the user has no key on. Features write NO permission code.
+- Administrators grant rights on the page "Người dùng & phân quyền" (`/admin`).
+- `self.current_user` (services and pages) is the logged-in `CurrentUser` (`None` in tests): use it to record
+  "who did it", never to re-implement access checks. Finer rules (e.g. "Sales only edits its own requests") are
+  business rules BR-xx in `business/`, written in the business document.

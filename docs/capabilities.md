@@ -25,10 +25,10 @@ Mỗi dòng "Làm được" đều đã có sẵn thư viện và lớp dùng ch
 ## 3. Lưu dữ liệu trong ứng dụng
 | Làm được | Ở đâu |
 |---|---|
-| Lưu danh sách/bản ghi lâu dài (thêm, sửa, xoá, tìm, lọc) | `JsonFileRepository` -> `data/<chức_năng>/*.json` |
+| Lưu danh sách/bản ghi lâu dài (thêm, sửa, xoá, tìm, lọc) trong cơ sở dữ liệu PostgreSQL của ứng dụng | `SqlRepository` -> bảng `<chức_năng>__<tên>` |
 | Trạng thái và luồng duyệt (ví dụ Nháp -> Đã gửi -> Đã duyệt) | enum trong `models/` + quy tắc chuyển trạng thái trong `business/` |
-| Lịch sử thay đổi (ai sửa, lúc nào) nếu nghiệp vụ cần | thêm trường vào model + ghi log |
-| Không làm được: nối tới SQL Server / ERP / Google Sheets; nhiều người sửa cùng một dòng cùng lúc | - |
+| Lịch sử thay đổi (ai sửa, lúc nào) nếu nghiệp vụ cần | thêm trường vào model, lấy người đang đăng nhập từ `self.current_user` |
+| Không làm được: nối tới SQL Server / ERP / Google Sheets của hệ thống khác; nhiều người sửa cùng một dòng cùng lúc | - |
 
 ## 4. Giao diện (Streamlit)
 | Làm được | Ở đâu |
@@ -42,7 +42,9 @@ Mỗi dòng "Làm được" đều đã có sẵn thư viện và lớp dùng ch
 | Hộp thoại xác nhận, tab, khối gấp gọn | `st.dialog`, `st.tabs`, `st.expander` |
 | Nhiều màn hình cho một chức năng, hiện ở menu bên trái | `manifest.py` (`pages=(...)`) |
 | Khung nhật ký chạy (log) để copy khi gặp lỗi | có sẵn ở cuối mỗi trang |
-| Không làm được: đăng nhập / phân quyền, đổi logo-màu riêng cho một chức năng, giao diện mobile riêng, tự động cập nhật theo thời gian thực | - |
+| Đăng nhập; quản trị viên tạo tài khoản, nhóm người dùng và cấp quyền theo chức năng hoặc từng màn hình (quyền = quyền cá nhân + quyền của các nhóm) | có sẵn trong khung sườn: trang "Người dùng & phân quyền" |
+| Menu bên trái gấp / mở theo chức năng, chia màn hình theo nhóm con (ví dụ Sales, Phòng SO); chỉ hiện những gì người dùng được phép mở | `manifest.py` + `menu_group` của trang |
+| Không làm được: đổi logo-màu riêng cho một chức năng, giao diện mobile riêng, tự động cập nhật theo thời gian thực | - |
 
 ## 5. Tính toán, xử lý bằng Python
 Bất cứ tính toán nào Python làm được đều dùng được, miễn là viết trong `business/` (quy tắc, công thức) hoặc
@@ -74,11 +76,11 @@ Chưa làm được, và cách đi đường khác:
 ## 7. Những việc ứng dụng không làm (đừng hứa với người dùng)
 | Việc | Vì sao / thay thế |
 |---|---|
-| Đăng nhập, phân quyền theo người dùng | Không có hệ thống người dùng. Thay bằng: nhập tay tên người thực hiện / người duyệt |
 | Gửi email, gửi Zalo/Teams tự động | Không có. Thay bằng: xuất file rồi người dùng tự gửi |
 | Chạy tự động theo giờ (job định kỳ) | Ứng dụng chỉ chạy khi có người mở. Thay bằng: người dùng bấm nút khi cần |
 | Nối trực tiếp vào ERP / SQL / Google Sheets | Chưa có. Thay bằng: xuất file từ hệ thống kia rồi tải lên đây |
-| Dùng cho hàng triệu dòng dữ liệu | Dữ liệu lưu dạng file JSON; phù hợp hàng nghìn đến vài chục nghìn dòng |
+| Dùng cho hàng triệu dòng dữ liệu | Mỗi bản ghi lưu dạng một tài liệu JSON trong PostgreSQL, lọc trong Python; phù hợp đến khoảng trăm nghìn dòng mỗi bảng |
+| Đăng nhập bằng tài khoản Windows / Microsoft (SSO) | Chưa có. Tài khoản do quản trị viên tạo trong ứng dụng |
 | Chạy trên điện thoại như app cài đặt | Chỉ là web nội bộ, mở bằng trình duyệt |
 
 Cần một khả năng chưa có trong danh mục này? Không tự ý thêm thư viện: ghi vào tài liệu nghiệp vụ và hỏi người phụ

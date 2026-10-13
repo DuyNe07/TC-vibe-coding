@@ -23,26 +23,30 @@ class HomePage(BasePage):
         super().__init__("home")
 
     def render_header(self) -> None:
-        registry = get_router().registry
+        router = get_router()
         hero(
             get_settings().name,
             "Cổng tổng hợp các công cụ nội bộ. Chọn một chức năng bên dưới để bắt đầu.",
-            meta=f"{len(registry.features)} chức năng · {len(registry.groups())} nhóm",
+            meta=f"{len(router.features)} chức năng · {len(router.groups())} nhóm",
         )
 
     def render(self) -> None:
         router = get_router()
-        registry = router.registry
         self._render_load_errors()
-        if not registry.features:
-            empty_state(
-                "Chưa có chức năng nào.",
-                "Yêu cầu AI: “Đọc docs/README.md rồi triển khai chức năng theo docs/business/<tên>.md”.",
-                icon="🧩",
-            )
+        if not router.features:
+            if router.registry.features:
+                empty_state(
+                    "Bạn chưa được cấp quyền chức năng nào.", "Liên hệ quản trị viên để được cấp quyền.", icon="🔒"
+                )
+            else:
+                empty_state(
+                    "Chưa có chức năng nào.",
+                    "Yêu cầu AI: “Đọc docs/README.md rồi triển khai chức năng theo docs/business/<tên>.md”.",
+                    icon="🧩",
+                )
             return
 
-        groups = registry.groups()
+        groups = router.groups()
         search_col, group_col = st.columns([2, 3], vertical_alignment="bottom")
         keyword = search_col.text_input(
             "Tìm chức năng", key=self.key("search"), placeholder="Nhập tên hoặc mô tả...", type="search"

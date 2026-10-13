@@ -3,7 +3,7 @@
 from functools import lru_cache
 from pathlib import Path
 
-from pydantic import field_validator
+from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -19,6 +19,14 @@ class Settings(BaseSettings):
     log_level: str = "INFO"
     data_dir: Path = PROJECT_ROOT / "data"
     log_dir: Path = PROJECT_ROOT / "logs"
+
+    # Database (backend/core/db.py). APP_DATABASE_URL wins; else PostgreSQL from POSTGRES_*; else data/app.db (SQLite)
+    database_url: str = ""
+    postgres_ip: str = Field("", validation_alias="POSTGRES_IP")
+    postgres_port: int = Field(5432, validation_alias="POSTGRES_PORT")
+    postgres_db: str = Field("", validation_alias="POSTGRES_DB")
+    postgres_user: str = Field("", validation_alias="POSTGRES_USER")
+    postgres_password: str = Field("", validation_alias="POSTGRES_PASSWORD")
 
     @field_validator("data_dir", "log_dir")
     @classmethod

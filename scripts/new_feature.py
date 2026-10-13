@@ -64,7 +64,7 @@ class PingResponse(BaseResponseDTO):
 ''',
     "builders/__init__.py": '''"""Converters (BaseBuilder): file/raw -> models, models -> DTOs, models -> files."""
 ''',
-    "repositories/__init__.py": '''"""Persistence (subclass JsonFileRepository[MyEntity])."""
+    "repositories/__init__.py": '''"""Persistence (subclass SqlRepository[MyEntity]: one database table per repository)."""
 ''',
     "services/__init__.py": '''"""One file = one service class = one use case (BaseService[Request, Response])."""
 ''',

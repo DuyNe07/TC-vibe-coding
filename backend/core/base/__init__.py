@@ -13,7 +13,12 @@ from backend.core.base.base_dto import (
     UploadedFileDTO,
 )
 from backend.core.base.base_model import BaseEntity, BaseValueObject, utc_now
-from backend.core.base.base_repository import BaseRepository, InMemoryRepository, JsonFileRepository
+from backend.core.base.base_repository import (
+    BaseRepository,
+    InMemoryRepository,
+    JsonFileRepository,
+    SqlRepository,
+)
 from backend.core.base.base_service import BaseService
 
 __all__ = [
@@ -34,6 +39,7 @@ __all__ = [
     "JsonFileRepository",
     "MimeType",
     "RuleViolation",
+    "SqlRepository",
     "UploadedFileDTO",
     "utc_now",
 ]

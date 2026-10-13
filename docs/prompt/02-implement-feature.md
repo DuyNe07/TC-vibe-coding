@@ -138,7 +138,7 @@ and use that port in the health check and stop commands.
          -> <UseCase>Service().handle(request)        services/<use_case>_service.py   (one use case)
               -> builders/      file -> models, models -> DTO / Excel / Word
               -> business/      BR-xx rules + calculations + decisions (pure, no I/O)
-              -> repositories/  load/save entities (data/<key>/*.json)
+              -> repositories/  load/save entities (database, SqlRepository)
               -> models/        entities, value objects, enums
          <- <UseCase>Response  (DTO)                  dto/*.py
      <- page renders the DTO; an AppError raised anywhere is shown by BasePage and logged by the gateway
@@ -149,7 +149,8 @@ and use that port in the health check and stop commands.
    is no central list to edit, so features never conflict. Pages import only `backend.core.*`, `backend.features.<key>`
    and `backend.features.<key>.dto.*`, and never write `<Pascal>Controller()`.
 4. **Navigation = manifest.** `frontend/features/<key>/manifest.py` (`FEATURE = FeatureManifest(...)`) lists the pages;
-   the sidebar menu (feature entry + `↳` sub-pages) and the Home card are generated from it. Never edit the sidebar,
+   the sidebar menu (one collapsible block per feature; `menu_group` on a page = sub-group label) and the Home card are
+   generated from it; the menu shows only what the user may open. Never edit the sidebar,
    Home, router or `frontend/app.py`.
 5. **Traceability.** One `UC-xx` = one controller method (docstring `"""UC-xx <tên nghiệp vụ>."""`) = one service class
    in its own file. One validation `BR-xx` = one `BaseBusinessRule` subclass with `code = "BR-xx"`; one
@@ -174,7 +175,7 @@ and use that port in the health check and stop commands.
    feature.
 11. **Existing feature** (`backend/features/<key>/` already exists): do NOT scaffold, do NOT delete folders. Update in
     place to match the document. Keep stored data readable: new model fields MUST have defaults; for a removed/renamed
-    field add a small conversion in the repository (models use `extra="forbid"`). Never delete `data/<key>/`.
+    field add a small conversion in the repository (models use `extra="forbid"`). Never delete `data/<key>/` or database tables.
 12. Do not `git commit` / `git push`.
 
 ## 5. Step 1 - Preflight
@@ -266,7 +267,7 @@ Read first: `CLAUDE.md`, `docs/rules/00`-`03`, `06`, `07`, `09`, the business do
    decisions, state transitions. Pure. Write the BR unit tests now (a passing and a failing case each).
 3. **constants.py / exceptions.py** - UPPER_CASE constants only (column specs, limits); errors inherit `AppError` /
    `FileProcessingError` with Vietnamese messages.
-4. **repositories/** - `class XRepository(JsonFileRepository[X]): storage_file = "x.json"` + simple queries.
+4. **repositories/** - `class XRepository(SqlRepository[X])` (table `<key>__x`, created automatically) + simple queries.
 5. **builders/** - `BaseBuilder[T]` (inputs in `__init__`, `build()` returns output): file -> models (`ExcelReader`,
    `WordReader`, `PdfTextReader` from `backend.shared.file_io`; `normalize_key`, `parse_decimal` from
    `backend.shared.utils`; `UploadedFileDTO.ensure_valid(...)`), models -> response DTOs, models -> files (`ExcelWriter`,
@@ -278,7 +279,7 @@ Read first: `CLAUDE.md`, `docs/rules/00`-`03`, `06`, `07`, `09`, the business do
    (`def __init__(self, repository: XRepository | None = None): self.repository = repository or XRepository()`),
    `execute()` = builder -> business -> repository -> builder, raise `AppError` subclasses for expected failures, log
    steps (inputs, counts, decisions, results). Write service tests now: happy path + each error flow, repository injected
-   as `XRepository(file_path=tmp_path / "x.json")`, input files built in memory (openpyxl / python-docx).
+   as `XRepository()` (conftest gives each test an empty database), input files built in memory (openpyxl / python-docx).
 8. **controllers/<key>_controller.py** - `class <Pascal>Controller(BaseController)`, one method per UC named as in the
    contract, body exactly `return XService().handle(request)`. KEEP the scaffold `ping` (the scaffold page still uses
    it; the lead removes it later). Keep the export in `backend/features/<key>/__init__.py`.

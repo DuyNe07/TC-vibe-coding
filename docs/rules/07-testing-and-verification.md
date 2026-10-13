@@ -13,10 +13,10 @@ following `10-self-repair.md`.
 
 ## Tests you write (per feature, in `backend/features/<key>/tests/`)
 - Every business rule BR-xx: at least one passing and one failing case (`business.collect_violations`).
-- Every service: happy path + main error path, with injected repositories:
-  `ProductRepository(file_path=tmp_path / "p.json")`.
+- Every service: happy path + main error path, with injected repositories: `ProductRepository()` (each test gets its
+  own empty SQLite database from `conftest.py`) or an `InMemoryRepository` subclass.
 - Build input files in memory (openpyxl `Workbook` -> bytes -> `UploadedFileDTO`).
-- Tests never touch the real `data/` folder (`conftest.py` redirects it).
+- Tests never touch the real `data/` folder nor the real PostgreSQL database (`conftest.py` redirects both).
 
 ## What the architecture tests enforce (`tests/architecture/`, never edit)
 | Test | Rule |

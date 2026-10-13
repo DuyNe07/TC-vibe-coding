@@ -16,6 +16,12 @@ pydantic==2.13.5           # Base classes for models (entities) and DTOs
 pydantic-settings==2.15.0  # Typed settings loaded from environment / .env
 python-dotenv==1.2.3       # Loads .env files
 
+# ---- Database (backend/core/db.py, SqlRepository) --------------------------
+sqlalchemy==2.1.4          # Async engine + SQL for every repository
+greenlet==3.5.6            # Required by SQLAlchemy's asyncio extension
+asyncpg==0.32.0            # Async PostgreSQL driver (POSTGRES_* in .env)
+aiosqlite==0.22.1          # Async SQLite driver (tests, and local fallback without PostgreSQL)
+
 # ---- Data processing --------------------------------------------------------
 pandas==3.0.6              # Tabular data manipulation
 
