@@ -1,4 +1,4 @@
-"""Table yarn_costing__loss_group (starts empty). Old S4 losses C3.1..C3.3 are imported as C3 (BR-59)."""
+"""Table xuan2894__yarn_costing__loss_group (starts empty). Old S4 losses C3.1..C3.3 are imported as C3 (BR-59)."""
 
 from typing import Any
 

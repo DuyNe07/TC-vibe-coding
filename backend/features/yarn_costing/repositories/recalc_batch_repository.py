@@ -1,4 +1,4 @@
-"""Tables yarn_costing__recalc_batch and yarn_costing__audit_log."""
+"""Tables xuan2894__yarn_costing__recalc_batch and xuan2894__yarn_costing__audit_log."""
 
 from backend.features.yarn_costing.models.audit_log import AuditLog
 from backend.features.yarn_costing.models.recalc_batch import RecalcBatch

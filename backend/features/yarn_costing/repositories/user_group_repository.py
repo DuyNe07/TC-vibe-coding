@@ -1,4 +1,4 @@
-"""Table yarn_costing__user_group. Seeds the 5 fixed groups on first read (section 10)."""
+"""Table xuan2894__yarn_costing__user_group. Seeds the 5 fixed groups on first read (section 10)."""
 
 from backend.features.yarn_costing.constants import SEED_GROUPS
 from backend.features.yarn_costing.models.enums import FactoryCode, GroupCode

@@ -1,4 +1,4 @@
-"""Table yarn_costing__packaging_type."""
+"""Table xuan2894__yarn_costing__packaging_type."""
 
 from backend.features.yarn_costing.models.packaging_type import PackagingType
 from backend.features.yarn_costing.repositories.yarn_sql_repository import YarnSqlRepository

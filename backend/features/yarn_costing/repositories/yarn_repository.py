@@ -1,4 +1,4 @@
-"""Table yarn_costing__yarn: yarns with their price lines and stage cost details.
+"""Table xuan2894__yarn_costing__yarn: yarns with their price lines and stage cost details.
 
 Yarns stored by the previous version (blend_ratios + carding NSM) are converted to components when imported (BR-58)."""
 

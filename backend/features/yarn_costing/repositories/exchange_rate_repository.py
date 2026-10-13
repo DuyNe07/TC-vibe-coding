@@ -1,4 +1,4 @@
-"""Tables yarn_costing__exchange_rate (seed 25.000 from 2026-01-01) and yarn_costing__settings (trial factor 3)."""
+"""Tables xuan2894__yarn_costing__exchange_rate (seed 25.000 from 2026-01-01) and xuan2894__yarn_costing__settings (trial factor 3)."""
 
 from datetime import date
 

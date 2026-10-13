@@ -1,4 +1,4 @@
-"""Tables yarn_costing__legacy_price and yarn_costing__import_batch."""
+"""Tables xuan2894__yarn_costing__legacy_price and xuan2894__yarn_costing__import_batch."""
 
 from backend.features.yarn_costing.models.legacy_price import ImportBatch, LegacyPrice
 from backend.features.yarn_costing.repositories.yarn_sql_repository import YarnSqlRepository

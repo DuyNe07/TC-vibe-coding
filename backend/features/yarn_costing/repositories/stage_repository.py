@@ -1,4 +1,4 @@
-"""Table yarn_costing__stage. Seeds tables 4.4.1 (S4) and 4.4.2 (S1) on first read.
+"""Table xuan2894__yarn_costing__stage. Seeds tables 4.4.1 (S4) and 4.4.2 (S1) on first read.
 
 Rows stored by the previous version (C3.1 / C3.2 / C3.3, old blend slots) are converted when imported."""
 

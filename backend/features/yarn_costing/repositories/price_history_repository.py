@@ -1,4 +1,4 @@
-"""Table yarn_costing__price_history (only changed lines are recorded)."""
+"""Table xuan2894__yarn_costing__price_history (only changed lines are recorded)."""
 
 from backend.features.yarn_costing.models.price_history import PriceHistory
 from backend.features.yarn_costing.repositories.yarn_sql_repository import YarnSqlRepository
