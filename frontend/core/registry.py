@@ -48,6 +48,11 @@ class FeatureRegistry:
         registry.features.sort(key=lambda m: (m.order, m.title))
         return registry
 
+    def visible_features(self) -> list[FeatureManifest]:
+        """Features shown in the app: the sample feature disappears as soon as one real feature exists."""
+        real = [m for m in self.features if not m.sample]
+        return real or list(self.features)
+
     def get(self, key: str) -> FeatureManifest | None:
         return next((m for m in self.features if m.key == key), None)
 

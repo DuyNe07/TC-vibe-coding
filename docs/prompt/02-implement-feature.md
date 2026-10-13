@@ -179,6 +179,10 @@ and use that port in the health check and stop commands.
     place to match the document. Keep stored data readable: new model fields MUST have defaults; for a removed/renamed
     field add a small conversion in the repository (models use `extra="forbid"`). Never delete `data/<key>/` or database tables.
 12. Do not `git commit` / `git push`.
+13. **The sample feature disappears by itself.** As soon as the app has your feature, `sample_product_import` (manifest
+    `sample=True`) is hidden from the menu, Home, URLs and the permission list. Do NOT delete or edit its folders: it is
+    the reference implementation and the framework tests use it. Tell the user in the final report that the sample is
+    now hidden.
 
 ## 5. Step 1 - Preflight
 0. Open the gate: write the in-scope feature keys into `.gate-unlock` (section 3). Without it every write to code is

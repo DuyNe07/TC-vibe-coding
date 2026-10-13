@@ -20,6 +20,7 @@ class FeatureManifest:
     owner: str = ""  # person or team responsible
     order: int = 100  # smaller = shown first inside the group
     enabled: bool = True  # False hides the feature everywhere
+    sample: bool = False  # framework demo: hidden from the app as soon as one real feature exists
 
     def __post_init__(self) -> None:
         if not is_valid_feature_key(self.key):

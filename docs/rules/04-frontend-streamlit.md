@@ -110,4 +110,5 @@ of the business document (agreed with the user at the start of Prompt 2) decides
    menu as one collapsible block per feature (click the arrow to show its pages; a one-page feature is a plain link)
    and the feature card appears on Home. Set `menu_group = "Sales"` on a page class to show it under a sub-group label
    inside the block (pages of a group must be consecutive in `FEATURE.pages`). Only the pages the user may open are
-   shown. Never edit the sidebar, Home or router to add a feature.
+   shown. The sample feature (`sample=True` in its manifest) is hidden automatically as soon as one real feature
+   exists; never delete or disable it by hand. Never edit the sidebar, Home or router to add a feature.

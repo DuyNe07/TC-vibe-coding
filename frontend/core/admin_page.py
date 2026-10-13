@@ -166,7 +166,7 @@ class AdminPage(BasePage):
         from frontend.core.router import get_router
 
         catalog: dict[str, str] = {}
-        for manifest in get_router().registry.features:
+        for manifest in get_router().registry.visible_features():
             catalog[manifest.key] = f"{manifest.icon} {manifest.title} — toàn bộ"
             for page_cls in manifest.pages:
                 group = f"[{page_cls.menu_group}] " if page_cls.menu_group else ""

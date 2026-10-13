@@ -12,5 +12,6 @@ FEATURE = FeatureManifest(
     group="Chức năng mẫu",
     owner="TC Vibe Coding",
     order=900,
+    sample=True,  # hidden automatically once the app has a real feature (still tested)
     pages=(ImportPage, ProductListPage),
 )

@@ -5,6 +5,8 @@ from pathlib import Path
 from streamlit.testing.v1 import AppTest
 
 from backend.core.access import AccessManager, User
+from backend.core.current_user import page_permission
+from frontend.core.registry import FeatureRegistry
 
 APP = str(Path(__file__).resolve().parents[2] / "frontend" / "app.py")
 
@@ -28,6 +30,11 @@ def _page_links(app: AppTest) -> list[str]:
     return [link.proto.label for link in app.get("page_link")]
 
 
+def _menu_labels(manifests) -> set[str]:
+    """Sidebar labels of fully granted features: a one-page feature is one link, otherwise one link per page."""
+    return {m.title if len(m.pages) == 1 else p.title for m in manifests for p in m.pages}
+
+
 def test_wrong_password_stays_on_login() -> None:
     app = _login("u-admin", "wrong")
     assert any("Sai tên đăng nhập" in e.value for e in app.error)
@@ -36,7 +43,7 @@ def test_wrong_password_stays_on_login() -> None:
 def test_admin_page_is_reachable_by_url_only_and_renders() -> None:
     app = _login("u-admin", "u-admin")
     links = set(_page_links(app))
-    assert {"Nhập sản phẩm từ Excel", "Danh sách sản phẩm"} <= links
+    assert _menu_labels(FeatureRegistry.discover().visible_features()) <= links
     assert "Người dùng & phân quyền" not in links, "the admin page must not be in the menu (open it by URL /admin)"
 
     def admin_page() -> None:
@@ -57,9 +64,20 @@ def test_admin_page_is_reachable_by_url_only_and_renders() -> None:
 
 def test_user_only_sees_granted_pages() -> None:
     AccessManager().ensure_admin()
-    AccessManager().save_user(User(username="viewer", permissions=["sample_product_import/products"]), "pw")
+    manifest = FeatureRegistry.discover().visible_features()[0]
+    granted = manifest.pages[-1]
+    AccessManager().save_user(User(username="viewer", permissions=[page_permission(manifest.key, granted.slug)]), "pw")
     app = _login("viewer", "pw")
     assert "Quản trị" not in _menu_texts(app)
     links = _page_links(app)
-    assert "Nhập sản phẩm từ Excel (mẫu)" in links  # a feature with one allowed page: a plain link to it
-    assert "Nhập sản phẩm từ Excel" not in links and "Người dùng & phân quyền" not in links
+    assert manifest.title in links  # a feature with one allowed page: a plain link to it
+    hidden = {p.title for p in manifest.pages if p is not granted} - {manifest.title}
+    assert not hidden & set(links) and "Người dùng & phân quyền" not in links
+
+
+def test_sample_feature_is_hidden_once_a_real_feature_exists() -> None:
+    sample = FeatureRegistry.discover().get("sample_product_import")
+    assert sample is not None and sample.sample
+    real = sample.__class__(**{**sample.__dict__, "key": "real_feature", "sample": False})
+    assert FeatureRegistry(features=[sample]).visible_features() == [sample]  # alone: shown as a demo
+    assert FeatureRegistry(features=[sample, real]).visible_features() == [real]

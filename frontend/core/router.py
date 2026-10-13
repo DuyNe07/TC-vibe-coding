@@ -41,7 +41,8 @@ class Router:
         user: CurrentUser | None = None,
         admin_page: BasePage | None = None,
     ) -> None:
-        """``user=None`` (tests) registers every page; otherwise only the pages the user may open."""
+        """``user=None`` (tests) registers every page; otherwise only the pages the user may open, without the sample
+        feature once a real feature exists."""
         self.registry = registry
         self.user = user
         self.home = st.Page(home_page.run, title=home_page.title, icon=home_page.icon, url_path=HOME_URL_PATH)
@@ -50,7 +51,7 @@ class Router:
         if admin_page is not None and user is not None and user.is_admin:
             self.admin = st.Page(admin_page.run, title=admin_page.title, icon=admin_page.icon, url_path=ADMIN_URL_PATH)
         self._entries: list[PageEntry] = []
-        for manifest in registry.features:
+        for manifest in registry.features if user is None else registry.visible_features():
             base_slug = feature_url_slug(manifest.key)
             for index, page_cls in enumerate(manifest.pages):
                 if user is not None and not user.can_open_page(manifest.key, page_cls.slug):

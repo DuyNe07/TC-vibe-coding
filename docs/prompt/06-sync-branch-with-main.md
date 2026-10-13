@@ -85,7 +85,8 @@ example: branch `origin/vibe/tinh-gia-soi-1210`, commit "refactor(yarn_costing):
    to be decided with Prompt 1 / Prompt 5.
 4. **Any other framework API change** shown by the baseline failures (renamed helper, new base-class argument...): fix
    the feature side, following `docs/rules/`.
-5. Update section 11 "Implementation map" (and the plan, if it names files) of each touched feature document.
+5. The sample feature `sample_product_import` hides itself once the branch has a real feature: never delete or edit it.
+6. Update section 11 "Implementation map" (and the plan, if it names files) of each touched feature document.
 Self-repair loop of `docs/rules/10-self-repair.md` until both commands pass:
 `.venv/Scripts/python.exe scripts/check.py` -> `ALL CHECKS PASSED` and `.venv/Scripts/python.exe scripts/doctor.py` ->
 `APP IS HEALTHY`. Never weaken tests, never edit framework code to make the feature pass.
