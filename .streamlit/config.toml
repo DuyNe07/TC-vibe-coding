@@ -1,7 +1,8 @@
 # Streamlit configuration. See docs/rules/08-dependencies-and-running.md
 [server]
 headless = true              # run.ps1 opens the browser itself (on /home)
-runOnSave = true             # auto-rerun when code changes (vibe coding friendly)
+runOnSave = true             # with the file watcher on: rerun when code changes (vibe coding friendly)
+fileWatcherType = "none"     # the watcher costs ~2-3 s on the first pages (Windows); run.ps1 -Watch turns it on
 maxUploadSize = 50           # MB
 folderWatchBlacklist = [".venv", "data", "logs", "docs", ".git"]
 

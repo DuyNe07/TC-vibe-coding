@@ -7,7 +7,10 @@ powershell -ExecutionPolicy Bypass -File .\run.ps1                        # norm
 powershell -ExecutionPolicy Bypass -File .\run.ps1 -Port 8600             # other port
 powershell -ExecutionPolicy Bypass -File .\run.ps1 -NoBrowser             # do not open the browser
 powershell -ExecutionPolicy Bypass -File .\run.ps1 -Reinstall             # force reinstalling packages
+powershell -ExecutionPolicy Bypass -File .\run.ps1 -Watch                 # reload by itself when code changes
 ```
+Without `-Watch` a code change needs a restart (Ctrl+C, run again): Streamlit's file watcher costs 2-3 seconds on the
+first pages of a fresh server on Windows, so it is off by default (`.streamlit/config.toml`, `fileWatcherType`).
 (`-ExecutionPolicy Bypass` is needed because Windows blocks unsigned scripts by default.)
 
 `run.ps1` steps:

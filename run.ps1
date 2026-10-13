@@ -7,12 +7,14 @@
 # Usage (from the project folder):
 #   powershell -ExecutionPolicy Bypass -File .\run.ps1
 #   powershell -ExecutionPolicy Bypass -File .\run.ps1 -Port 8600 -NoBrowser -Reinstall
+#   powershell -ExecutionPolicy Bypass -File .\run.ps1 -Watch   # reload by itself when code changes (slower start)
 # Stop: Ctrl + C
 # =============================================================================
 param(
     [int]$Port = 0,
     [switch]$NoBrowser,
-    [switch]$Reinstall
+    [switch]$Reinstall,
+    [switch]$Watch
 )
 
 $ErrorActionPreference = "Stop"
@@ -146,7 +148,9 @@ if ($LASTEXITCODE -ne 0) { throw "Database migration failed - see the message ab
 # ---- 6. Start the app (one Streamlit process) ---------------------------------
 Write-Step "Starting app at $Url  (press Ctrl+C to stop)"
 try {
-    & $VenvPython -m streamlit run "frontend/app.py" --server.port $Port --server.headless true
+    # the file watcher (live reload of code changes) costs seconds on the first pages on Windows: only with -Watch
+    $Watcher = if ($Watch) { "auto" } else { "none" }
+    & $VenvPython -m streamlit run "frontend/app.py" --server.port $Port --server.headless true --server.fileWatcherType $Watcher
 } finally {
     if ($BrowserJob) { Remove-Job -Job $BrowserJob -Force -ErrorAction SilentlyContinue }
 }
