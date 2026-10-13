@@ -1,21 +1,13 @@
 """BR-05 mã tính giá, BR-06 trùng tên, BR-07 sửa/huỷ, BR-08 từ chối, BR-33 mã ĐCNSM, BR-44 chuẩn hoá mã,
-BR-63 lý do khoá nút "Gửi yêu cầu"."""
+BR-63 lý do khoá nút "Gửi yêu cầu" (loại đóng gói)."""
 
 import re
 from collections.abc import Sequence
 
 from backend.core.base import BaseBusiness, BaseBusinessRule
 from backend.features.yarn_costing.business.name_business import YarnNameBusiness
-from backend.features.yarn_costing.constants import (
-    INITIAL_MAX_CODE,
-    SUBMIT_BLOCK_NO_PACKAGING,
-    SUBMIT_BLOCK_NO_SALES_MEMBER,
-    SUBMIT_BLOCK_NOT_ALLOWED,
-    SUBMIT_BLOCK_NOT_AUTHENTICATED,
-    USE_CASE_PERMISSIONS,
-)
+from backend.features.yarn_costing.constants import INITIAL_MAX_CODE, SUBMIT_BLOCK_NO_PACKAGING
 from backend.features.yarn_costing.models.enums import FactoryCode, YarnStatus
-from backend.features.yarn_costing.models.user_group import UserGroup
 from backend.features.yarn_costing.models.yarn import Yarn
 
 REVISION_PATTERN = re.compile(r"\(\s*[ĐDđd]\s*C\s*N\s*S\s*M\s*(\d*)\s*\)", re.IGNORECASE)
@@ -118,20 +110,11 @@ class RequestBusiness(BaseBusiness[Yarn]):
         """BR-06."""
         DuplicateNameRule(others).check(yarn)
 
-    def submit_block_reasons(
-        self,
-        authenticated_group: UserGroup | None,
-        sales_group: UserGroup | None,
-        factory_code: str | None,
-        has_selectable_packaging: bool,
-    ) -> list[str]:
-        """BR-63: các lý do khoá nút "Gửi yêu cầu" theo thứ tự (1) xác nhận, (2) quyền, (3) loại đóng gói; rỗng = bấm được."""
-        reasons: list[str] = []
-        if authenticated_group is None:
-            no_member = sales_group is None or not sales_group.active_member_names
-            reasons.append(SUBMIT_BLOCK_NO_SALES_MEMBER if no_member else SUBMIT_BLOCK_NOT_AUTHENTICATED)
-        elif authenticated_group.code.value not in USE_CASE_PERMISSIONS["UC-15"]:
-            reasons.append(SUBMIT_BLOCK_NOT_ALLOWED.format(group=authenticated_group.name))
+    def submit_block_reasons(self, factory_code: str | None, has_selectable_packaging: bool) -> list[str]:
+        """BR-63: lý do khoá nút "Gửi yêu cầu" do dữ liệu (xưởng chưa có loại đóng gói chọn được); rỗng = bấm được.
+
+        Quyền gửi yêu cầu (vai trò Sales / Phòng SO) do BR-47 quyết định, không phụ thuộc người dùng nên không nằm ở đây.
+        """
         if factory_code and not has_selectable_packaging:
-            reasons.append(SUBMIT_BLOCK_NO_PACKAGING.format(factory=factory_code))
-        return reasons
+            return [SUBMIT_BLOCK_NO_PACKAGING.format(factory=factory_code)]
+        return []

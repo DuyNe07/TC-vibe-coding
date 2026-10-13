@@ -13,7 +13,6 @@ from backend.features.yarn_costing.dto.price_dto import PriceLineResponse, SetAc
 from backend.features.yarn_costing.exceptions import YarnNotFoundError
 from backend.features.yarn_costing.repositories.exchange_rate_repository import ExchangeRateRepository
 from backend.features.yarn_costing.repositories.recalc_batch_repository import AuditLogRepository
-from backend.features.yarn_costing.repositories.user_group_repository import UserGroupRepository
 from backend.features.yarn_costing.repositories.yarn_repository import YarnRepository
 
 
@@ -26,23 +25,15 @@ class SetAccountingCodeService(BaseService[SetAccountingCodeRequest, PriceLineRe
         self.costing = CostingBusiness()
 
     def execute(self, request: SetAccountingCodeRequest) -> PriceLineResponse:
-        a = request.actor
         yarns = self.repository.list_all()
         yarn = next((y for y in yarns if y.line(request.line_code) is not None), None)
         if yarn is None:
             raise YarnNotFoundError(f"Không tìm thấy dòng {request.line_code}.")
-        group = self.access.verify(
-            a.group_code,
-            a.access_code,
-            a.person_name,
-            UserGroupRepository().list_all(),
-            "UC-28",
-            yarn.factory_code.value,
-        )
+        self.access.ensure_allowed(self.current_user, "UC-28", yarn.factory_code.value)
         code = request.accounting_code.strip()
         self.master.require(len(code) <= ACCOUNTING_CODE_MAX, "Mã kế toán tối đa 100 ký tự.")
         old = yarn.line(request.line_code)
-        label = self.access.actor_label(group, a.person_name)
+        label = self.access.user_label(self.current_user)
         new_line = old.model_copy(  # type: ignore[union-attr]
             update={
                 "accounting_code": code or None,
@@ -57,8 +48,7 @@ class SetAccountingCodeService(BaseService[SetAccountingCodeRequest, PriceLineRe
         self.repository.store(yarns, [updated])
         AuditLogRepository().add(
             self.access.audit_entry(
-                group,
-                a.person_name,
+                self.current_user,
                 "UC-28",
                 request.line_code,
                 f"{old.accounting_code or '(trống)'} → {code or '(trống)'}",

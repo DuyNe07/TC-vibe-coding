@@ -16,7 +16,6 @@ from backend.features.yarn_costing.models.enums import PriceEvent
 from backend.features.yarn_costing.repositories.exchange_rate_repository import ExchangeRateRepository
 from backend.features.yarn_costing.repositories.price_history_repository import PriceHistoryRepository
 from backend.features.yarn_costing.repositories.recalc_batch_repository import AuditLogRepository
-from backend.features.yarn_costing.repositories.user_group_repository import UserGroupRepository
 from backend.features.yarn_costing.repositories.yarn_repository import YarnRepository
 
 
@@ -29,26 +28,18 @@ class CreateAdjustmentLineService(BaseService[CreateAdjustmentLineRequest, Price
         self.costing = CostingBusiness()
 
     def execute(self, request: CreateAdjustmentLineRequest) -> PriceLineResponse:
-        a = request.actor
         yarns = self.repository.list_all()
         yarn = next((y for y in yarns if y.yarn_code == request.yarn_code), None)
         if yarn is None:
             raise YarnNotFoundError(f"Không tìm thấy mã {request.yarn_code}.")
-        group = self.access.verify(
-            a.group_code,
-            a.access_code,
-            a.person_name,
-            UserGroupRepository().list_all(),
-            "UC-25",
-            yarn.factory_code.value,
-        )
+        self.access.ensure_allowed(self.current_user, "UC-25", yarn.factory_code.value)
         self.master.require(request.line_type in ADJUSTMENT_TYPES, "Vui lòng chọn Chiết khấu hoặc Phụ phí.")
         self.master.require(
             yarn.regular_line is not None, f"Mã {yarn.yarn_code} chưa có giá, chưa tạo được dòng CK/PP."
         )
         data = AdjustmentInput(percent=request.percent, reason=request.reason, order_ref=request.order_ref)
         self.lines.ensure_adjustment_valid(data)
-        label = self.access.actor_label(group, a.person_name)
+        label = self.access.user_label(self.current_user)
         updated, line = self.lines.new_adjustment_line(yarn, request.line_type, data, label)
         entry = self.lines.history(
             updated,
@@ -63,8 +54,7 @@ class CreateAdjustmentLineService(BaseService[CreateAdjustmentLineRequest, Price
         PriceHistoryRepository().add_many([entry])
         AuditLogRepository().add(
             self.access.audit_entry(
-                group,
-                a.person_name,
+                self.current_user,
                 "UC-25",
                 line.line_code,
                 f"{request.line_type.value} {request.percent} - {request.order_ref}",

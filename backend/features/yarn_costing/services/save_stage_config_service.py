@@ -14,7 +14,6 @@ from backend.features.yarn_costing.repositories.loss_group_repository import Los
 from backend.features.yarn_costing.repositories.price_history_repository import PriceHistoryRepository
 from backend.features.yarn_costing.repositories.recalc_batch_repository import AuditLogRepository, RecalcBatchRepository
 from backend.features.yarn_costing.repositories.stage_repository import StageRepository
-from backend.features.yarn_costing.repositories.user_group_repository import UserGroupRepository
 from backend.features.yarn_costing.repositories.yarn_repository import YarnRepository
 
 
@@ -26,10 +25,8 @@ class SaveStageConfigService(BaseService[SaveStageConfigRequest, RecalcResultRes
         self.recalc = RecalcBusiness()
 
     def execute(self, request: SaveStageConfigRequest) -> RecalcResultResponse:
-        a, factory = request.actor, request.factory_code
-        group = self.access.verify(
-            a.group_code, a.access_code, a.person_name, UserGroupRepository().list_all(), "UC-03", factory.value
-        )
+        factory = request.factory_code
+        self.access.ensure_allowed(self.current_user, "UC-03", factory.value)
         self.master.require_date_and_reason(request.effective_date, request.reason)
         old = {s.stage_code: s for s in self.repository.for_factory(factory.value)}
         rows = [r for r in request.rows if r.stage_code and r.stage_code.strip()]
@@ -58,7 +55,7 @@ class SaveStageConfigService(BaseService[SaveStageConfigRequest, RecalcResultRes
             if code not in {s.stage_code for s in stages}:
                 self.repository.delete(stage.id)
         self.repository.save_many(stages)
-        label = self.access.actor_label(group, a.person_name)
+        label = self.access.user_label(self.current_user)
         now = utc_now()
         data = load_factory_data(factory)
         batch_repo = RecalcBatchRepository()
@@ -82,8 +79,7 @@ class SaveStageConfigService(BaseService[SaveStageConfigRequest, RecalcResultRes
         batch_repo.add(batch)
         AuditLogRepository().add(
             self.access.audit_entry(
-                group,
-                a.person_name,
+                self.current_user,
                 "UC-03",
                 factory.value,
                 f"{len(stages)} công đoạn; lần tính lại {batch.batch_code}",

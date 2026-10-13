@@ -150,7 +150,7 @@ class ImportBusiness(BaseBusiness[ParsedWorkbook]):
         routes: Sequence[ProcessRoute],
         loss_groups: Sequence[LossGroup],
         yarns: Sequence[Yarn],
-        actor: str,
+        user_label: str,
         now: datetime,
     ) -> ImportPlan:
         """BR-42..BR-45 applied to every sheet, in the order of UC-34; nothing is stored here."""
@@ -185,7 +185,7 @@ class ImportBusiness(BaseBusiness[ParsedWorkbook]):
         final_groups = {g.group_key: g for g in loss_groups if g.factory_code == factory}
         if active(SHEET_LOSSES):
             groups, sheets[SHEET_LOSSES] = self._losses(
-                book, factory, is_so, stages, loss_groups, yarns, actor, sheets[SHEET_LOSSES], rejected
+                book, factory, is_so, stages, loss_groups, yarns, user_label, sheets[SHEET_LOSSES], rejected
             )
             plan = plan.model_copy(update={"loss_groups": groups})
             final_groups.update({g.group_key: g for g in groups})
@@ -193,11 +193,11 @@ class ImportBusiness(BaseBusiness[ParsedWorkbook]):
         nsm_codes: set[str] = set()
         if active(SHEET_NSM):
             sheets[SHEET_NSM], nsm_codes = self._nsm(
-                book, factory, stages, final_groups, yarns, actor, now, changed, sheets[SHEET_NSM], rejected
+                book, factory, stages, final_groups, yarns, user_label, now, changed, sheets[SHEET_NSM], rejected
             )
         if active(SHEET_PRICES):
             sheets[SHEET_PRICES], prices, codes = self._prices(
-                book, factory, yarns, nsm_codes, actor, now, changed, sheets[SHEET_PRICES], rejected
+                book, factory, yarns, nsm_codes, user_label, now, changed, sheets[SHEET_PRICES], rejected
             )
             plan = plan.model_copy(update={"legacy_prices": prices, "legacy_codes": codes})
         return plan.model_copy(
@@ -358,7 +358,7 @@ class ImportBusiness(BaseBusiness[ParsedWorkbook]):
         stages: Sequence[Stage],
         existing: Sequence[LossGroup],
         yarns: Sequence[Yarn],
-        actor: str,
+        user_label: str,
         sheet: SheetPlan,
         rejected: list,
     ) -> tuple[list[LossGroup], SheetPlan]:
@@ -419,7 +419,7 @@ class ImportBusiness(BaseBusiness[ParsedWorkbook]):
                 "level": level,
                 "losses": {} if is_secondary else self.losses.manual_losses(losses, stage_codes),
                 "components": [],
-                "updated_by": actor,
+                "updated_by": user_label,
             }
             old = groups.get(key)
             groups[key] = (
@@ -534,7 +534,7 @@ class ImportBusiness(BaseBusiness[ParsedWorkbook]):
         stages: Sequence[Stage],
         groups: dict[str, LossGroup],
         yarns: Sequence[Yarn],
-        actor: str,
+        user_label: str,
         now: datetime,
         changed: dict[str, Yarn],
         sheet: SheetPlan,
@@ -584,7 +584,7 @@ class ImportBusiness(BaseBusiness[ParsedWorkbook]):
                 "packaging_code": row.packaging_code or None,
                 "components": self.row_components(row, factory, groups.get(parsed.loss_group_key), groups),
                 "nsm": {k: v for k, v in row.nsm.items() if v > 0 and k in nsm_codes},
-                "handled_by": actor,
+                "handled_by": user_label,
                 "handled_at": now,
             }
             if old is not None and normalize_key(row.remark) == remark:
@@ -604,7 +604,7 @@ class ImportBusiness(BaseBusiness[ParsedWorkbook]):
                     yarn_code=code,
                     base_code=base,
                     revision_no=number,
-                    requested_by=actor,
+                    requested_by=user_label,
                     **fields,
                 )
                 changed[code] = yarn
@@ -615,7 +615,7 @@ class ImportBusiness(BaseBusiness[ParsedWorkbook]):
         known = list(yarns) + list(changed.values())
         for fields in pending_new:
             new_code = self.requests.next_base_code(factory, known)
-            yarn = Yarn(factory_code=factory, yarn_code=new_code, base_code=new_code, requested_by=actor, **fields)
+            yarn = Yarn(factory_code=factory, yarn_code=new_code, base_code=new_code, requested_by=user_label, **fields)
             changed[new_code] = yarn
             known.append(yarn)
             codes_in_file.add(new_code)
@@ -628,7 +628,7 @@ class ImportBusiness(BaseBusiness[ParsedWorkbook]):
         factory: FactoryCode,
         yarns: Sequence[Yarn],
         nsm_codes: set[str],
-        actor: str,
+        user_label: str,
         now: datetime,
         changed: dict[str, Yarn],
         sheet: SheetPlan,
@@ -673,7 +673,7 @@ class ImportBusiness(BaseBusiness[ParsedWorkbook]):
                     line = regular.model_copy(
                         update={
                             "accounting_code": accounting[:100],
-                            "accounting_code_by": actor,
+                            "accounting_code_by": user_label,
                             "accounting_code_at": now,
                         }
                     )

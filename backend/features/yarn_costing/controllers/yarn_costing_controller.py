@@ -79,12 +79,6 @@ from backend.features.yarn_costing.dto.request_dto import (
     YarnNameAnalysisResponse,
     YarnResponse,
 )
-from backend.features.yarn_costing.dto.user_dto import (
-    ActorResponse,
-    SaveUserGroupRequest,
-    UserGroupResponse,
-    VerifyActorRequest,
-)
 from backend.features.yarn_costing.services.add_exchange_rate_service import AddExchangeRateService
 from backend.features.yarn_costing.services.analyze_yarn_name_service import AnalyzeYarnNameService
 from backend.features.yarn_costing.services.apply_rate_version_service import ApplyRateVersionService
@@ -124,24 +118,18 @@ from backend.features.yarn_costing.services.save_packaging_types_service import 
 from backend.features.yarn_costing.services.save_process_routes_service import SaveProcessRoutesService
 from backend.features.yarn_costing.services.save_recovery_rates_service import SaveRecoveryRatesService
 from backend.features.yarn_costing.services.save_stage_config_service import SaveStageConfigService
-from backend.features.yarn_costing.services.save_user_group_service import SaveUserGroupService
 from backend.features.yarn_costing.services.save_yarn_nsm_service import SaveYarnNsmService
 from backend.features.yarn_costing.services.set_accounting_code_service import SetAccountingCodeService
 from backend.features.yarn_costing.services.suggest_nsm_service import SuggestNsmService
 from backend.features.yarn_costing.services.update_loss_group_service import UpdateLossGroupService
 from backend.features.yarn_costing.services.update_trial_factor_service import UpdateTrialFactorService
 from backend.features.yarn_costing.services.update_yarn_request_service import UpdateYarnRequestService
-from backend.features.yarn_costing.services.verify_actor_service import VerifyActorService
 
 
 class YarnCostingController(BaseController):
-    def save_user_group(self, request: SaveUserGroupRequest) -> UserGroupResponse:
-        """UC-01 Khai báo nhóm người dùng và thành viên."""
-        return SaveUserGroupService().handle(request)
-
     @cached_query
     def list_audit_log(self, request: ListAuditLogRequest) -> AuditLogListResponse:
-        """UC-02 Xem nhật ký thay đổi."""
+        """UC-02 Xem nhật ký thao tác."""
         return ListAuditLogService().handle(request)
 
     def save_stage_config(self, request: SaveStageConfigRequest) -> RecalcResultResponse:
@@ -301,10 +289,6 @@ class YarnCostingController(BaseController):
     def get_reference_data(self, request: GetReferenceDataRequest) -> ReferenceDataResponse:
         """UC-38 Lấy dữ liệu tham chiếu."""
         return GetReferenceDataService().handle(request)
-
-    def verify_actor(self, request: VerifyActorRequest) -> ActorResponse:
-        """UC-39 Xác thực người thao tác."""
-        return VerifyActorService().handle(request)
 
     @cached_query
     def analyze_yarn_name(self, request: AnalyzeYarnNameRequest) -> YarnNameAnalysisResponse:

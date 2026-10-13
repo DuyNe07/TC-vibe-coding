@@ -11,7 +11,6 @@ from backend.features.yarn_costing.dto.master_dto import (
     RecoveryRowDTO,
     StageRowDTO,
 )
-from backend.features.yarn_costing.dto.user_dto import UserGroupDTO
 from backend.features.yarn_costing.models.enums import FactoryCode
 
 
@@ -46,7 +45,6 @@ class GetReferenceDataRequest(BaseRequestDTO):
 
 
 class ReferenceDataResponse(BaseResponseDTO):
-    groups: list[UserGroupDTO] = []
     factories: list[FactoryDTO] = []
     stages: list[StageRowDTO] = []
     current_rate: RateVersionDTO | None = None

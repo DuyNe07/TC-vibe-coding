@@ -16,7 +16,13 @@ from backend.features.yarn_costing.business.name_business import YarnNameBusines
 from backend.features.yarn_costing.business.nsm_business import NsmInputBusiness
 from backend.features.yarn_costing.business.price_line_business import PriceLineBusiness
 from backend.features.yarn_costing.business.request_business import RejectReasonRule, RequestBusiness
-from backend.features.yarn_costing.exceptions import YarnValidationError
+from backend.features.yarn_costing.constants import USE_CASE_ACTIONS
+from backend.features.yarn_costing.models.access import (
+    INITIAL_IMPORT_USE_CASE,
+    ROLE_FACTORY,
+    ROLE_LABELS,
+    USE_CASE_PERMISSIONS,
+)
 from backend.features.yarn_costing.models.costing import AdjustmentInput, NsmInput
 from backend.features.yarn_costing.models.enums import (
     FactoryCode,
@@ -31,9 +37,9 @@ from backend.features.yarn_costing.models.loss_group import LossComponent, LossG
 from backend.features.yarn_costing.models.master_checks import FileCheck
 from backend.features.yarn_costing.models.packaging_type import PackagingType
 from backend.features.yarn_costing.models.rate_version import RateLine
-from backend.features.yarn_costing.models.user_group import GroupMember, UserGroup
 from backend.features.yarn_costing.models.yarn import CostBreakdown, PriceLine, Yarn, YarnComponent
 from backend.features.yarn_costing.repositories.stage_repository import StageRepository
+from backend.features.yarn_costing.tests.helpers import user_with
 
 D = Decimal
 
@@ -344,27 +350,54 @@ def test_br41_br45_file_rules() -> None:
     assert business.sheet_skip_message("Dinh muc (phut)", is_so=True) == ""
 
 
-def test_br46_br47_br48_access() -> None:
+def test_role_tables_only_use_known_roles() -> None:  # one source of truth for backend, manifest and buttons
+    codes = {c.value for c in GroupCode}
+    assert set(ROLE_LABELS) == set(GroupCode) and all(ROLE_LABELS.values())
+    assert set(ROLE_FACTORY) <= codes and set(ROLE_FACTORY.values()) <= {f.value for f in FactoryCode}
+    assert {r for roles in USE_CASE_PERMISSIONS.values() for r in roles} <= codes
+    assert set(USE_CASE_ACTIONS) <= set(USE_CASE_PERMISSIONS)  # every audited use case has its roles listed
+
+
+def test_br47_br48_access_by_role() -> None:
     access = AccessBusiness()
-    groups = [
-        UserGroup(
-            code=GroupCode.XS4,
-            name="Xưởng Sợi 4",
-            factory_code=S4,
-            access_code="XS4-2026",
-            members=[GroupMember(name="An")],
-        ),
-        UserGroup(code=GroupCode.SALES, name="Sales", access_code="SALES1", members=[GroupMember(name="Bình")]),
-    ]
-    assert access.verify("XS4", "XS4-2026", "An", groups, "UC-21", "S4").code == GroupCode.XS4
-    with pytest.raises(BusinessRuleViolation, match="nhập đúng mã nội bộ"):  # AC-28
-        access.verify("XS4", "sai", "An", groups, "UC-21")
-    with pytest.raises(BusinessRuleViolation, match="Nhóm 'Sales' không được thực hiện thao tác này."):
-        access.verify("SALES", "SALES1", "Bình", groups, "UC-21")
-    with pytest.raises(BusinessRuleViolation, match="Bạn chỉ được thao tác dữ liệu của xưởng S4."):
-        access.verify("XS4", "XS4-2026", "An", groups, "UC-21", "S1")
-    entry = access.audit_entry(groups[0], "An", "UC-28", "S4-1", "a → b", "lý do")  # BR-49
-    assert entry.action == "Nhập / sửa / xoá mã kế toán" and entry.group_code == "XS4"
+    xs4, so = user_with("XS4", username="an"), user_with("SO", username="so")
+    access.ensure_allowed(xs4, "UC-21", "S4")  # allowed role, own factory
+    access.ensure_allowed(xs4, "UC-21")  # no factory in the call: only BR-47 applies
+    for roles in (("SALES",), ("KT",), (), ("KHONG-CO",)):  # AC-28: refused role, no role, unknown role code
+        with pytest.raises(BusinessRuleViolation, match="chưa có vai trò cho thao tác 'Nhập NSM và tính giá'.*/admin"):
+            access.ensure_allowed(user_with(*roles), "UC-21", "S4")
+    with pytest.raises(BusinessRuleViolation, match="Bạn chỉ được thao tác dữ liệu của xưởng S4."):  # BR-48
+        access.ensure_allowed(xs4, "UC-21", "S1")
+    access.ensure_allowed(so, "UC-21", "S1")  # Phòng SO works on both factories
+    access.ensure_allowed(user_with("XS1", "XS4"), "UC-21", "S1")  # some role covers the factory
+    access.ensure_allowed(user_with("KT"), "UC-28", "S1")  # KT / Sales have no factory
+    access.ensure_allowed(user_with("SALES"), "UC-15", "S4")
+    access.ensure_allowed(user_with("XS1", "SALES"), "UC-15", "S4")  # the role that permits the use case has no factory
+    with pytest.raises(BusinessRuleViolation, match="chưa có vai trò cho thao tác 'Áp dụng định mức"):
+        access.ensure_allowed(xs4, "UC-04", "S4")  # SO-only use case
+    with pytest.raises(BusinessRuleViolation, match="chưa có vai trò"):
+        access.ensure_allowed(xs4, "UC-99")  # a use case missing from the table is SO only
+    access.ensure_allowed(so, "UC-99")
+    access.ensure_allowed(user_with(is_admin=True), "UC-04", "S1")  # administrators act as Phòng SO
+    access.ensure_allowed(None, "UC-04", "S1")  # system code / tests
+    access.ensure_allowed(xs4, "UC-34", "S4")  # BR-45: a factory uploads its own NSM / loss sheets...
+    with pytest.raises(BusinessRuleViolation, match="'Chuyển dữ liệu ban đầu'"):
+        access.ensure_allowed(xs4, INITIAL_IMPORT_USE_CASE, "S4")  # ...but the initial import is Phòng SO only
+    access.ensure_allowed(so, INITIAL_IMPORT_USE_CASE, "S4")
+
+
+def test_is_so_and_audit_entry_br49() -> None:
+    access = AccessBusiness()
+    assert access.is_so(None) and access.is_so(user_with(is_admin=True)) and access.is_so(user_with("SO"))
+    assert not access.is_so(user_with("XS4")) and not access.is_so(user_with())
+    kt = user_with("KT", username="dung", full_name="Dung")
+    entry = access.audit_entry(kt, "UC-28", "S4-1", "a → b", "lý do")  # BR-49
+    assert (entry.username, entry.display_name) == ("dung", "Dung")
+    assert entry.action == "Nhập / sửa / xoá mã kế toán" and entry.detail == "a → b" and entry.reason == "lý do"
+    assert access.audit_entry(user_with(username="binh"), "UC-15", "S4-2").display_name == "binh"  # no full name
+    system = access.audit_entry(None, "UC-15", "S4-2")
+    assert (system.username, system.display_name) == ("system", "Hệ thống")
+    assert access.user_label(kt) == "Dung" and access.user_label(None) == "Hệ thống"
 
 
 def test_br50_br51_br52_master_rules() -> None:
@@ -389,8 +422,6 @@ def test_br50_br51_br52_master_rules() -> None:
     with pytest.raises(BusinessRuleViolation, match="Mã đóng gói 'Type 1' đã có ở xưởng S4."):
         master.ensure_valid_packaging("S4", [pk, pk.model_copy(update={"id": "2"})])
     assert not master.is_selectable(pk, None)
-    with pytest.raises(YarnValidationError, match="Mã nội bộ phải dài từ 4 đến 20 ký tự."):
-        master.ensure_access_code("abc")
 
 
 # ---- BR-56..BR-60 (2026-09-28) --------------------------------------------------------------------------------------
@@ -566,3 +597,17 @@ def test_br60_default_packaging() -> None:
     with pytest.raises(BusinessRuleViolation):
         master.ensure_single_default([t3.model_copy(update={"active": False})])
     assert master.default_packaging([t1, t3], None) is None  # no rate yet → not selectable → empty
+
+
+def test_cached_queries_never_depend_on_the_user() -> None:  # one cached result is shared by every account
+    import inspect
+    import re
+
+    from backend.features.yarn_costing import YarnCostingController
+
+    cached = {n: m for n, m in YarnCostingController.actions().items() if getattr(m, "cached_query", False)}
+    assert len(cached) >= 19
+    for name, method in cached.items():
+        service = method.__globals__[re.search(r"return (\w+)\(\)", inspect.getsource(method)).group(1)]
+        source = inspect.getsource(inspect.getmodule(service))
+        assert "current_user" not in source and "AccessBusiness" not in source, f"{name} reads the logged-in user"

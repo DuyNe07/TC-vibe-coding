@@ -5,7 +5,6 @@ from typing import Any
 
 import streamlit as st
 
-from backend.features.yarn_costing.dto.common_dto import ActorDTO
 from backend.features.yarn_costing.dto.import_dto import ComponentImportResponse, ImportComponentFileRequest
 from frontend.core.base_page import BasePage
 from frontend.core.components import data_table, download_button, file_upload, panel, stat_row
@@ -87,9 +86,7 @@ def _result_tables(page: BasePage, result: ComponentImportResponse, key: str) ->
     )
 
 
-def render_component_import(
-    page: BasePage, feature: Any, actor: ActorDTO | None, factory: str, effective: date
-) -> None:
+def render_component_import(page: BasePage, feature: Any, factory: str, effective: date) -> None:
     """UC-45: tải file, 'Kiểm tra file' (không lưu), 'Lưu N nhóm hợp lệ' (hỏi xác nhận), kết quả + chênh lệch."""
     with panel("Khai báo thành phần sợi pha", icon="🧩"):
         st.caption(
@@ -103,7 +100,7 @@ def render_component_import(
             key=page.key(f"comp.file.{factory}"),
             help="Tối đa 60 MB, 10.000 dòng. Dùng file mẫu hoặc bản nháp đã có các cột Nhóm sợi pha, Thành phần, Tỷ lệ.",
         )
-        disabled, why = action_state(page.state, "UC-45", factory)
+        disabled, why = action_state("UC-45", factory)
         signature = (file.filename, len(file.content), factory) if file is not None else None
         if st.button(
             "Kiểm tra file",
@@ -115,7 +112,6 @@ def render_component_import(
         ):
             preview = feature.import_component_file(
                 ImportComponentFileRequest(
-                    actor=actor or ActorDTO(),
                     factory_code=factory,
                     file=file,
                     effective_date=effective,
@@ -143,7 +139,6 @@ def render_component_import(
                 help=why or ("Không có nhóm hợp lệ để lưu." if count == 0 else None),
             ):
                 request = ImportComponentFileRequest(
-                    actor=actor or ActorDTO(),
                     factory_code=factory,
                     file=file,
                     effective_date=effective,

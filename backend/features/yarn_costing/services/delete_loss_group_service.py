@@ -8,7 +8,6 @@ from backend.features.yarn_costing.dto.loss_dto import DeleteLossGroupRequest
 from backend.features.yarn_costing.exceptions import YarnNotFoundError
 from backend.features.yarn_costing.repositories.loss_group_repository import LossGroupRepository
 from backend.features.yarn_costing.repositories.recalc_batch_repository import AuditLogRepository
-from backend.features.yarn_costing.repositories.user_group_repository import UserGroupRepository
 from backend.features.yarn_costing.repositories.yarn_repository import YarnRepository
 
 
@@ -19,10 +18,8 @@ class DeleteLossGroupService(BaseService[DeleteLossGroupRequest, SaveCountRespon
         self.business = LossBusiness()
 
     def execute(self, request: DeleteLossGroupRequest) -> SaveCountResponse:
-        a, factory = request.actor, request.factory_code
-        group = self.access.verify(
-            a.group_code, a.access_code, a.person_name, UserGroupRepository().list_all(), "UC-14", factory.value
-        )
+        factory = request.factory_code
+        self.access.ensure_allowed(self.current_user, "UC-14", factory.value)
         groups = self.repository.for_factory(factory.value)
         target = next((g for g in groups if g.group_key == request.group_key), None)
         if target is None:
@@ -34,7 +31,7 @@ class DeleteLossGroupService(BaseService[DeleteLossGroupRequest, SaveCountRespon
         self.business.ensure_deletable(yarn_count, len(parents))
         self.repository.delete(target.id)
         AuditLogRepository().add(
-            self.access.audit_entry(group, a.person_name, "UC-14", f"{factory.value} / {target.group_key}", "Đã xoá")
+            self.access.audit_entry(self.current_user, "UC-14", f"{factory.value} / {target.group_key}", "Đã xoá")
         )
         self.logger.info("Loss group %s/%s deleted", factory, target.group_key)
         return SaveCountResponse(message=f"Đã xoá nhóm tiêu hao '{target.group_key}'.", saved_count=1)

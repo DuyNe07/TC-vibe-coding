@@ -15,7 +15,6 @@ from backend.features.yarn_costing.repositories.price_history_repository import 
 from backend.features.yarn_costing.repositories.rate_version_repository import RateVersionRepository
 from backend.features.yarn_costing.repositories.recalc_batch_repository import AuditLogRepository, RecalcBatchRepository
 from backend.features.yarn_costing.repositories.stage_repository import StageRepository
-from backend.features.yarn_costing.repositories.user_group_repository import UserGroupRepository
 from backend.features.yarn_costing.repositories.yarn_repository import YarnRepository
 
 
@@ -27,10 +26,8 @@ class ApplyRateVersionService(BaseService[ApplyRateVersionRequest, RecalcResultR
         self.recalc = RecalcBusiness()
 
     def execute(self, request: ApplyRateVersionRequest) -> RecalcResultResponse:
-        a, factory = request.actor, request.factory_code
-        group = self.access.verify(
-            a.group_code, a.access_code, a.person_name, UserGroupRepository().list_all(), "UC-04", factory.value
-        )
+        factory = request.factory_code
+        self.access.ensure_allowed(self.current_user, "UC-04", factory.value)
         rows = [r for r in request.rows if r.rate_code and r.rate_code.strip()]
         values = [(r.labor, r.depreciation, r.electricity, r.materials, r.overhead) for r in rows]
         negative = any(v is None or v < 0 for row in values for v in row)
@@ -54,7 +51,7 @@ class ApplyRateVersionService(BaseService[ApplyRateVersionRequest, RecalcResultR
             StageRepository().for_factory(factory.value), PackagingTypeRepository().for_factory(factory.value)
         )
         self.master.ensure_valid_rate_version(lines, required, negative, request.effective_date, request.reason)
-        label = self.access.actor_label(group, a.person_name)
+        label = self.access.user_label(self.current_user)
         version = RateVersion(
             version_code=self.master.version_code(factory.value, [v.version_code for v in self.repository.list_all()]),
             factory_code=factory,
@@ -88,8 +85,7 @@ class ApplyRateVersionService(BaseService[ApplyRateVersionRequest, RecalcResultR
         batch_repo.add(batch)
         AuditLogRepository().add(
             self.access.audit_entry(
-                group,
-                a.person_name,
+                self.current_user,
                 "UC-04",
                 f"{factory.value} / {version.version_code}",
                 f"{len(lines)} dòng định mức; lần tính lại {batch.batch_code}",

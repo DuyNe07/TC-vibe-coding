@@ -31,11 +31,11 @@ from backend.features.yarn_costing.tests.helpers import (
     S1_COMPONENTS,
     S1_NAME,
     S1_NSM,
-    SO,
     TODAY,
-    add_member,
+    acting_as,
     create_request,
     setup_factory,
+    user_with,
 )
 
 D = Decimal
@@ -64,10 +64,9 @@ def row(group: str, *pairs: object, tech: str = "") -> list:
     return cells + [None] * (len(HEADER) - len(cells))
 
 
-def run(content: bytes, commit: bool = False, actor=SO, reason: str = "Khai báo thành phần") -> object:
+def run(content: bytes, commit: bool = False, reason: str = "Khai báo thành phần") -> object:
     return ImportComponentFileService().handle(
         ImportComponentFileRequest(
-            actor=actor,
             factory_code=S1,
             file=UploadedFileDTO(filename="thanh-phan.xlsx", content=content),
             effective_date=TODAY,
@@ -80,7 +79,6 @@ def run(content: bytes, commit: bool = False, actor=SO, reason: str = "Khai báo
 def primary(label: str, material: str, losses: dict) -> None:
     CreatePrimaryLossGroupService().handle(
         CreatePrimaryLossGroupRequest(
-            actor=SO,
             factory_code=S1,
             yarn_group_label=label,
             material=material,
@@ -95,9 +93,7 @@ def priced_s1() -> str:
     primary("PE MVS", "PE", {"C1": D("0.028"), "V": D("0.02"), "MD1": D("0.002"), "MD2": D("0.002"), "MD3": D("0.002")})
     primary("CM MVS", "CM", {"V": D("0.05"), "MD1": D("0.01"), "MD2": D("0.01"), "MD3": D("0.01")})
     code = create_request(S1_NAME, S1, "Type 1")
-    SaveYarnNsmService().handle(
-        SaveYarnNsmRequest(actor=SO, yarn_code=code, components=S1_COMPONENTS, nsm=S1_NSM, save=True)
-    )
+    SaveYarnNsmService().handle(SaveYarnNsmRequest(yarn_code=code, components=S1_COMPONENTS, nsm=S1_NSM, save=True))
     return code
 
 
@@ -198,16 +194,24 @@ def test_permissions_and_locked_groups() -> None:  # AC-84
     yarn = next(y for y in yarns if y.yarn_code == code)
     locked = yarn.model_copy(update={"pending_accounting_code": "KT-1"})
     YarnRepository().store(yarns, [locked])
-    xs1 = add_member("XS1", "XS10000", "Nguyễn Văn B")
+    xs1 = user_with("XS1", username="xs1")
     content = workbook([row(GROUP, "PE MVS", 60, "CM MVS", 40)])
-    result = run(content, actor=xs1)
+    with acting_as(xs1):
+        result = run(content)
     assert result.valid_count == 0 and result.rejected_rows[0].reason.startswith(
         f"Nhóm tiêu hao '{GROUP}' đang được dùng"
     )
     assert run(content).valid_count == 1  # Phòng SO may change a locked group
-    kt = add_member("KT", "KT0000", "Kế toán A")
-    with pytest.raises(AppError, match="không được thực hiện thao tác này"):
-        run(content, actor=kt)
+    with (
+        acting_as(user_with("KT", username="kt")),
+        pytest.raises(AppError, match="chưa có vai trò cho thao tác"),
+    ):  # BR-47
+        run(content)
+    with (
+        acting_as(user_with("XS4", username="xs4")),
+        pytest.raises(AppError, match="chỉ được thao tác dữ liệu của xưởng S4"),
+    ):
+        run(content)  # BR-48: the file is for S1
 
 
 def test_draft_file_with_extra_columns() -> None:  # AC-85

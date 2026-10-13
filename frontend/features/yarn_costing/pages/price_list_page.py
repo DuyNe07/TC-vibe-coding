@@ -6,7 +6,7 @@ import streamlit as st
 
 from backend.core.gateway import gateway
 from backend.features.yarn_costing import YarnCostingController
-from backend.features.yarn_costing.dto.common_dto import ActorDTO, LineType
+from backend.features.yarn_costing.dto.common_dto import LineType
 from backend.features.yarn_costing.dto.dashboard_dto import CheckPriceAnomaliesRequest
 from backend.features.yarn_costing.dto.price_dto import (
     CreateAdjustmentLineRequest,
@@ -20,7 +20,6 @@ from backend.features.yarn_costing.dto.reference_dto import GetReferenceDataRequ
 from frontend.core.base_page import BasePage
 from frontend.core.components import data_table, download_button, panel, section_title, stat_row
 from frontend.core.formatting import format_number
-from frontend.features.yarn_costing.components.actor_block import render_actor_block
 from frontend.features.yarn_costing.components.columns import (
     ANOMALY_CONFIG,
     COMPONENT_CONFIG,
@@ -76,7 +75,6 @@ class PriceListPage(BasePage):
         feature = gateway.open(YarnCostingController)
         reference = feature.get_reference_data(GetReferenceDataRequest(factory_code=None))
         show_data_warnings(reference)
-        actor = render_actor_block(feature, self.state, reference)
         show_flash(self.state)
 
         request = self._filters(reference)
@@ -107,7 +105,7 @@ class PriceListPage(BasePage):
             self._table_actions(feature, request)
 
         if picked:
-            self._selected_line(feature, actor, str(picked[0]["Mã dòng"]))
+            self._selected_line(feature, str(picked[0]["Mã dòng"]))
 
     # ---- filters ----
     def _filters(self, reference: ReferenceDataResponse) -> ListPriceLinesRequest:
@@ -199,7 +197,7 @@ class PriceListPage(BasePage):
                 st.rerun()
 
     # ---- selected line ----
-    def _selected_line(self, feature: YarnCostingController, actor: ActorDTO | None, line_code: str) -> None:
+    def _selected_line(self, feature: YarnCostingController, line_code: str) -> None:
         detail = feature.get_yarn_detail(GetYarnDetailRequest(yarn_code=None, line_code=line_code))
         line = next((item for item in detail.lines if item.line_code == line_code), None)
         with panel(f"Dòng đang chọn: {line_code}", icon="🧾"):
@@ -236,7 +234,7 @@ class PriceListPage(BasePage):
                     empty_message="Chưa có lịch sử giá.",
                     key=self.key("d_history"),
                 )
-            self._line_actions(feature, actor, detail, line_code, line)
+            self._line_actions(feature, detail, line_code, line)
 
     def _yarn_info(self, detail: YarnDetailResponse) -> None:
         y = detail.yarn
@@ -280,7 +278,6 @@ class PriceListPage(BasePage):
     def _line_actions(
         self,
         feature: YarnCostingController,
-        actor: ActorDTO | None,
         detail: YarnDetailResponse,
         line_code: str,
         line: object,
@@ -295,19 +292,19 @@ class PriceListPage(BasePage):
         accounting_code = acc_col.text_input(
             "Mã kế toán", value=current_code, max_chars=100, key=self.key(f"acc.{line_code}")
         )
-        acc_disabled, acc_why = action_state(self.state, "UC-28", factory)
+        acc_disabled, acc_why = action_state("UC-28", factory)
         reasons.append(acc_why)
         if button_col.button(
             "Lưu mã kế toán", type="primary", key=self.key("acc_save"), disabled=acc_disabled, help=acc_why
         ):
             result = feature.set_accounting_code(
-                SetAccountingCodeRequest(actor=actor, line_code=line_code, accounting_code=accounting_code)
+                SetAccountingCodeRequest(line_code=line_code, accounting_code=accounting_code)
             )
             set_flash(self.state, result.message)
             st.rerun()
         st.caption("Để trống rồi bấm Lưu = xoá mã kế toán.")
 
-        adj_disabled, adj_why = action_state(self.state, "UC-25", factory)
+        adj_disabled, adj_why = action_state("UC-25", factory)
         reasons.append(adj_why)
         with st.expander("Thêm CK/PP", icon="➕"), st.form(self.key(f"adj_form.{yarn.yarn_code}")):
             adj_type = st.radio(
@@ -337,7 +334,6 @@ class PriceListPage(BasePage):
             if st.form_submit_button("Lưu dòng CK/PP", type="primary", disabled=adj_disabled, help=adj_why):
                 result = feature.create_adjustment_line(
                     CreateAdjustmentLineRequest(
-                        actor=actor,
                         yarn_code=yarn.yarn_code,
                         line_type=adj_type or LineType.CHIET_KHAU,
                         percent=from_percent(adj_percent),
@@ -350,7 +346,7 @@ class PriceListPage(BasePage):
 
         left, right, _ = st.columns([1, 1, 2])
         if line_type in ADJUSTMENT_TYPES:
-            del_disabled, del_why = action_state(self.state, "UC-26", factory)
+            del_disabled, del_why = action_state("UC-26", factory)
             if current_code:
                 del_disabled, del_why = True, f"Dòng {line_code} đã có mã kế toán, không xoá được."
             reasons.append(del_why)
@@ -361,11 +357,7 @@ class PriceListPage(BasePage):
                     "Xác nhận xoá dòng CK/PP",
                     f"Xoá dòng {line_code}? Lịch sử giá của dòng vẫn được giữ; số thứ tự CK/PP không dùng lại.",
                     "Xoá dòng",
-                    lambda: (
-                        feature.delete_adjustment_line(
-                            DeleteAdjustmentLineRequest(actor=actor, line_code=line_code)
-                        ).message
-                    ),
+                    lambda: feature.delete_adjustment_line(DeleteAdjustmentLineRequest(line_code=line_code)).message,
                 )
         if right.button("Mở trong Nhập NSM", icon="🧮", key=self.key("open_nsm")):
             self.state.set(OPEN_YARN_KEY, {"yarn_code": yarn.yarn_code, "factory_code": factory})

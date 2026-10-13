@@ -25,7 +25,7 @@ from backend.features.yarn_costing.dto.import_dto import (
     UnmatchedYarnDTO,
 )
 from backend.features.yarn_costing.exceptions import YarnValidationError
-from backend.features.yarn_costing.models.enums import GroupCode, ImportMode, PriceEvent, YarnStatus
+from backend.features.yarn_costing.models.enums import ImportMode, PriceEvent, YarnStatus
 from backend.features.yarn_costing.models.legacy_price import ImportBatch, SheetCount
 from backend.features.yarn_costing.models.master_checks import FileCheck
 from backend.features.yarn_costing.repositories.factory_data_loader import load_factory_data
@@ -33,7 +33,6 @@ from backend.features.yarn_costing.repositories.legacy_price_repository import I
 from backend.features.yarn_costing.repositories.loss_group_repository import LossGroupRepository
 from backend.features.yarn_costing.repositories.price_history_repository import PriceHistoryRepository
 from backend.features.yarn_costing.repositories.recalc_batch_repository import AuditLogRepository, RecalcBatchRepository
-from backend.features.yarn_costing.repositories.user_group_repository import UserGroupRepository
 from backend.features.yarn_costing.repositories.yarn_repository import YarnRepository
 
 UNMATCHED_SHEET = "Mã sợi"
@@ -53,10 +52,8 @@ class ImportComponentFileService(BaseService[ImportComponentFileRequest, Compone
         self.recalc = RecalcBusiness()
 
     def execute(self, request: ImportComponentFileRequest) -> ComponentImportResponse:
-        a, factory, file = request.actor, request.factory_code, request.file
-        group = self.access.verify(
-            a.group_code, a.access_code, a.person_name, UserGroupRepository().list_all(), "UC-45", factory.value
-        )
+        factory, file = request.factory_code, request.file
+        self.access.ensure_allowed(self.current_user, "UC-45", factory.value)
         self.importer.ensure_file_valid(  # BR-41
             FileCheck(extension_ok=file.extension in ALLOWED_EXTENSIONS, size_ok=0 < file.size_mb <= MAX_UPLOAD_MB)
         )
@@ -65,10 +62,10 @@ class ImportComponentFileService(BaseService[ImportComponentFileRequest, Compone
         data = load_factory_data(factory)
         yarn_repo = YarnRepository()
         yarns = yarn_repo.list_all()
-        label = self.access.actor_label(group, a.person_name)
+        label = self.access.user_label(self.current_user)
         now = utc_now()
         plan = self.business.plan(
-            rows, factory, data.loss_groups, data.stages, yarns, group.code == GroupCode.SO, label, now
+            rows, factory, data.loss_groups, data.stages, yarns, self.access.is_so(self.current_user), label, now
         )
         self.logger.info(
             "Component file %s (%s): %s rows, %s groups valid, %s rejected, %s yarns affected, %s unmatched",
@@ -184,8 +181,7 @@ class ImportComponentFileService(BaseService[ImportComponentFileRequest, Compone
         )
         AuditLogRepository().add(
             self.access.audit_entry(
-                group,
-                a.person_name,
+                self.current_user,
                 "UC-45",
                 f"{factory.value} / {import_id}",
                 f"{file.filename}: {len(plan.changes)} nhóm (tạo mới {created}), bị loại {len(rejected)} dòng; "

@@ -23,7 +23,8 @@ from backend.features.yarn_costing.dto.import_dto import (
     SheetResultDTO,
 )
 from backend.features.yarn_costing.exceptions import ImportFileError, YarnValidationError
-from backend.features.yarn_costing.models.enums import GroupCode, ImportMode, PriceEvent, RecoveryType
+from backend.features.yarn_costing.models.access import INITIAL_IMPORT_USE_CASE
+from backend.features.yarn_costing.models.enums import ImportMode, PriceEvent, RecoveryType
 from backend.features.yarn_costing.models.legacy_price import ImportBatch, LegacyPrice, SheetCount
 from backend.features.yarn_costing.models.master_checks import FileCheck
 from backend.features.yarn_costing.models.rate_version import RateVersion
@@ -41,7 +42,6 @@ from backend.features.yarn_costing.repositories.rate_version_repository import R
 from backend.features.yarn_costing.repositories.recalc_batch_repository import AuditLogRepository, RecalcBatchRepository
 from backend.features.yarn_costing.repositories.recovery_rate_repository import RecoveryRateRepository
 from backend.features.yarn_costing.repositories.stage_repository import StageRepository
-from backend.features.yarn_costing.repositories.user_group_repository import UserGroupRepository
 from backend.features.yarn_costing.repositories.yarn_repository import YarnRepository
 
 
@@ -55,13 +55,11 @@ class ImportWorkbookService(BaseService[ImportWorkbookRequest, ImportResultRespo
 
     def execute(self, request: ImportWorkbookRequest) -> ImportResultResponse:
         started = time.perf_counter()
-        a, factory, file = request.actor, request.factory_code, request.file
-        group = self.access.authenticate(a.group_code, a.access_code, a.person_name, UserGroupRepository().list_all())
-        self.access.ensure_permission(group, "UC-34")
-        self.access.ensure_factory_scope(group, factory.value)
+        factory, file = request.factory_code, request.file
+        self.access.ensure_allowed(self.current_user, "UC-34", factory.value)
         if request.mode == ImportMode.BAN_DAU:
-            self.access.ensure_initial_import_allowed(group)
-        is_so = group.code == GroupCode.SO
+            self.access.ensure_allowed(self.current_user, INITIAL_IMPORT_USE_CASE, factory.value)  # BR-45
+        is_so = self.access.is_so(self.current_user)
         self.importer.ensure_file_valid(
             FileCheck(extension_ok=file.extension in ALLOWED_EXTENSIONS, size_ok=0 < file.size_mb <= MAX_UPLOAD_MB)
         )
@@ -86,7 +84,7 @@ class ImportWorkbookService(BaseService[ImportWorkbookRequest, ImportResultRespo
         if problems:
             raise ImportFileError(" ".join(problems))
         yarns = self.repository.list_all()
-        label = self.access.actor_label(group, a.person_name)
+        label = self.access.user_label(self.current_user)
         now = utc_now()
         plan = self.importer.plan(
             book,
@@ -201,8 +199,7 @@ class ImportWorkbookService(BaseService[ImportWorkbookRequest, ImportResultRespo
         priced = outcome.yarn_count - outcome.failed_yarn_count
         AuditLogRepository().add(
             self.access.audit_entry(
-                group,
-                a.person_name,
+                self.current_user,
                 "UC-34",
                 f"{factory.value} / {import_id}",
                 f"{file.filename}: tạo {created}, cập nhật {updated}, bị loại {bad}; lần tính lại {batch.batch_code}",

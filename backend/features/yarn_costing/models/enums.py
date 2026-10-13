@@ -9,11 +9,13 @@ class FactoryCode(StrEnum):
 
 
 class GroupCode(StrEnum):
+    """Role codes of the app (ticked per user on /admin, permission key yarn_costing/@CODE)."""
+
     SALES = "SALES"
     XS1 = "XS1"
     XS4 = "XS4"
-    SO = "SO"
     KT = "KT"
+    SO = "SO"
 
 
 class YarnStatus(StrEnum):

@@ -37,17 +37,6 @@ LEGACY_SLOT_LINES: Final = {
 COL_REMARK: Final = "REMARK"
 REMARK_SCREEN_ONLY: Final = "Có thành phần chỉ sửa được trên màn hình"
 
-# ---- 4.1 / section 10: seeded user groups ----------------------------------------------------------------------------
-# (code, name, factory, access code, members)
-SEED_GROUPS: Final = (
-    ("SALES", "Sales", None, "SALES0000", ()),
-    ("XS1", "Xưởng Sợi 1", "S1", "XS10000", ()),
-    ("XS4", "Xưởng Sợi 4", "S4", "XS40000", ()),
-    ("SO", "Phòng SO", None, "SO0000", ("Phòng SO",)),
-    ("KT", "Kế toán", None, "KT0000", ()),
-)
-GROUP_NAMES: Final = {code: name for code, name, *_ in SEED_GROUPS}
-
 # ---- 4.4.1 / 4.4.2 seeded stage configuration -----------------------------------------------------------------------
 # (sequence, code, name, stage_group, recovery, blend_slot, merge, secondary_method, cumulative, varies_with_count,
 #  max_passes: None = not a carding line)
@@ -118,38 +107,10 @@ SEED_TRIAL_FACTOR: Final = Decimal(3)
 SEED_EXCHANGE_RATE: Final = Decimal(25000)
 SEED_EXCHANGE_RATE_DATE: Final = "2026-01-01"
 
-# ---- BR-47: permissions per use case (SO may run every mutating use case) --------------------------------------------
-FACTORY_GROUPS: Final = ("XS1", "XS4")
-USE_CASE_PERMISSIONS: Final = {
-    "UC-01": ("SO",),
-    "UC-03": ("SO",),
-    "UC-04": ("SO",),
-    "UC-05": ("SO",),
-    "UC-06": ("SO",),
-    "UC-07": ("SO",),
-    "UC-08": ("SO",),
-    "UC-09": ("SO",),
-    "UC-43": ("SO",),
-    "UC-45": ("SO", "XS1", "XS4"),
-    "UC-11": ("SO", *FACTORY_GROUPS),
-    "UC-12": ("SO", *FACTORY_GROUPS),
-    "UC-13": ("SO", *FACTORY_GROUPS),
-    "UC-14": ("SO", *FACTORY_GROUPS),
-    "UC-15": ("SO", "SALES"),
-    "UC-16": ("SO", "SALES"),
-    "UC-17": ("SO", "SALES"),
-    "UC-18": ("SO", *FACTORY_GROUPS),
-    "UC-20": ("SO", *FACTORY_GROUPS),
-    "UC-21": ("SO", *FACTORY_GROUPS),
-    "UC-23": ("SO", *FACTORY_GROUPS),
-    "UC-24": ("SO", *FACTORY_GROUPS),
-    "UC-25": ("SO", *FACTORY_GROUPS),
-    "UC-26": ("SO", *FACTORY_GROUPS),
-    "UC-28": ("SO", "KT", *FACTORY_GROUPS),
-    "UC-34": ("SO", *FACTORY_GROUPS),
-}
+# ---- BR-47 / BR-49: names of the use cases that change data (roles per use case: models/access.py) ----------------
+SYSTEM_USERNAME: Final = "system"  # BR-49: who is recorded when no user is logged in (system code, tests)
+SYSTEM_DISPLAY_NAME: Final = "Hệ thống"
 USE_CASE_ACTIONS: Final = {
-    "UC-01": "Khai báo nhóm người dùng",
     "UC-03": "Sửa cấu hình công đoạn",
     "UC-04": "Áp dụng định mức chi phí/phút",
     "UC-05": "Khai báo loại đóng gói",
@@ -174,6 +135,7 @@ USE_CASE_ACTIONS: Final = {
     "UC-26": "Xoá dòng CK/PP",
     "UC-28": "Nhập / sửa / xoá mã kế toán",
     "UC-34": "Nhập dữ liệu từ file",
+    "UC-34-BAN-DAU": "Chuyển dữ liệu ban đầu",
 }
 
 # ---- Tolerances and limits -----------------------------------------------------------------------------------------
@@ -245,13 +207,8 @@ DATA_FILE_UNREADABLE_MESSAGE = (
     "Không đọc được dữ liệu '{file_name}'. Vui lòng chép lại file này từ app cũ (thư mục data\\yarn_costing)."
 )
 
-# BR-63: reasons shown next to the disabled "Gửi yêu cầu" button (Screen 2)
-SUBMIT_BLOCK_NOT_AUTHENTICATED = (
-    "Bạn chưa xác nhận người thao tác. Vui lòng chọn nhóm, nhập mã nội bộ và chọn tên ở đầu trang."
-)
-SUBMIT_BLOCK_NO_SALES_MEMBER = "Nhóm Sales chưa có thành viên. Vui lòng báo Phòng SO thêm tên."
-SUBMIT_BLOCK_NOT_ALLOWED = "Nhóm '{group}' không được gửi yêu cầu tính giá."
-SUBMIT_BLOCK_NO_PACKAGING = (
+# BR-63: reason shown next to the disabled "Gửi yêu cầu" button (Screen 2)
+SUBMIT_BLOCK_NO_PACKAGING: Final = (
     "Xưởng {factory} chưa có loại đóng gói chọn được. Vui lòng báo Phòng SO khai báo loại đóng gói và định mức."
 )
 

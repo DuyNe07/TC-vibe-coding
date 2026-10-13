@@ -4,7 +4,6 @@ from datetime import date, datetime
 from decimal import Decimal
 
 from backend.core.base import BaseDTO, BaseRequestDTO, BaseResponseDTO
-from backend.features.yarn_costing.dto.common_dto import ActorDTO
 from backend.features.yarn_costing.models.enums import FactoryCode, LossGroupLevel, Technology
 
 
@@ -45,7 +44,6 @@ class LossGroupListResponse(BaseResponseDTO):
 
 
 class CreatePrimaryLossGroupRequest(BaseRequestDTO):
-    actor: ActorDTO
     factory_code: FactoryCode
     yarn_group_label: str
     material: str = ""
@@ -54,7 +52,6 @@ class CreatePrimaryLossGroupRequest(BaseRequestDTO):
 
 
 class CreateSecondaryLossGroupRequest(BaseRequestDTO):
-    actor: ActorDTO
     factory_code: FactoryCode
     yarn_group_label: str
     material: str = ""
@@ -64,7 +61,6 @@ class CreateSecondaryLossGroupRequest(BaseRequestDTO):
 
 
 class UpdateLossGroupRequest(BaseRequestDTO):
-    actor: ActorDTO
     factory_code: FactoryCode
     group_key: str
     material: str = ""
@@ -76,7 +72,6 @@ class UpdateLossGroupRequest(BaseRequestDTO):
 
 
 class DeleteLossGroupRequest(BaseRequestDTO):
-    actor: ActorDTO
     factory_code: FactoryCode
     group_key: str
 

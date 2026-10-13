@@ -14,7 +14,6 @@ from backend.features.yarn_costing.repositories.packaging_type_repository import
 from backend.features.yarn_costing.repositories.price_history_repository import PriceHistoryRepository
 from backend.features.yarn_costing.repositories.rate_version_repository import RateVersionRepository
 from backend.features.yarn_costing.repositories.recalc_batch_repository import AuditLogRepository, RecalcBatchRepository
-from backend.features.yarn_costing.repositories.user_group_repository import UserGroupRepository
 from backend.features.yarn_costing.repositories.yarn_repository import YarnRepository
 
 
@@ -26,10 +25,8 @@ class SavePackagingTypesService(BaseService[SavePackagingTypesRequest, RecalcRes
         self.recalc = RecalcBusiness()
 
     def execute(self, request: SavePackagingTypesRequest) -> RecalcResultResponse:
-        a, factory = request.actor, request.factory_code
-        group = self.access.verify(
-            a.group_code, a.access_code, a.person_name, UserGroupRepository().list_all(), "UC-05", factory.value
-        )
+        factory = request.factory_code
+        self.access.ensure_allowed(self.current_user, "UC-05", factory.value)
         old = {p.code: p for p in self.repository.for_factory(factory.value)}
         rows = [r for r in request.rows if r.code and r.code.strip()]
         items = []
@@ -77,7 +74,7 @@ class SavePackagingTypesService(BaseService[SavePackagingTypesRequest, RecalcRes
         self.repository.save_many(items)
         version = RateVersionRepository().current(factory.value)
         missing = [i.code for i in items if version is None or version.line_for(i.code) is None]
-        label = self.access.actor_label(group, a.person_name)
+        label = self.access.user_label(self.current_user)
         batch = None
         outcome_count = failed = 0
         if changed_minutes:
@@ -102,8 +99,7 @@ class SavePackagingTypesService(BaseService[SavePackagingTypesRequest, RecalcRes
             outcome_count, failed = outcome.yarn_count, outcome.failed_yarn_count
         AuditLogRepository().add(
             self.access.audit_entry(
-                group,
-                a.person_name,
+                self.current_user,
                 "UC-05",
                 factory.value,
                 f"Loại đóng gói: {', '.join(sorted(new_codes))}",

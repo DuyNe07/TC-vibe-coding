@@ -146,20 +146,22 @@ class PriceLineBusiness(BaseBusiness[Yarn]):
         regular_cost = stored_cost(result.cost)
         lines = list(yarn.lines)
         history: list[PriceHistory] = []
-        actor = str(ctx.get("changed_by", ""))
+        user_label = str(ctx.get("changed_by", ""))
         ctx = {**ctx, "effective_date": effective_date}
         pending = yarn.pending_accounting_code
-        regular = PriceLine(line_code=yarn.yarn_code, line_type=LineType.THUONG, cost=regular_cost, created_by=actor)
+        regular = PriceLine(
+            line_code=yarn.yarn_code, line_type=LineType.THUONG, cost=regular_cost, created_by=user_label
+        )
         if pending and yarn.regular_line is None:
             regular = regular.model_copy(
-                update={"accounting_code": pending, "accounting_code_by": actor, "accounting_code_at": now}
+                update={"accounting_code": pending, "accounting_code_by": user_label, "accounting_code_at": now}
             )
         self._set_line(lines, regular, history, yarn, event, **ctx)
         trial = PriceLine(
             line_code=self.trial_code(yarn),
             line_type=LineType.THI_NGHIEM,
             cost=self.trial_cost(regular_cost, trial_factor),
-            created_by=actor,
+            created_by=user_label,
         )
         self._set_line(lines, trial, history, yarn, event, **ctx)
         for line in [x for x in lines if x.line_type in ADJUSTMENT_TYPES]:
@@ -201,7 +203,7 @@ class PriceLineBusiness(BaseBusiness[Yarn]):
         return yarn.model_copy(update={"lines": lines}), history
 
     def new_adjustment_line(
-        self, yarn: Yarn, line_type: LineType, data: AdjustmentInput, actor: str
+        self, yarn: Yarn, line_type: LineType, data: AdjustmentInput, user_label: str
     ) -> tuple[Yarn, PriceLine]:
         """BR-31: mã = mã dòng Thường + ' (CKn)' / ' (PPn)', n = số lớn nhất đã dùng + 1 (không dùng lại)."""
         regular = yarn.regular_line
@@ -215,7 +217,7 @@ class PriceLineBusiness(BaseBusiness[Yarn]):
             adjustment_reason=data.reason.strip(),
             order_ref=data.order_ref.strip(),
             cost=self.adjustment_cost(regular.cost, line_type, data.percent),
-            created_by=actor,
+            created_by=user_label,
         )
         counter = {"max_ck_no": number} if is_discount else {"max_pp_no": number}
         return yarn.model_copy(update={"lines": [*yarn.lines, line], **counter}), line

@@ -4,7 +4,6 @@ from datetime import date, datetime
 from decimal import Decimal
 
 from backend.core.base import BaseDTO, BaseRequestDTO, BaseResponseDTO, FileDownloadDTO, UploadedFileDTO
-from backend.features.yarn_costing.dto.common_dto import ActorDTO
 from backend.features.yarn_costing.models.enums import FactoryCode, ImportMode
 
 
@@ -13,7 +12,6 @@ class DownloadTemplateRequest(BaseRequestDTO):
 
 
 class ImportWorkbookRequest(BaseRequestDTO):
-    actor: ActorDTO
     factory_code: FactoryCode
     mode: ImportMode
     cutoff_date: date
@@ -109,7 +107,6 @@ class DownloadComponentTemplateRequest(BaseRequestDTO):
 
 
 class ImportComponentFileRequest(BaseRequestDTO):
-    actor: ActorDTO
     factory_code: FactoryCode
     file: UploadedFileDTO
     effective_date: date | None = None

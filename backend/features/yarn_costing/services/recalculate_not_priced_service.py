@@ -11,7 +11,6 @@ from backend.features.yarn_costing.models.enums import PriceEvent
 from backend.features.yarn_costing.repositories.factory_data_loader import load_factory_data
 from backend.features.yarn_costing.repositories.price_history_repository import PriceHistoryRepository
 from backend.features.yarn_costing.repositories.recalc_batch_repository import AuditLogRepository, RecalcBatchRepository
-from backend.features.yarn_costing.repositories.user_group_repository import UserGroupRepository
 from backend.features.yarn_costing.repositories.yarn_repository import YarnRepository
 
 
@@ -23,16 +22,14 @@ class RecalculateNotPricedService(BaseService[RecalculateNotPricedRequest, Recal
         self.recalc = RecalcBusiness()
 
     def execute(self, request: RecalculateNotPricedRequest) -> RecalcResultResponse:
-        a, factory = request.actor, request.factory_code
-        group = self.access.verify(
-            a.group_code, a.access_code, a.person_name, UserGroupRepository().list_all(), "UC-43", factory.value
-        )
+        factory = request.factory_code
+        self.access.ensure_allowed(self.current_user, "UC-43", factory.value)
         self.master.require_date_and_reason(request.effective_date, request.reason)
         yarns = self.repository.list_all()
         waiting = self.recalc.not_priced(yarns, factory)
         self.logger.info("Recalculate not priced yarns of %s: %s waiting", factory, len(waiting))
         self.master.require(bool(waiting), f"Xưởng {factory.value} không có mã nào đang 'Chưa tính được'.")
-        label = self.access.actor_label(group, a.person_name)
+        label = self.access.user_label(self.current_user)
         batch_repo = RecalcBatchRepository()
         codes = [b.batch_code for b in batch_repo.list_all()]
         outcome = self.recalc.recalculate_not_priced(
@@ -53,8 +50,7 @@ class RecalculateNotPricedService(BaseService[RecalculateNotPricedRequest, Recal
         priced = outcome.yarn_count - outcome.failed_yarn_count
         AuditLogRepository().add(
             self.access.audit_entry(
-                group,
-                a.person_name,
+                self.current_user,
                 "UC-43",
                 factory.value,
                 f"Tính lại {outcome.yarn_count} mã chưa tính được: {priced} mã đã có giá",

@@ -6,7 +6,7 @@
 | Icon (Biểu tượng) | 🧵 |
 | Owner (Người phụ trách) | Phòng SO |
 | Status (Trạng thái) | Implemented |
-| Last updated | 2026-09-29 |
+| Last updated | 2026-10-13 |
 
 ## 1. Goal (Mục tiêu)
 Hiện nay giá sợi của Xưởng Sợi 1 (S1) và Sợi 4 (S4) được tính trên hai file Excel có macro: Sales gửi yêu cầu qua
@@ -20,13 +20,17 @@ Chức năng được chuyển từ app cũ sang app mới (chỉ có chức nă
 (mục 5.6) và từ đó chỉ dùng app mới.
 
 ## 2. Actors (Người dùng)
-| Actor | Description |
+Mỗi người dùng app bằng **tài khoản đăng nhập riêng** của ứng dụng. Mỗi actor dưới đây là một **vai trò** của chức năng
+(mã SALES, XS1, XS4, KT, SO): quản trị viên tích vai trò cho từng tài khoản hoặc nhóm tài khoản ở trang `/admin` (một cột cho mỗi
+vai trò). Một tài khoản có thể có nhiều vai trò. Quản trị viên làm được như Phòng SO mà không cần tích vai trò.
+
+| Actor (vai trò) | Description |
 |---|---|
-| Sales | Tạo yêu cầu tính giá cho sợi mới (chọn xưởng, nhập tên sợi, chọn loại đóng gói); sửa / huỷ yêu cầu khi xưởng chưa xử lý; xem trạng thái và giá |
-| Xưởng S1, Xưởng S4 | Mỗi xưởng chỉ thao tác dữ liệu của xưởng mình: từ chối yêu cầu; nhập NSM + tỷ lệ pha và tính giá; tạo bản ĐCNSM, dòng CK/PP; khai báo và sửa tiêu hao (khi chưa bị khoá); nhập / sửa / xoá mã kế toán; tải file cập nhật NSM và tiêu hao |
-| Phòng SO | Làm được mọi thao tác của hai xưởng cho cả S1 và S4; ngoài ra: khai báo nhóm người dùng; dữ liệu nền (cấu hình công đoạn, định mức chi phí/phút, loại đóng gói, hồi phế, quy trình công nghệ, tỷ giá, hệ số thí nghiệm); sửa tiêu hao đã bị khoá; chuyển dữ liệu cũ từ file Excel |
-| Kế toán | Nhập / sửa / xoá mã kế toán cho các dòng bảng giá |
-| Người xem | Bất kỳ ai mở app: xem mọi màn hình, tra cứu, xuất Excel, xem dashboard mà không cần xác thực |
+| Sales (SALES) | Tạo yêu cầu tính giá cho sợi mới (chọn xưởng, nhập tên sợi, chọn loại đóng gói); sửa / huỷ yêu cầu khi xưởng chưa xử lý; xem trạng thái và giá |
+| Xưởng S1 (XS1), Xưởng S4 (XS4) | Mỗi xưởng chỉ thao tác dữ liệu của xưởng mình: từ chối yêu cầu; nhập NSM + tỷ lệ pha và tính giá; tạo bản ĐCNSM, dòng CK/PP; khai báo và sửa tiêu hao (khi chưa bị khoá); nhập / sửa / xoá mã kế toán; tải file cập nhật NSM và tiêu hao |
+| Phòng SO (SO) | Làm được mọi thao tác của hai xưởng cho cả S1 và S4; ngoài ra: dữ liệu nền (cấu hình công đoạn, định mức chi phí/phút, loại đóng gói, hồi phế, quy trình công nghệ, tỷ giá, hệ số thí nghiệm); sửa tiêu hao đã bị khoá; chuyển dữ liệu cũ từ file Excel |
+| Kế toán (KT) | Nhập / sửa / xoá mã kế toán cho các dòng bảng giá |
+| Người xem | Bất kỳ tài khoản nào được cấp quyền mở chức năng (không cần vai trò): xem mọi màn hình, tra cứu, xuất Excel, xem dashboard, xem nhật ký thao tác |
 
 ## 3. Glossary (Thuật ngữ)
 | Term | Meaning |
@@ -67,25 +71,22 @@ Chức năng được chuyển từ app cũ sang app mới (chỉ có chức nă
 | File khai báo thành phần | File Excel khai báo thành phần + tỷ lệ cho nhiều nhóm tiêu hao sợi pha của một xưởng cùng lúc (5.7, UC-45) |
 | Dây chuyền tương đương | Hai dây chuyền chải thô cùng công nghệ, chạy thay nhau được, dùng được tiêu hao chải thô của nhau (BR-64): S4 C2 ↔ C3; S1 C1 ↔ C2. S4 C1 (cotton) không có dây chuyền tương đương |
 | Ngày hiệu lực | Ngày áp dụng của giá sau một lần tính lại toàn bộ, do Phòng SO chọn |
-| Xác thực thao tác | Chọn nhóm người dùng → nhập mã nội bộ của nhóm → chọn tên mình; không phải đăng nhập, chỉ để biết ai thao tác |
+| Vai trò | Quyền của một actor trong chức năng (SALES, XS1, XS4, KT, SO); quản trị viên tích cho từng tài khoản ở trang `/admin`; ai thao tác là tài khoản đang đăng nhập |
 
 ## 4. Data (Dữ liệu)
 
-### 4.1 Nhóm người dùng (User group)
-| Field | Type | Required | Description | Example |
-|---|---|---|---|---|
-| code | list of values: SALES / XS1 / XS4 / SO / KT (cố định, không thêm/xoá) | Yes | Mã nhóm: Sales, Xưởng S1, Xưởng S4, Phòng SO, Kế toán | XS4 |
-| name | text ≤ 100 | Yes | Tên hiển thị của nhóm | Xưởng Sợi 4 |
-| factory_code | list of values: S1 / S4 / để trống | No | Xưởng mà nhóm được thao tác: XS1 = S1, XS4 = S4; các nhóm khác để trống | S4 |
-| access_code | text 4-20 ký tự | Yes | Mã nội bộ của nhóm, nhập khi thao tác | XS4-2026 |
-| active | yes-no (default Yes) | Yes | Nhóm còn được thao tác không | Có |
+### 4.1 Vai trò của chức năng (Role)
+Không lưu trong cơ sở dữ liệu: 5 vai trò cố định, khai báo cùng chức năng (mã và tên hiển thị lấy từ cùng một danh sách trong code);
+quản trị viên tích vai trò cho tài khoản / nhóm tài khoản ở trang `/admin` (khoá quyền `yarn_costing/@<mã>`).
 
-### 4.2 Thành viên nhóm (Group member)
 | Field | Type | Required | Description | Example |
 |---|---|---|---|---|
-| group_code | list of values (mã nhóm 4.1) | Yes | Nhóm của người này | XS4 |
-| name | text ≤ 100, duy nhất trong nhóm | Yes | Tên hiện trong danh sách chọn khi xác thực | Nguyễn Văn A |
-| active | yes-no (default Yes) | Yes | Còn hoạt động không | Có |
+| code | list of values: SALES / XS1 / XS4 / KT / SO (cố định) | Yes | Mã vai trò | XS4 |
+| label | text | Yes | Tên hiện ở trang `/admin`: Sales, Xưởng S1, Xưởng S4, Kế toán, Phòng SO | Xưởng S4 |
+| factory_code | list of values: S1 / S4 / để trống | No | Xưởng mà vai trò được thao tác: XS1 = S1, XS4 = S4; các vai trò khác để trống (cả hai xưởng) | S4 |
+
+### 4.2 Thành viên nhóm (đã bỏ)
+Đã bỏ (2026-10-13): người thao tác là tài khoản đăng nhập của app, không còn danh sách thành viên riêng của chức năng.
 
 ### 4.3 Xưởng (Factory) - dữ liệu cố định
 | Field | Type | Required | Description | Example |
@@ -354,7 +355,7 @@ Một dòng mỗi khi giá của một dòng bảng giá thay đổi (giữ giá
 |---|---|---|---|
 | line_code | text | Dòng giá | S4-2020 |
 | changed_at | datetime | Lúc thay đổi | |
-| changed_by | text | Người thao tác (nhóm - tên) | Xưởng S4 - Nguyễn Văn A |
+| changed_by | text | Họ tên của tài khoản đăng nhập thực hiện ("Hệ thống" khi không có tài khoản) | Nguyễn Văn A |
 | event | list of values: Tính lần đầu / Sửa NSM / Đổi định mức / Đổi dữ liệu nền / Sửa tiêu hao / Đổi hệ số thí nghiệm / Nhập từ file / Tính lại mã chưa tính được | Nguyên nhân | Đổi định mức |
 | batch_id | text | Lần tính lại toàn bộ (nếu có) | TL-S4-005 |
 | effective_date | date | Ngày hiệu lực của giá mới | 2026-01-01 |
@@ -398,7 +399,8 @@ Giá đọc từ sheet "4. Bang gia da tinh" khi nhập file, để so với gi�
 | Field | Type | Description | Example |
 |---|---|---|---|
 | at | datetime | Lúc thao tác | |
-| group_code, person_name | text | Nhóm và tên người thao tác | XS4, Nguyễn Văn A |
+| username | text | Tên đăng nhập của tài khoản thao tác ("system" khi không có tài khoản) | nva |
+| display_name | text | Họ tên của tài khoản thao tác ("Hệ thống" khi không có tài khoản) | Nguyễn Văn A |
 | action | text | Thao tác (tên UC) | Sửa nhóm tiêu hao |
 | object_ref | text | Đối tượng | S4 / TR (65/35) |
 | detail | text | Nội dung thay đổi (trước → sau) | W: 1,00% → 1,20% |
@@ -474,16 +476,17 @@ xưởng đó (để người dùng sửa rồi tải lên lại). Sheet "4. Ban
 - **Đích:** thư mục dữ liệu của chức năng trong app mới `data\yarn_costing\` (thư mục dự án app mới).
 - **Cách làm (Phòng SO):** 1. Ngừng nhập liệu Tính giá sợi ở app cũ. 2. Tắt app mới nếu đang chạy. 3. Chép nguyên 15 file từ
   nguồn sang đích (thay file cùng tên nếu có). 4. Mở app mới. Từ đó chỉ dùng app mới; app cũ không còn dùng cho Tính giá sợi.
-- **Dữ liệu được giữ nguyên hoàn toàn (BR-61):** nhóm người dùng, mã nội bộ, thành viên; cấu hình công đoạn, phiên bản định
+- **Dữ liệu được giữ nguyên hoàn toàn (BR-61):** cấu hình công đoạn, phiên bản định
   mức, loại đóng gói (cả loại mặc định), hồi phế, quy trình, tỷ giá, hệ số thí nghiệm; nhóm tiêu hao; mã sợi / bản NSM kèm
   thành phần, NSM, trạng thái; dòng giá, mã kế toán; chi tiết tính giá; lịch sử giá; các lần tính lại; các lần nhập file; giá cũ
   đối chiếu; nhật ký thay đổi. App mới **không** tính lại giá khi đọc dữ liệu chép sang; dãy mã tính giá tiếp tục từ số lớn
-  nhất đã có (BR-05).
+  nhất đã có (BR-05). File `user_groups` của app cũ không còn được đọc (từ 2026-10-13 người dùng là tài khoản đăng nhập
+  của app); dòng nhật ký cũ có nhóm + tên được đọc thành họ tên "<nhóm> - <tên>" (không có tên đăng nhập).
 - **Dữ liệu lưu theo cách cũ:** một phần dữ liệu app cũ còn lưu theo cách trước ngày 2026-09-28 (công đoạn C3.1 / C3.2 / C3.3,
   tỷ lệ pha theo ô). App mới tự hiểu và chuyển sang cách mới (C3 nhiều lượt, thành phần nguyên liệu) khi đọc, cùng cách app cũ
   đã làm, không xoá dữ liệu, không đổi giá.
 - **Số liệu tham khảo ngày 2026-09-29** (để kiểm tra sau khi chép): 3.435 mã sợi / bản NSM, 1.463 nhóm tiêu hao, 10 loại đóng
-  gói, 80 quy trình, 5 nhóm người dùng, 3.258 dòng giá cũ đối chiếu, 4.066 dòng lịch sử giá, 2 lần nhập file, 2 lần tính lại,
+  gói, 80 quy trình, 3.258 dòng giá cũ đối chiếu, 4.066 dòng lịch sử giá, 2 lần nhập file, 2 lần tính lại,
   7 dòng nhật ký.
 - **Chép lỗi:** nếu một file bị thiếu hoặc hỏng, màn hình không bị dừng; màn hình hiện cảnh báo ghi rõ tên file không đọc được
   và Phòng SO chép lại file đó từ app cũ.
@@ -522,24 +525,17 @@ xưởng đó (để người dùng sửa rồi tải lên lại). Sheet "4. Ban
   các mã không ghép được thành phần (BR-68).
 
 ## 6. Use cases (Nghiệp vụ)
-Mọi UC làm thay đổi dữ liệu đều yêu cầu xác thực thao tác (BR-46) và quyền theo nhóm (BR-47, BR-48), ghi nhật ký
-(BR-49). Xem, tra cứu, xuất file không cần xác thực.
+Mọi UC làm thay đổi dữ liệu đều chạy bằng tài khoản đã đăng nhập (BR-46: thay bằng đăng nhập của ứng dụng) có vai trò phù hợp
+(BR-47, BR-48) và ghi nhật ký theo tài khoản (BR-49). Xem, tra cứu, xuất file chỉ cần được cấp quyền mở chức năng.
 
-### UC-01: Khai báo nhóm người dùng và thành viên
-- **Actor:** Phòng SO
-- **Trigger:** mở Screen 8, sửa một nhóm hoặc thêm / tắt thành viên, bấm "Lưu nhóm".
-- **Input:** nhóm (5 nhóm cố định); tên nhóm; mã nội bộ; còn hoạt động; danh sách thành viên (tên, còn hoạt động).
-- **Main flow:** 1. Kiểm tra mã nội bộ 4-20 ký tự, tên thành viên không trùng trong nhóm. 2. Lưu. 3. Ghi nhật ký (không
-  ghi mã nội bộ vào nhật ký).
-- **Output:** "Đã lưu nhóm <tên nhóm>."
-- **Errors / alternative flows:** mã nội bộ sai độ dài → "Mã nội bộ phải dài từ 4 đến 20 ký tự."; tên trùng →
-  "Tên '<tên>' đã có trong nhóm."
-- **Rules applied:** BR-46, BR-47, BR-49
+### UC-01: Khai báo nhóm người dùng và thành viên (đã bỏ 2026-10-13)
+- Đã bỏ: người dùng và vai trò do quản trị viên quản lý ở trang `/admin` của app (xem mục 2 và 4.1). Mã UC không dùng lại.
 
-### UC-02: Xem nhật ký thay đổi
+### UC-02: Xem nhật ký thao tác
 - **Actor:** Người xem
-- **Trigger:** mở Screen 8, chọn khoảng ngày, nhóm, từ khoá.
-- **Output:** danh sách nhật ký (mới nhất trước): Lúc, Nhóm, Người, Thao tác, Đối tượng, Nội dung, Lý do.
+- **Trigger:** mở Screen 8, chọn khoảng ngày, tài khoản, thao tác, từ khoá.
+- **Output:** danh sách nhật ký (mới nhất trước): Lúc, Tài khoản, Họ tên, Thao tác, Đối tượng, Nội dung, Lý do; kèm danh sách tài
+  khoản và thao tác có trong khoảng ngày để chọn bộ lọc.
 - **Rules applied:** BR-49
 
 ### UC-03: Sửa cấu hình công đoạn
@@ -869,22 +865,15 @@ tắt và hiện thông báo BR-32, kèm nút "Tạo bản ĐCNSM" (UC-24).
 
 ### UC-38: Lấy dữ liệu tham chiếu (bổ sung ở Prompt 2 cho giao diện)
 - **Actor:** Người xem
-- **Trigger:** mở bất kỳ màn hình nào (danh sách chọn, khối xác thực, thẻ dữ liệu nền).
+- **Trigger:** mở bất kỳ màn hình nào (danh sách chọn, thẻ dữ liệu nền).
 - **Input:** xưởng (không bắt buộc).
-- **Output:** 5 nhóm người dùng (mã, tên, xưởng, còn hoạt động, danh sách tên thành viên đang hoạt động; không có mã nội
-  bộ), xưởng và dây chuyền chải thô, cấu hình công đoạn, phiên bản định mức (hiện tại + danh sách), loại đóng gói, hồi phế, quy
+- **Output:** xưởng và dây chuyền chải thô, cấu hình công đoạn, phiên bản định mức (hiện tại + danh sách), loại đóng gói, hồi phế, quy
   trình công nghệ, tỷ giá (danh sách + đang dùng), hệ số thí nghiệm, danh sách nhóm sợi. Không có thay đổi dữ liệu.
 - **Errors:** file dữ liệu chép từ app cũ không đọc được → thông báo BR-61 (các dữ liệu khác vẫn hiện).
 - **Rules applied:** BR-61
 
-### UC-39: Xác thực người thao tác (bổ sung ở Prompt 2 cho giao diện)
-- **Actor:** mọi nhóm
-- **Trigger:** khối xác thực ở đầu trang: chọn nhóm, nhập mã nội bộ, chọn tên, bấm "Xác nhận".
-- **Main flow:** kiểm tra BR-46; đúng → trang nhớ người thao tác trong phiên làm việc. Mỗi thao tác thay đổi dữ liệu vẫn kiểm
-  tra lại BR-46 ở phía xử lý.
-- **Output:** "Đang thao tác: <tên nhóm> - <tên người>."
-- **Errors:** thông báo BR-46.
-- **Rules applied:** BR-46
+### UC-39: Xác thực người thao tác (đã bỏ 2026-10-13)
+- Đã bỏ: ai thao tác là tài khoản đăng nhập của app, chức năng không hỏi lại. Mã UC không dùng lại.
 
 ### UC-40: Nhận diện tên sợi (bổ sung ở Prompt 2 cho giao diện)
 - **Actor:** Người xem (Sales khi gõ tên)
@@ -901,9 +890,10 @@ tắt và hiện thông báo BR-32, kèm nút "Tạo bản ĐCNSM" (UC-24).
 
 ### UC-42: Kiểm tra điều kiện gửi yêu cầu (bổ sung ở Prompt 2 cho giao diện, 2026-09-29)
 - **Actor:** Người xem (Sales trên Screen 2)
-- **Trigger:** mở Screen 2, chọn xưởng, xác nhận / đổi người thao tác.
-- **Input:** nhóm đã xác nhận trong phiên làm việc (trống = chưa xác nhận); xưởng đang chọn (không bắt buộc).
-- **Main flow:** áp dụng BR-63, trả danh sách lý do khoá nút "Gửi yêu cầu" (rỗng = bấm được). Không lưu gì.
+- **Trigger:** mở Screen 2, chọn xưởng.
+- **Input:** xưởng đang chọn (không bắt buộc).
+- **Main flow:** áp dụng BR-63, trả lý do khoá nút "Gửi yêu cầu" do dữ liệu của xưởng (rỗng = bấm được); kết quả không phụ thuộc
+  tài khoản đang dùng. Lý do thiếu vai trò (BR-47) do màn hình tự thêm khi tắt nút. Không lưu gì.
 - **Output:** các lý do hiện ngay cạnh nút "Gửi yêu cầu".
 - **Rules applied:** BR-63
 
@@ -911,7 +901,7 @@ tắt và hiện thông báo BR-32, kèm nút "Tạo bản ĐCNSM" (UC-24).
 - **Actor:** Phòng SO
 - **Trigger:** Screen 5, chọn xưởng, nhập ngày hiệu lực (mặc định hôm nay) và lý do, bấm "Tính lại các mã chưa tính được", xác
   nhận.
-- **Preconditions:** xác thực là Phòng SO (BR-46, BR-47).
+- **Preconditions:** tài khoản có vai trò Phòng SO (BR-47).
 - **Input:** xưởng; ngày hiệu lực; lý do.
 - **Main flow:** 1. Kiểm tra ngày hiệu lực và lý do. 2. Lấy các bản NSM "Chưa tính được" của xưởng (BR-65); không có → thông
   báo lỗi. 3. Tính lại từng bản (BR-14..BR-20, BR-58, BR-64). 4. Lưu kết quả, lịch sử giá, tạo lần tính lại (4.16). 5. Ghi nhật ký
@@ -920,7 +910,7 @@ tắt và hiện thông báo BR-32, kèm nút "Tạo bản ĐCNSM" (UC-24).
   (UC-37).
 - **Errors / alternative flows:** không có mã → "Xưởng <xưởng> không có mã nào đang 'Chưa tính được'."; thiếu ngày / lý do →
   "Vui lòng chọn ngày hiệu lực và nhập lý do."; không phải Phòng SO → thông báo BR-47.
-- **Rules applied:** BR-14..BR-20, BR-46, BR-47, BR-49, BR-58, BR-64, BR-65
+- **Rules applied:** BR-14..BR-20, BR-47, BR-49, BR-58, BR-64, BR-65
 
 ### UC-44: Tải file mẫu khai báo thành phần sợi pha (bổ sung 2026-09-29)
 - **Actor:** Người xem
@@ -931,7 +921,7 @@ tắt và hiện thông báo BR-32, kèm nút "Tạo bản ĐCNSM" (UC-24).
 - **Actor:** Xưởng (xưởng mình, nhóm chưa khoá), Phòng SO (mọi nhóm) - BR-69
 - **Trigger:** Screen 6, chọn xưởng, Loại tải "Khai báo thành phần sợi pha", nhập Ngày hiệu lực (mặc định hôm nay) và Lý do, tải
   file, bấm "Kiểm tra file" (không lưu); xem kết quả; bấm "Lưu N nhóm hợp lệ", xác nhận.
-- **Preconditions:** xác thực thao tác (BR-46); ngày hiệu lực và lý do bắt buộc khi lưu.
+- **Preconditions:** tài khoản có vai trò phù hợp (BR-47, BR-48); ngày hiệu lực và lý do bắt buộc khi lưu.
 - **Main flow:**
   1. Kiểm tra file (BR-41, 5.7), quyền (BR-69).
   2. Đọc từng dòng theo BR-66; dòng lỗi liệt kê với lý do (BR-43).
@@ -948,7 +938,7 @@ tắt và hiện thông báo BR-32, kèm nút "Tạo bản ĐCNSM" (UC-24).
   (%)" → "Sheet 'Khai bao thanh phan' thiếu cột bắt buộc: <danh sách>."; lỗi từng dòng theo BR-66, BR-69; không có dòng hợp lệ →
   nút Lưu tắt, thông báo "Không có nhóm hợp lệ để lưu."; thiếu ngày / lý do khi lưu → "Vui lòng chọn ngày hiệu lực và nhập lý
   do."
-- **Rules applied:** BR-14..BR-20, BR-24, BR-26, BR-27, BR-36, BR-41, BR-43, BR-46, BR-49, BR-64, BR-66, BR-67, BR-68, BR-69
+- **Rules applied:** BR-14..BR-20, BR-24, BR-26, BR-27, BR-36, BR-41, BR-43, BR-47, BR-49, BR-64, BR-66, BR-67, BR-68, BR-69
 
 ## 7. Business rules (Quy tắc nghiệp vụ)
 | ID | Rule | Error message shown to user (VI) |
@@ -998,10 +988,10 @@ tắt và hiện thông báo BR-32, kèm nút "Tạo bản ĐCNSM" (UC-24).
 | BR-43 | Mỗi dòng lỗi được liệt kê với: sheet, số dòng Excel, mã / nhóm, lý do; dòng hợp lệ vẫn được lưu | - |
 | BR-44 | Đọc sheet "1. Input NSM": mã chuẩn hoá = bỏ khoảng trắng quanh "-" ("S4 - 586" → "S4-586"), hậu tố "(ĐCNSM…)" chuẩn hoá thành " (ĐCNSMn)" (không số → n = 1) và tạo bản ĐCNSM trỏ về mã gốc; mã trống → cấp mã mới theo BR-05; mã đã có trong app → cập nhật tên, thành phần nguyên liệu (BR-58), NSM, đóng gói nếu bản chưa khoá (đã khoá → loại dòng với thông báo BR-32); mã chưa có → tạo mới với mã đó. Mã trùng trong file → mọi dòng trùng bị loại. Tên không hợp lệ (BR-01) → loại dòng. Thiếu đóng gói / thiếu tiêu hao → vẫn tạo, trạng thái "Chưa tính được" (BR-16). Sheet "4. Bang gia da tinh": mã kế toán không trống → gán cho dòng Thường của mã đó (bản bị khoá); mã tính giá không dạng "<xưởng>-N" và không có ở sheet NSM → loại dòng "Không có dữ liệu NSM cho mã '<mã>'."; mã tính giá dạng mã kế toán (không theo "<xưởng>-N") có ở sheet NSM → giữ làm mã tính giá, đồng thời điền vào mã kế toán nếu cột mã kế toán trống; "Ngày tính giá" → `first_priced_at` (không đọc được → để trống). Tên trùng trong dữ liệu cũ không bị chặn | - |
 | BR-45 | Quyền theo sheet khi tải file: Phòng SO được mọi sheet và cả hai loại tải; Xưởng chỉ được "Cập nhật hàng loạt" với sheet "1. Input NSM" và "2. Input tieu hao" của xưởng mình; "Chuyển dữ liệu ban đầu" chỉ Phòng SO | Sheet '<sheet>' chỉ Phòng SO được cập nhật, đã bỏ qua. |
-| BR-46 | Mọi thao tác làm thay đổi dữ liệu yêu cầu: chọn nhóm (đang hoạt động), nhập đúng mã nội bộ của nhóm, chọn tên (thành viên đang hoạt động của nhóm). Xem, tra cứu, xuất file không cần | Vui lòng chọn nhóm, nhập đúng mã nội bộ và chọn tên của bạn. |
-| BR-47 | Quyền theo nhóm: Sales → UC-15, UC-16, UC-17. Xưởng → UC-11, UC-12, UC-13, UC-14, UC-18, UC-20, UC-21, UC-23, UC-24, UC-25, UC-26, UC-28, UC-34 (theo BR-45), UC-45 (theo BR-69). Kế toán → UC-28. Phòng SO → mọi UC thay đổi dữ liệu | Nhóm '<nhóm>' không được thực hiện thao tác này. |
-| BR-48 | Nhóm Xưởng S1 / Xưởng S4 chỉ thao tác trên dữ liệu có `factory_code` bằng xưởng của nhóm | Bạn chỉ được thao tác dữ liệu của xưởng <xưởng>. |
-| BR-49 | Mọi thao tác làm thay đổi dữ liệu ghi một dòng nhật ký (4.19): lúc, nhóm, tên, thao tác, đối tượng, nội dung trước → sau, lý do | - |
+| BR-46 | Thay bằng đăng nhập của ứng dụng (2026-10-13): mỗi người dùng app bằng tài khoản riêng; chức năng không còn khối chọn nhóm / nhập mã / chọn tên. Mã quy tắc giữ trống | - |
+| BR-47 | Quyền theo vai trò: tài khoản làm được một thao tác khi có ít nhất một vai trò cho phép thao tác đó. Sales → UC-15, UC-16, UC-17. Xưởng (XS1, XS4) → UC-11, UC-12, UC-13, UC-14, UC-18, UC-20, UC-21, UC-23, UC-24, UC-25, UC-26, UC-28, UC-34 (theo BR-45), UC-45 (theo BR-69). Kế toán → UC-28. Phòng SO → mọi UC thay đổi dữ liệu. Quản trị viên làm như Phòng SO. Tài khoản không có vai trò nào của chức năng chỉ xem được | Tài khoản của bạn chưa có vai trò cho thao tác '<thao tác>'. Hãy nhờ quản trị viên cấp vai trò ở trang /admin. |
+| BR-48 | Vai trò Xưởng S1 / Xưởng S4 chỉ thao tác trên dữ liệu có `factory_code` bằng xưởng của vai trò: thao tác chỉ được phép khi có ít nhất một vai trò cho phép thao tác đó mà đúng xưởng (Sales, Kế toán, Phòng SO không giới hạn xưởng) | Bạn chỉ được thao tác dữ liệu của xưởng <xưởng>. |
+| BR-49 | Mọi thao tác làm thay đổi dữ liệu ghi một dòng nhật ký (4.19): lúc, tài khoản đăng nhập (tên đăng nhập + họ tên), thao tác, đối tượng, nội dung trước → sau, lý do. Các cột "người làm" khác (người tạo, người xử lý...) ghi họ tên của tài khoản. Khi không có tài khoản (chạy bằng mã hệ thống) ghi "system" / "Hệ thống" | - |
 | BR-50 | Cấu hình công đoạn: stage_code và sequence duy nhất trong xưởng; đúng một công đoạn `is_packaging` = Có; `cumulative_stages` chỉ gồm mã công đoạn có của xưởng và có `sequence` lớn hơn; `blend_slot` "Tỷ lệ dây chuyền X" với X là dây chuyền chải thô của xưởng; dây chuyền chải thô có `max_passes` từ 1 đến 3. Không xoá công đoạn đang có NSM hoặc tiêu hao khác 0 (chỉ đổi tên / cấu hình) | Cấu hình công đoạn không hợp lệ: <chi tiết>. |
 | BR-51 | Phiên bản định mức mới phải có đủ 5 khoản ≥ 0 cho mọi công đoạn không phải đóng gói và mọi loại đóng gói đang hoạt động; bắt buộc ngày hiệu lực và lý do | Thiếu định mức cho: <danh sách mã>. / Vui lòng chọn ngày hiệu lực và nhập lý do. |
 | BR-52 | Mã loại đóng gói duy nhất trong xưởng; phút/kg > 0; chỉ loại đang hoạt động và đã có định mức mới hiện cho Sales chọn | Mã đóng gói '<mã>' đã có ở xưởng <xưởng>. / Phút/kg phải lớn hơn 0. |
@@ -1013,30 +1003,29 @@ tắt và hiện thông báo BR-32, kèm nút "Tạo bản ĐCNSM" (UC-24).
 | BR-58 | Tiêu hao của một lượt chải thô (thành phần M chạy dây chuyền X): nếu M là thành phần của nhóm tiêu hao của sợi → tiêu hao của nhóm thành phần M tại X (khi `secondary_method` của X = Cộng thẳng) hoặc tiêu hao đó × tỷ lệ của M trong nhóm (khi = Bình quân); nếu nhóm Sơ cấp hoặc nhóm không có thành phần → tiêu hao của nhóm tại X, chỉ dùng được khi X có đúng 1 lượt (có từ 2 lượt → "Chưa tính được", BR-16). "Tiêu hao tại X" ở hai trường hợp trên được lấy theo BR-64 (khi X chưa khai báo thì dùng tiêu hao của dây chuyền tương đương, rồi áp dụng `secondary_method` của X). Ngoài BR-64, không tự điều chỉnh tiêu hao đã khai báo. Nhập NSM từ file cũ: S4 ô Cotton + C1 → thành phần dây chuyền C1; ô PE + C2 → C2 lượt 1; ô Other - C3.k + C3.k → C3 lượt k; S1 ô PE + C1 → C1 lượt 1, ô Viscose/other + C2 → C2 lượt 1, ô Cotton → "Không chải thô"; tên nguyên liệu = `material_tech_key` của thành phần nhóm tiêu hao ở đúng ô đó (S4, nhóm Thứ cấp), nguyên liệu của nhóm (nhóm Sơ cấp), ngược lại = tên ô ("PE", "Other - C3.1", "Cotton"...); ô tỷ lệ = 0 và NSM = 0 thì không tạo thành phần; mã có REMARK "Có thành phần chỉ sửa được trên màn hình" giữ nguyên thành phần | - |
 | BR-59 | Nhập tiêu hao S4 từ file cũ: tiêu hao C3 của một dòng = số khác 0 nhỏ nhất trong 3 cột C3.1 / C3.2 / C3.3 (không có → 0). Các dòng cùng `group_key` mà mọi cột khác giống nhau, chỉ khác các cột C3.x → gộp thành một nhóm, tiêu hao C3 = số khác 0 nhỏ nhất của các dòng; các dòng trùng `group_key` khác còn lại vẫn bị loại theo BR-42. Không tự điều chỉnh tiêu hao C2 | - |
 | BR-60 | Mỗi xưởng có tối đa một loại đóng gói mặc định, phải là loại đang hoạt động; khi Sales chọn xưởng ở Screen 2, ô Loại đóng gói tự điền loại mặc định nếu loại đó chọn được (BR-52), ngược lại để trống; Sales đổi được; loại mặc định không tự gán cho mã nhập từ file thiếu đóng gói | Mỗi xưởng chỉ được chọn một loại đóng gói mặc định. |
-| BR-61 | Dữ liệu chép từ app cũ (5.6) được đọc nguyên trạng: mọi mã, dòng giá, số tiền, trạng thái, mã kế toán, mã nội bộ, thành viên, lịch sử, lần tính lại, lần nhập file, nhật ký giữ nguyên, không tính lại giá. Dữ liệu lưu theo cách trước 2026-09-28 được chuyển khi đọc: công đoạn C3.1 / C3.2 / C3.3 của S4 gộp thành C3 (tối đa 3 lượt); tỷ lệ pha và NSM theo ô → thành phần nguyên liệu theo cách ghép ô của BR-58; tiêu hao C3 của nhóm = số khác 0 nhỏ nhất trong C3.1 / C3.2 / C3.3 (BR-59). Giá sau khi chuyển phải bằng giá đang lưu (ví dụ S4-2017 = 19.777,8356 VND/kg). Một file dữ liệu không đọc được → màn hình hiện thông báo, các dữ liệu khác vẫn dùng được | Không đọc được dữ liệu '<tên file>'. Vui lòng chép lại file này từ app cũ (thư mục data\yarn_costing). |
+| BR-61 | Dữ liệu chép từ app cũ (5.6) được đọc nguyên trạng: mọi mã, dòng giá, số tiền, trạng thái, mã kế toán, lịch sử, lần tính lại, lần nhập file, nhật ký giữ nguyên (dòng cũ có nhóm + tên được đọc thành họ tên "<nhóm> - <tên>", tên đăng nhập để trống), không tính lại giá. Dữ liệu lưu theo cách trước 2026-09-28 được chuyển khi đọc: công đoạn C3.1 / C3.2 / C3.3 của S4 gộp thành C3 (tối đa 3 lượt); tỷ lệ pha và NSM theo ô → thành phần nguyên liệu theo cách ghép ô của BR-58; tiêu hao C3 của nhóm = số khác 0 nhỏ nhất trong C3.1 / C3.2 / C3.3 (BR-59). Giá sau khi chuyển phải bằng giá đang lưu (ví dụ S4-2017 = 19.777,8356 VND/kg). Một file dữ liệu không đọc được → màn hình hiện thông báo, các dữ liệu khác vẫn dùng được | Không đọc được dữ liệu '<tên file>'. Vui lòng chép lại file này từ app cũ (thư mục data\yarn_costing). |
 | BR-62 | Loại đóng gói "đang được dùng" = có ít nhất một bản NSM của xưởng (trạng thái khác Đã huỷ, Từ chối) có `packaging_code` bằng mã loại. Khi lưu bảng Đóng gói (UC-05): chỉ tính lại toàn bộ xưởng khi ít nhất một loại đang được dùng có `minutes_per_kg` khác giá trị đang lưu; ngày hiệu lực và lý do chỉ bắt buộc trong trường hợp này. Hộp xác nhận: có tính lại → "Phút/kg của loại <danh sách mã> (đang có mã sợi dùng) thay đổi. App sẽ tính lại toàn bộ giá xưởng <xưởng> từ ngày <dd/mm/yyyy>."; không tính lại (chỉ đổi loại mặc định, tên, khối lượng, số công, còn hoạt động, thêm loại mới, đổi phút/kg của loại chưa có mã dùng) → "Giá các mã không thay đổi." | Vui lòng chọn ngày hiệu lực và nhập lý do. |
-| BR-63 | Nút "Gửi yêu cầu" (Screen 2) bị khoá khi có ít nhất một lý do dưới đây; mọi lý do đang đúng hiện ngay cạnh nút, theo thứ tự: (1) chưa xác nhận người thao tác → câu (a), trừ khi nhóm Sales chưa có thành viên đang hoạt động → câu (b); (2) nhóm đang xác nhận không phải Sales hoặc Phòng SO → câu (c); (3) xưởng đang chọn không có loại đóng gói chọn được (BR-52) → câu (d). Hết lý do → nút bấm được | (a) Bạn chưa xác nhận người thao tác. Vui lòng chọn nhóm, nhập mã nội bộ và chọn tên ở đầu trang. (b) Nhóm Sales chưa có thành viên. Vui lòng báo Phòng SO thêm tên. (c) Nhóm '<nhóm>' không được gửi yêu cầu tính giá. (d) Xưởng <xưởng> chưa có loại đóng gói chọn được. Vui lòng báo Phòng SO khai báo loại đóng gói và định mức. |
+| BR-63 | Nút "Gửi yêu cầu" (Screen 2) bị khoá khi có ít nhất một lý do dưới đây; mọi lý do đang đúng hiện ngay cạnh nút, theo thứ tự: (1) tài khoản không có vai trò Sales hoặc Phòng SO (BR-47; quản trị viên được phép) → câu (a); (2) xưởng đang chọn không có loại đóng gói chọn được (BR-52) → câu (b). Hết lý do → nút bấm được | (a) Tài khoản của bạn chưa có vai trò cho thao tác này (quản trị viên cấp ở trang /admin). (b) Xưởng <xưởng> chưa có loại đóng gói chọn được. Vui lòng báo Phòng SO khai báo loại đóng gói và định mức. |
 | BR-64 | Dây chuyền tương đương (cố định theo xưởng): S4 C2 ↔ C3; S1 C1 ↔ C2; S4 C1 không có. Khi tính tiêu hao của một lượt chải thô (nguyên liệu chạy dây chuyền X, BR-58): lấy tiêu hao khai báo tại X của nhóm liên quan (nhóm thành phần của nguyên liệu, hoặc nhóm Sơ cấp / nhóm không có thành phần của sợi); nếu tiêu hao tại X = 0 hoặc để trống và X có dây chuyền tương đương Y với tiêu hao tại Y > 0 → dùng tiêu hao tại Y, ghi `loss_source_stage` = Y (4.14). Nếu tiêu hao tại X > 0 thì luôn dùng số của X, kể cả khi Y có số khác. Nếu cả X và Y đều = 0 → "Chưa tính được" với câu thứ hai của BR-16. Chỉ áp dụng cho tiêu hao của lượt chải thô khi tính giá (và kiểm tra khớp BR-15); không đổi số tiêu hao đã khai báo, không đổi bảng "Tiêu hao tính ra" của nhóm sợi pha (BR-26), không đổi so sánh NSM (BR-37, BR-38, BR-54) | - |
 | BR-65 | Tính lại các mã chưa tính được của một xưởng (UC-43): xét mọi bản NSM của xưởng trạng thái "Chưa tính được" (kể cả bản đã khoá hoặc đang giữ mã kế toán chờ); tính lại theo dữ liệu hiện tại (BR-14..BR-20, BR-64); đạt → tạo / cập nhật dòng Thường, Thí nghiệm, CK/PP, chi tiết công đoạn, `effective_date` = ngày hiệu lực, `first_priced_at` = ngày hiệu lực nếu chưa có, trạng thái "Đã tính giá" (hoặc "Có mã kế toán" nếu bản có mã kế toán), ghi lịch sử giá event "Tính lại mã chưa tính được"; không đạt → giữ "Chưa tính được", cập nhật lại `status_reasons`. Bắt buộc ngày hiệu lực và lý do; tạo một bản ghi 4.16 trigger "Tính lại mã chưa tính được". Các bản NSM trạng thái khác không bị tính lại | Xưởng <xưởng> không có mã nào đang 'Chưa tính được'. / Vui lòng chọn ngày hiệu lực và nhập lý do. |
 | BR-66 | Đọc file khai báo thành phần (5.7), từng dòng: tên nhóm trùng nhau trong file (so khớp như `group_key`) → loại mọi dòng trùng ("Nhóm '<nhóm>' bị trùng trong file."); mỗi cặp Thành phần k / Tỷ lệ k: có tên mà trống tỷ lệ hoặc có tỷ lệ mà trống tên → loại dòng ("Thành phần <k>: cần cả tên và tỷ lệ."); tỷ lệ không phải số hoặc ≤ 0 hoặc > 100 → loại ("Tỷ lệ <k> phải là số % lớn hơn 0 và không quá 100."); tên thành phần không khớp `group_key` hoặc `material_tech_key` của nhóm nào của xưởng → loại ("Không tìm thấy nhóm thành phần '<tên>' ở xưởng <xưởng>."); cùng một thành phần ghi 2 lần → loại ("Thành phần '<tên>' bị ghi 2 lần."); nhóm chưa có trong app mà thiếu / sai Công nghệ → loại ("Nhóm mới '<nhóm>' cần cột Công nghệ là Ring hoặc MVS."); sau đó kiểm tra BR-27 trên toàn bộ các nhóm sau khi khai báo (1-5 thành phần, tổng 100% ± 0,01%, không dùng chính nó, không tạo vòng - kể cả vòng giữa các dòng trong cùng file) → loại dòng với thông báo BR-27 | (các câu trong quy tắc) |
 | BR-67 | Lưu một nhóm hợp lệ từ file khai báo thành phần: nhóm đã có (mọi loại: Sơ cấp, Nhập từ file - chưa khai báo thành phần, Thứ cấp) → `level` = Thứ cấp, `components` = các thành phần trong file (thay toàn bộ thành phần cũ), `losses` = tính theo BR-26 từ thành phần (thay toàn bộ tiêu hao cũ, kể cả công đoạn thành phần không có tiêu hao → 0); giữ `group_key`, `yarn_group_label`, `material`, `technology`. Nhóm chưa có → tạo nhóm Thứ cấp mới: `group_key` = tên đã chuẩn hoá, `yarn_group_label` = tên như trong file, `material` trống, `technology` = cột Công nghệ. Ghi `updated_by`, `updated_at` | - |
 | BR-68 | Đổi thành phần của mã sợi khi nhóm tiêu hao của mã được khai báo lại bằng file (BR-67): với mỗi thành phần của mã có dây chuyền chải thô X: ứng viên = các thành phần của nhóm mà nhóm thành phần có tiêu hao chải thô > 0 ở X hoặc ở dây chuyền tương đương của X (BR-64); đúng 1 ứng viên → `material_label` = `material_tech_key` của ứng viên; nhiều ứng viên → chọn ứng viên có tỷ lệ trong nhóm bằng tỷ lệ của thành phần mã (sai lệch ≤ 0,01%), còn lại nhiều hơn 1 hoặc không có → không ghép được. Không đổi tỷ lệ, dây chuyền, NSM, lượt; thành phần "Không chải thô" giữ nguyên tên. Áp dụng cả mã đã khoá (chỉ đổi tên nguyên liệu). Mã có thành phần không ghép được → sau khi tính lại là "Chưa tính được" với lý do "Không ghép được thành phần '<tên>' (<dây chuyền>) của mã với thành phần của nhóm tiêu hao '<nhóm>'. Vui lòng chọn lại nguyên liệu ở màn Nhập NSM." và có tên trong file kết quả | Không ghép được thành phần '<tên>' (<dây chuyền>) của mã với thành phần của nhóm tiêu hao '<nhóm>'. Vui lòng chọn lại nguyên liệu ở màn Nhập NSM. |
-| BR-69 | Quyền tải file khai báo thành phần: nhóm Xưởng chỉ tải cho xưởng mình, và chỉ được đổi nhóm không khoá (BR-24; dòng của nhóm đang khoá bị loại với thông báo BR-24) và tạo nhóm mới; Phòng SO tải cho cả hai xưởng, đổi được mọi nhóm kể cả nhóm đang khoá; Kế toán, Sales không được tải | Nhóm tiêu hao '<nhóm>' đang được dùng cho sợi đã có mã kế toán (<tối đa 5 mã>). Chỉ Phòng SO được sửa. / Nhóm '<nhóm>' không được thực hiện thao tác này. |
+| BR-69 | Quyền tải file khai báo thành phần: vai trò Xưởng chỉ tải cho xưởng mình, và chỉ được đổi nhóm không khoá (BR-24; dòng của nhóm đang khoá bị loại với thông báo BR-24) và tạo nhóm mới; Phòng SO tải cho cả hai xưởng, đổi được mọi nhóm kể cả nhóm đang khoá; Kế toán, Sales không được tải | Nhóm tiêu hao '<nhóm>' đang được dùng cho sợi đã có mã kế toán (<tối đa 5 mã>). Chỉ Phòng SO được sửa. / Tài khoản của bạn chưa có vai trò cho thao tác '<thao tác>'. Hãy nhờ quản trị viên cấp vai trò ở trang /admin. |
 
 ## 8. Screens (Màn hình)
 
 ### Giao diện đã chốt (UI concept)
-> Chốt lại ở app mới ngày 2026-09-29 (Prompt 2): câu 2-7 giữ đề xuất (giống app cũ); câu 1 - menu **phân theo nhóm người dùng,
+> Chốt lại ở app mới ngày 2026-09-29 (Prompt 2): câu 2-7 giữ đề xuất (giống app cũ); câu 1 - menu **phân theo vai trò,
 > có nút mở rộng / thu gọn**.
 
 - **Menu (chốt 2026-09-29):**
   - Menu bên trái (khung sườn, cập nhật 2026-10-13 theo YC-01): khối "🧵 Tính giá sợi" bấm mũi tên để mở / thu gọn; bên trong
-    8 màn hình chia theo nhóm người dùng: **Dùng chung** (Bảng giá đã tính - trang chính, Dashboard kiểm soát) → **Sales** (Yêu cầu
+    8 màn hình chia theo vai trò: **Dùng chung** (Bảng giá đã tính - trang chính, Dashboard kiểm soát) → **Sales** (Yêu cầu
     tính giá) → **Xưởng sợi** (Nhập NSM & tính giá, Tiêu hao) → **Phòng SO** (Dữ liệu nền & định mức, Nhập dữ liệu từ Excel,
-    Người dùng & nhật ký). Kế toán dùng Bảng giá đã tính (nhập mã kế toán). Người dùng chỉ thấy những màn hình được cấp quyền.
-  - Khối "📂 Menu theo nhóm người dùng" ở đầu mỗi màn hình (2026-09-29) đã bỏ vì menu bên trái đã gấp / mở theo nhóm.
-- **Xác thực:** một khối (chọn nhóm, nhập mã nội bộ, chọn tên) ở đầu mỗi trang có thao tác thay đổi dữ liệu (Screen 1-6,
-  8); nhập một lần, app nhớ trong phiên làm việc, không hỏi lại mỗi lần bấm nút; có nút "Đổi người thao tác".
+    Nhật ký thao tác). Kế toán dùng Bảng giá đã tính (nhập mã kế toán). Người dùng chỉ thấy những màn hình được cấp quyền.
+  - Khối "📂 Menu theo vai trò" ở đầu mỗi màn hình (2026-09-29) đã bỏ vì menu bên trái đã gấp / mở theo nhóm.
+- **Vai trò (2026-10-13):** chức năng không có khối chọn người riêng; ai thao tác là tài khoản đang đăng nhập. Nút làm thay đổi dữ liệu bị tắt kèm chú thích khi tài khoản không có vai trò phù hợp (BR-47, BR-48).
 - **Bảng danh sách** (bảng giá, yêu cầu, mã cần xử lý, nhóm tiêu hao, lần nhập file, lần tính lại, nhật ký): chỉ xem (lọc,
   sắp xếp, tìm, tải) + chọn 1 dòng; chọn dòng xong mới hiện khối chi tiết / thao tác của dòng đó bên dưới bảng.
 - **Screen 1 - Bảng giá đã tính:** bộ lọc ở trên → dòng thông tin tỷ giá đang dùng + hệ số TN → 4 ô số liệu (Tổng dòng, Có
@@ -1074,9 +1063,8 @@ tắt và hiện thông báo BR-32, kèm nút "Tạo bản ĐCNSM" (UC-24).
   hàng + tỷ lệ %, Yêu cầu mới, Khả năng đáp ứng %, Đang chờ xưởng xem) → biểu đồ cột "Yêu cầu mới theo tuần" và biểu đồ đường
   "Khả năng đáp ứng theo tuần" → số dòng giá theo trạng thái (ô số liệu) → khối chênh lệch lần tính lại gần nhất + nút xem chi
   tiết → bảng "Sai lệch giá" → bảng "NSM bất thường".
-- **Screen 8 - Người dùng & nhật ký:** bảng nhóm (chỉ xem, chọn dòng) → khối sửa nhóm: tên, mã nội bộ mới (để trống = giữ
-  mã cũ), còn hoạt động, **bảng thành viên sửa trong ô** (Tên, Còn hoạt động; thêm / xoá dòng) + "Lưu nhóm" → bảng nhật ký có
-  bộ lọc (khoảng ngày, nhóm, từ khoá).
+- **Screen 8 - Nhật ký thao tác:** bộ lọc (khoảng ngày, tài khoản, thao tác, từ khoá) → bảng nhật ký (Lúc, Tài khoản, Họ tên, Thao tác,
+  Đối tượng, Nội dung, Lý do).
 - **Bổ sung 2026-09-29 (BR-64, UC-43)** - theo đúng cách giao diện đã chốt, không hỏi lại: bảng chi tiết công đoạn (Screen 1
   khối dòng đang chọn, Screen 3 khối kết quả) có thêm cột cuối "Ghi chú tiêu hao"; Screen 5 thẻ "Các lần tính lại" có khối "🔄
   Tính lại các mã chưa tính được" ở đầu thẻ (ô Ngày hiệu lực, ô Lý do, nút "Tính lại các mã chưa tính được" có hộp xác nhận), bên
@@ -1089,11 +1077,10 @@ tắt và hiện thông báo BR-32, kèm nút "Tạo bản ĐCNSM" (UC-24).
 - **Ô số liệu:** Screen 1, 3, 6, 7. **Biểu đồ:** chỉ ở Screen 7.
 - **Hộp thoại xác nhận** trước khi: Huỷ yêu cầu, Từ chối, Xoá nhóm tiêu hao, Xoá dòng CK/PP, "Lưu đóng gói" (nội dung theo BR-62), mọi nút "… và tính lại" (Screen
   5), "Lưu hệ số", "Lưu thay đổi" nhóm tiêu hao (có tính lại), "Lưu N dòng hợp lệ". Không hỏi lại khi: Gửi yêu cầu, Lưu sửa
-  đổi, Lưu NSM và giá, Lưu bản ĐCNSM, Lưu dòng CK/PP, Lưu mã kế toán, Lưu nhóm tiêu hao mới, Lưu quy trình, Thêm tỷ giá, Lưu
-  nhóm người dùng.
+  đổi, Lưu NSM và giá, Lưu bản ĐCNSM, Lưu dòng CK/PP, Lưu mã kế toán, Lưu nhóm tiêu hao mới, Lưu quy trình, Thêm tỷ giá.
 
-Mỗi màn hình lấy danh sách chọn từ dữ liệu tham chiếu (UC-38) và có khối xác thực thao tác (nhóm, mã nội bộ, tên - UC-39) dùng cho các nút làm thay đổi dữ liệu (BR-46) và khung nhật
-ký chạy ở cuối trang. Nút mà nhóm đang xác thực không có quyền thì bị tắt kèm chú thích (BR-47, BR-48).
+Mỗi màn hình lấy danh sách chọn từ dữ liệu tham chiếu (UC-38). Nút làm thay đổi dữ liệu bị tắt kèm chú thích khi tài khoản đăng nhập
+không có vai trò phù hợp (BR-47, BR-48); phía xử lý vẫn kiểm tra lại ở mỗi thao tác.
 
 ### Screen 1: Bảng giá đã tính (landing page)
 - **Purpose:** xem, lọc, xuất toàn bộ giá; nhập mã kế toán; tạo / xoá dòng CK/PP; xem chi tiết và lịch sử.
@@ -1183,11 +1170,13 @@ ký chạy ở cuối trang. Nút mà nhóm đang xác thực không có quyền
   → UC-31. Rỗng: "Không có dữ liệu trong khoảng ngày đã chọn."
 - **Buttons:** không có thao tác thay đổi dữ liệu.
 
-### Screen 8: Người dùng & nhật ký
-- **Purpose:** Phòng SO khai báo nhóm và thành viên; mọi người xem nhật ký.
-- **Blocks:** danh sách 5 nhóm (tên, xưởng, đang hoạt động, số thành viên; mã nội bộ không hiển thị, chỉ nhập lại) + form sửa
-  nhóm và thành viên → UC-01; nhật ký (lọc khoảng ngày, nhóm, từ khoá) → UC-02.
-- **Buttons:** "Lưu nhóm" → UC-01.
+### Screen 8: Nhật ký thao tác
+- **Purpose:** mọi người xem ai (tài khoản đăng nhập) đã làm thao tác nào, lúc nào.
+- **Inputs / filters:** Từ ngày - Đến ngày (mặc định 30 ngày gần nhất); Tài khoản và Thao tác (danh sách giá trị có trong khoảng ngày,
+  mặc định Tất cả); Từ khoá.
+- **Table (UC-02):** Lúc, Tài khoản, Họ tên, Thao tác, Đối tượng, Nội dung, Lý do; mới nhất trước; rỗng: "Chưa có thao tác nào
+  trong khoảng thời gian này."
+- **Buttons:** không có thao tác thay đổi dữ liệu.
 
 ## 9. Acceptance criteria (Tiêu chí nghiệm thu)
 - [ ] AC-01 (UC-34, BR-20): Cho trước file S4 hiện tại được chuyển dữ liệu ban đầu, khi app tính giá mã S4-2017 thì Tổng =
@@ -1240,8 +1229,8 @@ ký chạy ở cuối trang. Nút mà nhóm đang xác thực không có quyền
   mã tiếp theo; mã "S42003000010000000" có ở sheet NSM được giữ làm mã tính giá và điền vào mã kế toán, bản bị khoá.
 - [ ] AC-27 (BR-41, UC-34): Tải file .pdf → thông báo BR-41; Xưởng S4 tải file có sheet "Dinh muc (phut)" → sheet đó bị bỏ qua
   với thông báo BR-45, sheet NSM vẫn được xử lý.
-- [ ] AC-28 (BR-46, BR-47, BR-48): Bấm "Lưu mã kế toán" với mã nội bộ sai → thông báo BR-46; nhóm Sales bấm "Lưu NSM và giá" →
-  thông báo BR-47; Xưởng S1 thao tác mã S4 → thông báo BR-48; mọi thao tác thành công có dòng nhật ký.
+- [ ] AC-28 (BR-47, BR-48): Tài khoản chỉ có vai trò Kế toán bấm "Lưu NSM và giá", hoặc tài khoản không có vai trò nào bấm "Lưu mã kế toán" → thông báo BR-47; tài khoản chỉ có vai trò
+  Xưởng S1 thao tác mã S4 → thông báo BR-48; quản trị viên thao tác như Phòng SO; mọi thao tác thành công có dòng nhật ký.
 - [ ] AC-29 (UC-08, BR-22): SO thêm tỷ giá 26.000 hôm nay → USD/kg của S4-2017 hiển thị 0,7607; giá VND và lịch sử giá không đổi.
 - [ ] AC-30 (UC-29, BR-23): Xuất Excel với bộ lọc Xưởng = S4, Loại dòng = Thường → file có đúng các dòng đang hiển thị, 2 sheet
   `Bang gia` và `Chi tiet cong doan`, VND làm tròn đến đồng.
@@ -1251,7 +1240,8 @@ ký chạy ở cuối trang. Nút mà nhóm đang xác thực không có quyền
   3% → mọi mã S4 có công đoạn S được tính lại.
 - [ ] AC-34 (UC-07, BR-13): Quy trình TC Ring "B2 - C1 - C2 - SBD - PD - LF - CM - MD1 - MD2 - MD3 - R - S - W - F" → form NSM hiện
   C1, C2, SBD, PD, CM, MD1, MD2, MD3, R, S, S Compact, W (không hiện B2, LF); nhóm chưa có quy trình → hiện mọi công đoạn.
-- [ ] AC-35 (UC-01, UC-02): SO đổi mã nội bộ nhóm Sales → mã cũ không còn xác thực được; nhật ký ghi thao tác nhưng không ghi mã.
+- [ ] AC-35 (UC-02, BR-49): Mỗi dòng nhật ký ghi tên đăng nhập và họ tên của tài khoản thao tác ("system" / "Hệ thống" khi chạy bằng mã hệ thống); lọc theo tài khoản,
+  thao tác hoặc từ khoá chỉ còn các dòng phù hợp.
 
 - [ ] AC-36 (UC-09, BR-30): SO lưu hệ số thí nghiệm 0 → "Hệ số thí nghiệm phải lớn hơn 0."
 - [ ] AC-37 (UC-10, UC-11, BR-25, BR-28): Xưởng S4 thêm nhóm sơ cấp "LINEN - RING" với tiêu hao W 120% → thông báo BR-28; sửa
@@ -1274,7 +1264,7 @@ ký chạy ở cuối trang. Nút mà nhóm đang xác thực không có quyền
 - [ ] AC-46 (BR-27): Nhóm sợi pha dùng chính nó (trực tiếp hoặc qua nhóm khác) làm thành phần → thông báo BR-27.
 - [ ] AC-47 (BR-43): Xưởng S4 cập nhật hàng loạt sheet "2. Input tieu hao" với nhóm có group_key trùng 2 dòng → cả 2 dòng bị loại
   với lý do "Nhóm '<nhóm>' bị trùng trong file."; dòng hợp lệ khác vẫn được lưu (BR-43).
-- [ ] AC-48 (BR-49): Mọi thao tác thay đổi dữ liệu (ví dụ AC-15, AC-18) có một dòng trong nhật ký với nhóm, tên, nội dung trước →
+- [ ] AC-48 (BR-49): Mọi thao tác thay đổi dữ liệu (ví dụ AC-15, AC-18) có một dòng trong nhật ký với tên đăng nhập, họ tên, nội dung trước →
   sau và lý do.
 - [ ] AC-49 (BR-51): SO lưu phiên bản định mức mới thiếu dòng cho "Type 2" đang hoạt động → "Thiếu định mức cho: Type 2."
 
@@ -1299,13 +1289,12 @@ ký chạy ở cuối trang. Nút mà nhóm đang xác thực không có quyền
 - [ ] AC-59 (UC-33, 5.3): Xuất file mẫu S4 → sheet tiêu hao có một cột "C3"; sheet NSM giữ cột C3.1 / C3.2 / C3.3 (lượt 1-3); mã có
   lượt 2 trên C2 có REMARK "Có thành phần chỉ sửa được trên màn hình" và tải lên lại không đổi thành phần.
 
-- [ ] AC-60 (UC-38, UC-39): Mở bất kỳ màn hình nào khi chưa có dữ liệu → danh sách nhóm, xưởng, công đoạn hiện đúng, không lỗi;
-  xác thực đúng Phòng SO / SO0000 / Phòng SO → "Đang thao tác: Phòng SO - Phòng SO." và các màn khác trong phiên không hỏi lại.
+- [ ] AC-60 (UC-38): Mở bất kỳ màn hình nào khi chưa có dữ liệu → danh sách xưởng, công đoạn hiện đúng, không lỗi; chức năng không hỏi chọn người thao tác.
 - [ ] AC-61 (UC-40, UC-41): Gõ "CVC 30/1 (60/40)" ở Screen 2 → hiện nhóm sợi CVC, chi số 30, Ring, nhóm tiêu hao "CVC (60/40)"; sau
   một lần nhập file, Screen 6 liệt kê lần nhập đó với số dòng tạo / cập nhật / bị loại.
 - [ ] AC-62 (5.6, BR-61, UC-27): Cho trước 15 file dữ liệu của app cũ được chép vào thư mục dữ liệu của app mới, khi mở Bảng giá
   thì thấy đủ 3.435 mã sợi / bản NSM (số liệu ngày 2026-09-29) với cùng mã, trạng thái, mã kế toán và số tiền như app cũ; mã
-  S4-2017 có Tổng 19.777,8356 VND/kg; Screen 8 có đủ 5 nhóm, thành viên và 7 dòng nhật ký; Screen 6 có 2 lần nhập file và đối
+  S4-2017 có Tổng 19.777,8356 VND/kg; Screen 8 có đủ 7 dòng nhật ký; Screen 6 có 2 lần nhập file và đối
   chiếu giá cũ như app cũ; không có lần tính lại mới nào được tạo.
 - [ ] AC-63 (BR-61, UC-38): Dữ liệu chép sang có công đoạn C3.1 / C3.2 / C3.3 (lưu theo cách cũ) → app mới hiện công đoạn C3 với
   lượt 1-3, thành phần nguyên liệu đúng như app cũ, giá không đổi; tạo yêu cầu S4 mới thì mã tiếp theo = số lớn nhất đã có + 1.
@@ -1320,11 +1309,9 @@ ký chạy ở cuối trang. Nút mà nhóm đang xác thực không có quyền
   lực và nhập lý do." và không lưu.
 - [ ] AC-67 (UC-05, BR-62): Đổi Phút/kg của một loại chưa có mã sợi nào dùng → hộp xác nhận ghi "Giá các mã không thay đổi.",
   không tính lại.
-- [ ] AC-68 (UC-15, BR-63): Mở Screen 2 chưa xác nhận người thao tác → nút "Gửi yêu cầu" bị khoá, cạnh nút hiện "Bạn chưa xác nhận
-  người thao tác. Vui lòng chọn nhóm, nhập mã nội bộ và chọn tên ở đầu trang."; khi nhóm Sales chưa có thành viên đang hoạt động
-  thì câu hiện là "Nhóm Sales chưa có thành viên. Vui lòng báo Phòng SO thêm tên."
-- [ ] AC-69 (UC-15, BR-63): Xác nhận là Kế toán → nút bị khoá với "Nhóm 'Kế toán' không được gửi yêu cầu tính giá."; xác nhận là
-  Sales, chọn xưởng không có loại đóng gói chọn được → nút bị khoá với "Xưởng S1 chưa có loại đóng gói chọn được. Vui lòng báo
+- [ ] AC-68 (UC-15, BR-63, BR-47): Mở Screen 2 bằng tài khoản không có vai trò Sales hoặc Phòng SO → nút "Gửi yêu cầu" bị khoá, cạnh nút hiện "Tài khoản của bạn chưa có
+  vai trò cho thao tác này (quản trị viên cấp ở trang /admin)."; quản trị viên hoặc tài khoản có vai trò Sales → câu này không hiện.
+- [ ] AC-69 (UC-15, BR-63): Tài khoản có vai trò Sales, chọn xưởng không có loại đóng gói chọn được → nút bị khoá với "Xưởng S1 chưa có loại đóng gói chọn được. Vui lòng báo
   Phòng SO khai báo loại đóng gói và định mức."; hết mọi lý do → nút bấm được, không còn dòng lý do.
 - [ ] AC-70 (BR-64, UC-21): Cho trước nhóm sơ cấp "VISCOSE MVS" (S4) chỉ có tiêu hao chải thô C2 = 3,4% (C3 để trống), khi xưởng
   nhập NSM cho sợi dùng nhóm đó với thành phần Viscose - MVS chạy C3 (NSM 45) và bấm "Kiểm tra và xem giá" thì kiểm tra khớp đạt,
@@ -1345,7 +1332,7 @@ ký chạy ở cuối trang. Nút mà nhóm đang xác thực không có quyền
   trong "Các lần tính lại"; thông báo "Đã tính lại N mã chưa tính được của xưởng S1: M mã đã có giá, K mã vẫn chưa tính được."; các
   mã "Đã tính giá" khác không đổi.
 - [ ] AC-76 (UC-43, BR-65): Xưởng không có mã "Chưa tính được" → "Xưởng S4 không có mã nào đang 'Chưa tính được'."; bỏ trống lý
-  do → "Vui lòng chọn ngày hiệu lực và nhập lý do."; người thao tác nhóm Xưởng S1 → nút bị tắt kèm chú thích BR-47.
+  do → "Vui lòng chọn ngày hiệu lực và nhập lý do."; tài khoản chỉ có vai trò Xưởng S1 → nút bị tắt kèm chú thích BR-47.
 - [ ] AC-77 (5.4, BR-64): Xuất Excel bảng giá → sheet `Chi tiet cong doan` có cột cuối "Ghi chú tiêu hao", có chữ ở các lượt lấy
   tiêu hao từ dây chuyền tương đương, trống ở các dòng khác.
 - [ ] AC-78 (UC-44, 5.7): Chọn S1, loại "Khai báo thành phần sợi pha", bấm "Tải file mẫu" → file có sheet "Khai bao thanh phan"
@@ -1371,9 +1358,7 @@ ký chạy ở cuối trang. Nút mà nhóm đang xác thực không có quyền
   gợi ý) tải lên được; các cột không đọc bị bỏ qua; dòng để trống Thành phần 1-5 không đổi gì.
 
 ## 10. Open questions (Câu hỏi mở)
-- Giả định: 5 nhóm người dùng được tạo sẵn; chỉ nhóm Phòng SO có mã nội bộ khởi tạo `SO0000` (SO đổi sau); các nhóm khác
-  chưa có thành viên và mã nội bộ khởi tạo lần lượt `SALES0000`, `XS10000`, `XS40000`, `KT0000` - SO đổi và thêm thành viên
-  trước khi dùng.
+- Giả định: 5 vai trò cố định (SALES, XS1, XS4, KT, SO); quản trị viên tích vai trò cho từng tài khoản ở trang `/admin` trước khi dùng.
 - Giả định: Phòng SO làm được mọi thao tác của xưởng cho cả S1 và S4 (kể cả từ chối, nhập NSM, mã kế toán).
 - Giả định: mọi thay đổi dữ liệu nền có ảnh hưởng đến giá (cấu hình công đoạn, hồi phế, phút/kg đóng gói, định mức) đều tính lại
   toàn bộ xưởng ngay khi lưu, với ngày hiệu lực và lý do SO nhập - như quy tắc định mức. Đổi quy trình công nghệ và tỷ giá
@@ -1409,7 +1394,7 @@ ký chạy ở cuối trang. Nút mà nhóm đang xác thực không có quyền
 - Giả định: file mẫu / file tải lên giữ bố cục cột NSM của file Excel hiện tại (mục 5.3); thành phần không ghi được vào bố cục
   này chỉ sửa trên màn hình.
 - Giả định: đổi loại đóng gói mặc định không tính lại giá và không đổi loại đóng gói của mã đã có.
-- Giả định (triển khai): thêm UC-38 (dữ liệu tham chiếu), UC-39 (xác thực người thao tác, nhớ trong phiên làm việc), UC-40
+- Giả định (triển khai): thêm UC-38 (dữ liệu tham chiếu), UC-39 (đã bỏ 2026-10-13), UC-40
   (nhận diện tên sợi khi gõ), UC-41 (danh sách lần nhập file) để các màn hình hiển thị được theo giao diện đã chốt; chỉ đọc
   hoặc kiểm tra, không thêm quy tắc mới.
 - Giả định (triển khai): UC-21 dùng cho mã "Chờ xưởng xem" / "Chưa tính được", UC-23 dùng cho mã "Đã tính giá" (sửa NSM nhập
@@ -1430,11 +1415,8 @@ ký chạy ở cuối trang. Nút mà nhóm đang xác thực không có quyền
   đổi.
 - Giả định (triển khai): sửa nhóm tiêu hao (UC-13) tạo một lần tính lại "Sửa tiêu hao"; thêm nhóm mới (BR-40) không tạo lần tính
   lại. Số tiền lưu 10 chữ số thập phân.
-- Giả định (triển khai): nhóm Phòng SO được tạo sẵn một thành viên tên "Phòng SO"; các nhóm khác chưa có thành viên - SO thêm ở
-  màn "Người dùng & nhật ký".
-- Giả định (triển khai): màn Yêu cầu chỉ liệt kê mã do Sales tạo; màn Nhập NSM mặc định chọn xưởng của người thao tác; màn Nhập
+- Giả định (triển khai): màn Yêu cầu chỉ liệt kê mã do Sales tạo; màn Nhập NSM mặc định chọn xưởng của tài khoản (khi tài khoản chỉ có vai trò của một xưởng); màn Nhập
   dữ liệu mặc định loại "Cập nhật hàng loạt"; nhóm Xưởng không bấm được "Kiểm tra file" ở loại "Chuyển dữ liệu ban đầu".
-- Giả định (triển khai): nếu SO đổi mã nội bộ của chính nhóm đang dùng thì phải xác thực lại.
 
 - Giả định (triển khai, 2026-09-28): gộp dòng tiêu hao trùng (BR-59) khi mọi cột giống nhau trừ nhóm cột C3 (gồm cả ô tên và tỷ
   lệ thành phần "Other - C3.1/2/3"); dòng trùng hoàn toàn cũng được gộp. File S4 có 74 tên nhóm trùng, gộp được 18; phần còn lại
@@ -1460,9 +1442,8 @@ ký chạy ở cuối trang. Nút mà nhóm đang xác thực không có quyền
   lý do của thẻ Đóng gói chỉ bắt buộc khi có tính lại.
 - Giả định: loại đóng gói "đang được dùng" tính cả mã "Chờ xưởng xem", "Chưa tính được", không tính mã "Đã huỷ", "Từ chối" (BR-62).
 - Giả định: các "Giả định (triển khai)" phía trên đã chốt ở app cũ được giữ nguyên cho app mới (cùng cách hoạt động, để dữ liệu
-  chép sang dùng tiếp được); các nhóm người dùng khởi tạo (SO0000...) chỉ dùng khi thư mục dữ liệu còn trống.
-- Giả định: sau khi chép dữ liệu, việc Phòng SO thêm thành viên cho Sales, Xưởng S1, Xưởng S4, Kế toán, đổi mã nội bộ mặc định,
-  chọn loại đóng gói mặc định cho S1 và S4, sửa các nhóm tiêu hao trùng tên trong file S4 rồi nhập lại vẫn làm trên các màn hình
+  chép sang dùng tiếp được).
+- Giả định: sau khi chép dữ liệu, việc Phòng SO chọn loại đóng gói mặc định cho S1 và S4, sửa các nhóm tiêu hao trùng tên trong file S4 rồi nhập lại vẫn làm trên các màn hình
   hiện có (không thêm màn hình mới).
 - Giả định: menu giữ 8 mục như "Giao diện đã chốt", chưa ghi nhãn đơn vị; sẽ đổi sau khi khung sườn có menu gấp / mở và đăng nhập
   (YC-01, YC-02 trong ghi chép menu).
@@ -1473,8 +1454,8 @@ ký chạy ở cuối trang. Nút mà nhóm đang xác thực không có quyền
   3.258 giá cũ đối chiếu, 2 lần nhập file, 2 lần tính lại, 7 dòng nhật ký; S4-2017 = 19.777,8356 VND/kg; công đoạn S4 lưu theo
   cách cũ (C3.1-C3.3) hiện thành C3; không tạo lần tính lại nào.
 - Giả định (triển khai, 2026-09-29): menu bên trái là phần khung dùng chung, không gấp / mở được và không có tiêu đề nhóm con;
-  cách gần nhất trong phạm vi chức năng: sắp 8 mục theo nhóm người dùng, ghi nhãn [Chung] / [Sales] / [Xưởng] / [SO] trước tên
-  (tên này cũng là tiêu đề màn hình), và khối "📂 Menu theo nhóm người dùng" gấp / mở ở đầu mỗi màn hình (mỗi nhóm cũng gấp /
+  cách gần nhất trong phạm vi chức năng: sắp 8 mục theo vai trò, ghi nhãn [Chung] / [Sales] / [Xưởng] / [SO] trước tên
+  (tên này cũng là tiêu đề màn hình), và khối "📂 Menu theo vai trò" gấp / mở ở đầu mỗi màn hình (mỗi nhóm cũng gấp /
   mở). Menu trái gấp / mở thật cần nâng cấp khung sườn (YC-01).
 - Giả định (triển khai, 2026-09-29): UC-05 có chế độ xem trước (không lưu) để hộp xác nhận ghi đúng câu BR-62; nút xác nhận ghi
   "Lưu và tính lại" khi có tính lại, "Lưu đóng gói" khi không. Kiểm tra ngày hiệu lực / lý do chạy ngay lúc bấm "Lưu đóng gói"
@@ -1526,20 +1507,30 @@ ký chạy ở cuối trang. Nút mà nhóm đang xác thực không có quyền
 - Giả định (triển khai, 2026-09-29, 5.7): tỷ lệ ghi "48%" hoặc "48,5" cũng đọc được (bỏ dấu %, dấu phẩy thập phân); ô chữ không phải
   số → loại dòng theo BR-66.
 
-- Câu hỏi mở (2026-10-13, nâng cấp khung sườn): app đã có **đăng nhập và phân quyền theo chức năng / màn hình** (trang
-  "Người dùng & phân quyền" của quản trị viên). Khối "Người thao tác" của chức năng này (chọn nhóm, mã nội bộ, chọn tên - BR-46,
-  BR-47, BR-48) vẫn giữ nguyên vì quy định quyền theo thao tác, phạm vi xưởng và tên trong nhật ký (BR-49). Đề xuất bước sau: nối
-  tài khoản đăng nhập với nhóm / thành viên của chức năng để không phải xác thực hai lần (hỏi Phòng SO bằng
-  `docs/prompt/05-permission-interview.md`). Tạm thời: quản trị viên cấp quyền màn hình theo nhóm 8 màn ở trên; `u-admin` thấy tất cả.
+- Đã chốt (2026-10-13, chủ sản phẩm): bỏ hẳn cách xác nhận người thao tác riêng của chức năng; ai thao tác là tài khoản đăng nhập của
+  app, các quy định theo nhóm giữ lại dưới dạng vai trò (BR-47, BR-48), nhật ký ghi tài khoản (BR-49).
+- Giả định (triển khai, 2026-10-13): 5 vai trò SALES, XS1, XS4, KT, SO được khai báo cùng chức năng (mã và tên hiển thị lấy từ
+  `GroupCode` của backend, cột vai trò hiện ở trang `/admin`); quản trị viên tích vai trò cho tài khoản hoặc nhóm tài khoản.
+  Tài khoản không có vai trò nào vẫn xem được các màn hình đã được cấp quyền nhưng mọi nút làm thay đổi dữ liệu bị tắt.
+- Giả định (triển khai, 2026-10-13): tài khoản có nhiều vai trò được làm một thao tác khi có ít nhất một vai trò cho phép thao tác đó
+  và (với vai trò Xưởng) đúng xưởng; quản trị viên làm như Phòng SO; chạy bằng mã hệ thống (không có tài khoản, ví dụ kiểm thử) không bị
+  chặn và ghi nhật ký "system" / "Hệ thống". Thao tác "Chuyển dữ liệu ban đầu" (BR-45) kiểm tra qua cùng quy tắc với riêng vai trò Phòng SO.
+- Giả định (triển khai, 2026-10-13): các cột "người làm" đã lưu (người yêu cầu, người xử lý, người tạo / sửa, người nhập mã kế toán, người
+  chạy tính lại, người nhập file, người đổi giá) ghi họ tên của tài khoản ("Hệ thống" khi không có tài khoản); dòng cũ giữ nguyên chữ
+  "<nhóm> - <tên>".
+- Giả định (triển khai, 2026-10-13): UC-01 và UC-39 đã bỏ (không đánh số lại các UC khác); UC-42 chỉ còn lý do về loại đóng gói của xưởng
+  (kết quả không phụ thuộc người dùng nên vẫn lấy từ bộ nhớ nhanh), lý do thiếu vai trò do màn hình thêm khi tắt nút "Gửi yêu cầu".
+- Giả định (triển khai, 2026-10-13): màn "Nhật ký thao tác" giữ đường dẫn cũ `nguoi-dung-nhat-ky` và nằm cùng nhóm menu "Phòng SO" để quyền
+  màn hình đã cấp không bị mất; chỉ còn nhật ký (không có bảng nhóm và thành viên); không có nút xuất Excel riêng (bảng nhật ký tải CSV được).
 
 ## 11. Implementation map (filled by the AI)
 | Spec item | Code |
 |---|---|
 | Tốc độ (2026-10-13) | 19 thao tác chỉ đọc mang `@cached_query` trong `controllers/yarn_costing_controller.py` (kết quả giữ trong RAM tới khi dữ liệu đổi); bảng dữ liệu được cache trong RAM bởi `SqlRepository` |
-| Section 4 | `backend/features/yarn_costing/models/` (user_group, stage, rate_version, packaging_type, recovery_rate, process_route, exchange_rate + settings, loss_group, yarn + PriceLine + StageCostDetail, price_history, recalc_batch, legacy_price + ImportBatch, audit_log, enums); seed: `constants.py`, `repositories/*_repository.py` |
+| Section 4 | `backend/features/yarn_costing/models/` (stage, rate_version, packaging_type, recovery_rate, process_route, exchange_rate + settings, loss_group, yarn + PriceLine + StageCostDetail, price_history, recalc_batch, legacy_price + ImportBatch, audit_log, enums); seed: `constants.py`, `repositories/*_repository.py` |
 | Section 5 | `builders/workbook_reader_builder.py` (5.1, 5.2), `builders/template_file_builder.py` (5.3), `builders/file_builders.py` (5.4, 5.5), `builders/price_rows_builder.py` |
 | 5.6 / BR-61 | `repositories/yarn_sql_repository.py::YarnSqlRepository` (mọi repository: bảng PostgreSQL, nhập file app cũ một lần), `repositories/legacy_conversion.py`, `exceptions.py::DataFileError`, `constants.py::DATA_FILE_UNREADABLE_MESSAGE`, `services/get_reference_data_service.py` (`data_warnings`) |
-| UC-01..UC-42 | `YarnCostingController.<method>()` (bảng 2 và mục 7.1 của `docs/plans/yarn_costing-implementation-plan.md`) -> `services/<method>_service.py`; UC-42 `check_request_submit` |
+| UC-02..UC-38, UC-40..UC-45 (UC-01, UC-39 đã bỏ) | `YarnCostingController.<method>()` (bảng 2 và mục 7.1 của `docs/plans/yarn_costing-implementation-plan.md`) -> `services/<method>_service.py`; UC-42 `check_request_submit` |
 | BR-01..BR-04 | `business/name_business.py` |
 | BR-05..BR-08, BR-63 | `business/request_business.py` (BR-63: `RequestBusiness.submit_block_reasons`) |
 | BR-09..BR-12, BR-38 | `business/nsm_business.py` |
@@ -1550,7 +1541,7 @@ ký chạy ở cuối trang. Nút mà nhóm đang xác thực không có quyền
 | BR-36, BR-40 | `business/recalc_business.py` |
 | BR-37, BR-39, BR-54, BR-55 | `business/analysis_business.py` |
 | BR-41..BR-45 | `business/import_business.py` |
-| BR-46..BR-49 | `business/access_business.py` |
+| BR-47..BR-49 (BR-46 thay bằng đăng nhập) | `business/access_business.py` (`ensure_allowed`, `is_so`, `user_label`, `audit_entry`); bảng vai trò `models/access.py` (`ROLE_LABELS`, `ROLE_FACTORY`, `USE_CASE_PERMISSIONS`); vai trò của chức năng: `frontend/features/yarn_costing/manifest.py` (`roles`) |
 | BR-64 (dây chuyền tương đương) | `business/costing_business.py::CostingBusiness.equivalent_line`, `declared_carding_loss`, `pass_loss_with_source`; `constants.py::EQUIVALENT_CARDING`; `models/yarn.py::StageCostDetail.loss_source_stage` / `loss_note` |
 | BR-65 / UC-43 | `business/recalc_business.py::RecalcBusiness.not_priced`, `recalculate_not_priced`; `services/recalculate_not_priced_service.py`; `YarnCostingController.recalculate_not_priced` |
 | BR-50..BR-52, BR-60, BR-62 | `business/master_business.py` (BR-62: `packaging_in_use`, `packaging_recalc_codes`, `packaging_confirm_text`) |
@@ -1567,8 +1558,8 @@ ký chạy ở cuối trang. Nút mà nhóm đang xác thực không có quyền
 | 5.7 / UC-44 / UC-45 | `builders/component_file_builder.py` (ComponentFileReaderBuilder, ComponentTemplateBuilder); `services/download_component_template_service.py`, `services/import_component_file_service.py`; `YarnCostingController.download_component_template`, `import_component_file` |
 | BR-66..BR-69 | `business/component_import_business.py::ComponentImportBusiness` (`check_row` BR-66, `declared_group` BR-67, `relabel_yarn` BR-68, `plan` BR-69) |
 | Screen 7 | `pages/dashboard_page.py::DashboardPage` |
-| Screen 8 | `pages/user_audit_page.py::UserAuditPage` |
-| Menu theo nhóm người dùng | `manifest.py` (thứ tự) + `menu_group` của mỗi trang (menu bên trái gấp / mở của khung sườn); cảnh báo BR-61: `components/data_warnings.py` |
-| Xác thực, quyền, hộp thoại | `frontend/features/yarn_costing/components/` (actor_block, permissions, dialogs, flash, display, labels, columns, recalc_diff, factory_picker) |
+| Screen 8 | `pages/user_audit_page.py::UserAuditPage` (Nhật ký thao tác; UC-02) |
+| Menu theo vai trò | `manifest.py` (thứ tự) + `menu_group` của mỗi trang (menu bên trái gấp / mở của khung sườn); cảnh báo BR-61: `components/data_warnings.py` |
+| Quyền theo vai trò, hộp thoại | `frontend/features/yarn_costing/components/` (permissions: tắt nút theo vai trò, dialogs, flash, display, labels, columns, recalc_diff, factory_picker) |
 | Logs | mọi service ghi log các bước vào `logs/app.log` (không còn khung nhật ký trên màn hình) |
-| Tests | `backend/features/yarn_costing/tests/` (test_calculation: khớp S4-2017 và S1-1310; test_rules; test_pricing_services; test_master_services; test_import_services; test_carding_services; test_new_app: BR-61..BR-65, UC-42, UC-43, AC-62..AC-77; test_component_import: BR-66..BR-69, UC-44, UC-45, AC-78..AC-85) |
+| Tests | `backend/features/yarn_costing/tests/` (conftest + helpers: tài khoản đăng nhập thử; test_calculation: khớp S4-2017 và S1-1310; test_rules; test_pricing_services; test_master_services; test_import_services; test_carding_services; test_new_app: BR-61..BR-65, UC-42, UC-43, AC-62..AC-77; test_component_import: BR-66..BR-69, UC-44, UC-45, AC-78..AC-85) |

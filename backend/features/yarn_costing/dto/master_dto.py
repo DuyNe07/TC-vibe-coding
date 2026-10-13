@@ -6,7 +6,7 @@ from decimal import Decimal
 from pydantic import field_validator
 
 from backend.core.base import BaseDTO, BaseRequestDTO, BaseResponseDTO, FileDownloadDTO
-from backend.features.yarn_costing.dto.common_dto import ActorDTO, RecalcBatchDTO
+from backend.features.yarn_costing.dto.common_dto import RecalcBatchDTO
 from backend.features.yarn_costing.models.enums import (
     FactoryCode,
     LineType,
@@ -44,7 +44,6 @@ class StageRowDTO(BaseDTO):
 
 
 class SaveStageConfigRequest(BaseRequestDTO):
-    actor: ActorDTO
     factory_code: FactoryCode
     rows: list[StageRowDTO]
     effective_date: date | None = None
@@ -64,7 +63,6 @@ class RateLineRowDTO(BaseDTO):
 
 
 class ApplyRateVersionRequest(BaseRequestDTO):
-    actor: ActorDTO
     factory_code: FactoryCode
     rows: list[RateLineRowDTO]
     effective_date: date | None = None
@@ -85,7 +83,6 @@ class PackagingRowDTO(BaseDTO):
 
 
 class SavePackagingTypesRequest(BaseRequestDTO):
-    actor: ActorDTO
     factory_code: FactoryCode
     rows: list[PackagingRowDTO]
     effective_date: date | None = None
@@ -100,7 +97,6 @@ class RecoveryRowDTO(BaseDTO):
 
 
 class SaveRecoveryRatesRequest(BaseRequestDTO):
-    actor: ActorDTO
     factory_code: FactoryCode
     rows: list[RecoveryRowDTO]
     effective_date: date | None = None
@@ -110,7 +106,6 @@ class SaveRecoveryRatesRequest(BaseRequestDTO):
 class RecalculateNotPricedRequest(BaseRequestDTO):
     """UC-43: tính lại các mã 'Chưa tính được' của một xưởng (BR-65)."""
 
-    actor: ActorDTO
     factory_code: FactoryCode
     effective_date: date | None = None
     reason: str = ""
@@ -126,20 +121,17 @@ class ProcessRouteRowDTO(BaseDTO):
 
 
 class SaveProcessRoutesRequest(BaseRequestDTO):
-    actor: ActorDTO
     factory_code: FactoryCode
     rows: list[ProcessRouteRowDTO]
 
 
 class AddExchangeRateRequest(BaseRequestDTO):
-    actor: ActorDTO
     effective_date: date
     rate: Decimal | None = None
     note: str = ""
 
 
 class UpdateTrialFactorRequest(BaseRequestDTO):
-    actor: ActorDTO
     trial_factor: Decimal | None = None
     effective_date: date | None = None
     reason: str = ""

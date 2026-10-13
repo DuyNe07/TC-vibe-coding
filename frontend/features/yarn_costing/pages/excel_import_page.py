@@ -8,7 +8,7 @@ import streamlit as st
 from backend.core.base import UploadedFileDTO
 from backend.core.gateway import gateway
 from backend.features.yarn_costing import YarnCostingController
-from backend.features.yarn_costing.dto.common_dto import ActorDTO, ImportMode
+from backend.features.yarn_costing.dto.common_dto import ImportMode
 from backend.features.yarn_costing.dto.import_dto import (
     DownloadComponentTemplateRequest,
     DownloadTemplateRequest,
@@ -21,7 +21,6 @@ from backend.features.yarn_costing.dto.reference_dto import GetReferenceDataRequ
 from frontend.core.base_page import BasePage
 from frontend.core.components import data_table, download_button, file_upload, panel, stat_row
 from frontend.core.formatting import format_number
-from frontend.features.yarn_costing.components.actor_block import actor_factory, actor_is_so, render_actor_block
 from frontend.features.yarn_costing.components.columns import count_col, date_col, datetime_col, money, percent
 from frontend.features.yarn_costing.components.component_import import render_component_import
 from frontend.features.yarn_costing.components.data_warnings import show_data_warnings
@@ -30,7 +29,7 @@ from frontend.features.yarn_costing.components.display import fmt_date, percent_
 from frontend.features.yarn_costing.components.factory_picker import factory_segment
 from frontend.features.yarn_costing.components.flash import show_flash
 from frontend.features.yarn_costing.components.labels import IMPORT_MODE_LABELS, label_of
-from frontend.features.yarn_costing.components.permissions import action_state, explain
+from frontend.features.yarn_costing.components.permissions import action_state, explain, is_so, own_factory
 
 PREVIEW_KEY = "import_preview"
 COMMITTED_KEY = "import_committed"
@@ -75,13 +74,12 @@ class ExcelImportPage(BasePage):
         feature = gateway.open(YarnCostingController)
         reference = feature.get_reference_data(GetReferenceDataRequest(factory_code=None))
         show_data_warnings(reference)
-        actor = render_actor_block(feature, self.state, reference)
         show_flash(self.state)
 
         with panel("Chọn dữ liệu", icon="⚙️"):
             c1, c2, c3, c4 = st.columns([1, 2, 1, 1], vertical_alignment="bottom")
             with c1:
-                factory = factory_segment(reference.factories, self.key("factory"), actor_factory(self.state))
+                factory = factory_segment(reference.factories, self.key("factory"), own_factory())
             if factory is None:
                 return
             mode = c2.radio(
@@ -110,14 +108,14 @@ class ExcelImportPage(BasePage):
             template = self.state.get(template_key)
             if template is not None:
                 download_button(template, label="Tải file mẫu về máy", key=self.key(f"{template_key}.dl"))
-            if not actor_is_so(self.state) and not components:
+            if not is_so() and not components:
                 st.caption(
                     "Xưởng chỉ được 'Cập nhật hàng loạt' sheet '1. Input NSM' và '2. Input tieu hao' của xưởng mình; "
                     "các sheet khác sẽ bị bỏ qua."
                 )
 
         if components:  # UC-45
-            render_component_import(self, feature, actor, factory, cutoff)
+            render_component_import(self, feature, factory, cutoff)
             import_id = self._import_list(feature, factory)
             if import_id:
                 self._comparison(feature, import_id)
@@ -130,8 +128,8 @@ class ExcelImportPage(BasePage):
                 key=self.key("file"),
                 help="Tối đa 60 MB, mỗi sheet tối đa 10.000 dòng.",
             )
-            disabled, why = action_state(self.state, "UC-34", factory)
-            if not disabled and mode == ImportMode.BAN_DAU and not actor_is_so(self.state):
+            disabled, why = action_state("UC-34", factory)
+            if not disabled and mode == ImportMode.BAN_DAU and not is_so():
                 disabled, why = True, "Chuyển dữ liệu ban đầu chỉ Phòng SO được thực hiện."
             signature = self._signature(file, factory, mode, cutoff)
             if st.button(
@@ -144,7 +142,6 @@ class ExcelImportPage(BasePage):
             ):
                 preview = feature.import_workbook(
                     ImportWorkbookRequest(
-                        actor=actor or ActorDTO(),
                         factory_code=factory,
                         mode=mode,
                         cutoff_date=cutoff,
@@ -158,7 +155,7 @@ class ExcelImportPage(BasePage):
 
         stored = self.state.get(PREVIEW_KEY)
         if stored and file is not None and stored["sig"] == signature:
-            self._preview_block(feature, actor, stored["result"], file, factory, mode, cutoff, disabled, why)
+            self._preview_block(feature, stored["result"], file, factory, mode, cutoff, disabled, why)
         committed = self.state.get(COMMITTED_KEY)
         if committed is not None:
             self._committed_block(committed)
@@ -209,7 +206,6 @@ class ExcelImportPage(BasePage):
     def _preview_block(
         self,
         feature: YarnCostingController,
-        actor: ActorDTO | None,
         preview: ImportResultResponse,
         file: UploadedFileDTO,
         factory: str,
@@ -232,7 +228,6 @@ class ExcelImportPage(BasePage):
                 help=why,
             ):
                 request = ImportWorkbookRequest(
-                    actor=actor or ActorDTO(),
                     factory_code=factory,
                     mode=mode,
                     cutoff_date=cutoff,

@@ -1,9 +1,13 @@
 """Shared test data: the real numbers of S4-2017 and S1-1310 (copied from the two Excel workbooks)."""
 
+from collections.abc import Iterator
+from contextlib import contextmanager
 from datetime import date
 from decimal import Decimal
 
-from backend.features.yarn_costing.dto.common_dto import ActorDTO, YarnComponentDTO
+from backend.core.current_user import CurrentUser, get_current_user, role_permission, set_current_user
+from backend.features.yarn_costing.constants import FEATURE_KEY
+from backend.features.yarn_costing.dto.common_dto import YarnComponentDTO
 from backend.features.yarn_costing.dto.loss_dto import CreatePrimaryLossGroupRequest
 from backend.features.yarn_costing.dto.master_dto import (
     ApplyRateVersionRequest,
@@ -12,18 +16,40 @@ from backend.features.yarn_costing.dto.master_dto import (
     SavePackagingTypesRequest,
 )
 from backend.features.yarn_costing.dto.request_dto import CreateYarnRequestRequest
-from backend.features.yarn_costing.dto.user_dto import GroupMemberRowDTO, SaveUserGroupRequest
 from backend.features.yarn_costing.models.enums import FactoryCode, Technology
 from backend.features.yarn_costing.repositories.stage_repository import StageRepository
 from backend.features.yarn_costing.services.apply_rate_version_service import ApplyRateVersionService
 from backend.features.yarn_costing.services.create_primary_loss_group_service import CreatePrimaryLossGroupService
 from backend.features.yarn_costing.services.create_yarn_request_service import CreateYarnRequestService
 from backend.features.yarn_costing.services.save_packaging_types_service import SavePackagingTypesService
-from backend.features.yarn_costing.services.save_user_group_service import SaveUserGroupService
 
 D = Decimal
 
-SO = ActorDTO(group_code="SO", access_code="SO0000", person_name="Phòng SO")
+
+def user_with(*roles: str, username: str = "user", full_name: str = "", is_admin: bool = False) -> CurrentUser:
+    """A logged-in account holding the given app roles (ticked on /admin as ``yarn_costing/@<ROLE>``)."""
+    return CurrentUser(
+        username,
+        full_name=full_name,
+        is_admin=is_admin,
+        permissions=frozenset(role_permission(FEATURE_KEY, r) for r in roles),
+    )
+
+
+SO_USER = user_with("SO", username="so", full_name="Phòng SO")
+
+
+@contextmanager
+def acting_as(user: CurrentUser | None) -> Iterator[None]:
+    """Run a block as another account (``None`` = system code); the previous account is restored afterwards."""
+    previous = get_current_user()
+    set_current_user(user)
+    try:
+        yield
+    finally:
+        set_current_user(previous)
+
+
 TODAY = date.today()
 
 MD_S4 = ("430.908759098888", "142.65553199032365", "60.092337370786986", "20.86446552646605", "47.57495512833889")
@@ -116,14 +142,12 @@ def setup_factory(factory: FactoryCode = FactoryCode.S4, with_loss_group: bool =
     )
     SavePackagingTypesService().handle(
         SavePackagingTypesRequest(
-            actor=SO,
             factory_code=factory,
             rows=[PackagingRowDTO(code=packaging[0], name=packaging[0], minutes_per_kg=packaging[1])],
         )
     )
     ApplyRateVersionService().handle(
         ApplyRateVersionRequest(
-            actor=SO,
             factory_code=factory,
             rows=rate_rows(factory, rates, packaging[0]),
             effective_date=TODAY,
@@ -134,24 +158,14 @@ def setup_factory(factory: FactoryCode = FactoryCode.S4, with_loss_group: bool =
         label = name.replace(name.split()[1] + " ", "", 1) if factory == FactoryCode.S4 else "TC (60/40) MVS"
         CreatePrimaryLossGroupService().handle(
             CreatePrimaryLossGroupRequest(
-                actor=SO, factory_code=factory, yarn_group_label=label, technology=Technology.MVS, losses=losses
+                factory_code=factory, yarn_group_label=label, technology=Technology.MVS, losses=losses
             )
         )
-
-
-def add_member(group_code: str, access_code: str, name: str) -> ActorDTO:
-    names = {"SALES": "Sales", "XS1": "Xưởng Sợi 1", "XS4": "Xưởng Sợi 4", "KT": "Kế toán"}
-    SaveUserGroupService().handle(
-        SaveUserGroupRequest(
-            actor=SO, group_code=group_code, name=names[group_code], members=[GroupMemberRowDTO(name=name)]
-        )
-    )
-    return ActorDTO(group_code=group_code, access_code=access_code, person_name=name)
 
 
 def create_request(name: str, factory: FactoryCode = FactoryCode.S4, packaging: str = "Type 3") -> str:
     return (
         CreateYarnRequestService()
-        .handle(CreateYarnRequestRequest(actor=SO, factory_code=factory, yarn_name=name, packaging_code=packaging))
+        .handle(CreateYarnRequestRequest(factory_code=factory, yarn_name=name, packaging_code=packaging))
         .yarn.yarn_code
     )

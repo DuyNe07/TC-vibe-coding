@@ -1,35 +1,48 @@
-"""Tắt nút theo quyền (BR-46, BR-47, BR-48) - chỉ để hiển thị; backend vẫn là nơi quyết định."""
+"""Tắt nút theo vai trò của tài khoản đang đăng nhập (BR-47, BR-48) - chỉ để hiển thị; backend vẫn là nơi quyết định."""
 
 import streamlit as st
 
-from frontend.core.session_state import SessionState
-from frontend.features.yarn_costing.components.actor_block import current_actor
+from backend.core.current_user import get_current_user
+from backend.features.yarn_costing.dto.common_dto import ROLE_FACTORY, USE_CASE_PERMISSIONS, GroupCode
 
-_FACTORY_UCS = {
-    "UC-11", "UC-12", "UC-13", "UC-14", "UC-18", "UC-20", "UC-21", "UC-23", "UC-24", "UC-25", "UC-26", "UC-28", "UC-34",
-    "UC-45",
-}  # fmt: skip
-UC_BY_GROUP: dict[str, set[str] | None] = {
-    "SALES": {"UC-15", "UC-16", "UC-17"},
-    "XS1": _FACTORY_UCS,
-    "XS4": _FACTORY_UCS,
-    "KT": {"UC-28"},
-    "SO": None,  # Phòng SO: mọi thao tác
-}
-NOT_AUTHENTICATED = "Vui lòng chọn nhóm, nhập đúng mã nội bộ và chọn tên của bạn."
+FEATURE_KEY = "yarn_costing"
+SO_ROLE = GroupCode.SO.value
+NO_ROLE = "Tài khoản của bạn chưa có vai trò cho thao tác này (quản trị viên cấp ở trang /admin)."
 
 
-def action_state(state: SessionState, uc: str, factory_code: str | None = None) -> tuple[bool, str | None]:
+def _permitting_roles(uc: str) -> list[str] | None:
+    """Vai trò của tài khoản cho phép thao tác (None = không giới hạn: quản trị viên hoặc chưa có người dùng)."""
+    user = get_current_user()
+    if user is None or user.is_admin:
+        return None
+    allowed = USE_CASE_PERMISSIONS.get(uc, (SO_ROLE,))
+    return [r for r in user.roles_in(FEATURE_KEY) if r == SO_ROLE or r in allowed]
+
+
+def action_state(uc: str, factory_code: str | None = None) -> tuple[bool, str | None]:
     """(disabled, help) cho một nút thao tác."""
-    info = current_actor(state)
-    if not info:
-        return True, NOT_AUTHENTICATED
-    allowed = UC_BY_GROUP.get(str(info["group_code"]), set())
-    if allowed is not None and uc not in allowed:
-        return True, f"Nhóm '{info['group_name']}' không được thực hiện thao tác này."
-    if info.get("factory_code") and factory_code and str(info["factory_code"]) != str(factory_code):
-        return True, f"Bạn chỉ được thao tác dữ liệu của xưởng {info['factory_code']}."
+    roles = _permitting_roles(uc)
+    if roles is None:
+        return False, None
+    if not roles:
+        return True, NO_ROLE
+    factories = {ROLE_FACTORY.get(r) for r in roles}
+    if factory_code and None not in factories and str(factory_code) not in factories:
+        return True, f"Bạn chỉ được thao tác dữ liệu của xưởng {', '.join(sorted(str(f) for f in factories))}."
     return False, None
+
+
+def is_so() -> bool:
+    """Phòng SO: có vai trò SO, là quản trị viên hoặc chưa có người dùng."""
+    user = get_current_user()
+    return user is None or user.is_admin or SO_ROLE in user.roles_in(FEATURE_KEY)
+
+
+def own_factory() -> str | None:
+    """Xưởng mặc định của màn hình: xưởng của tài khoản khi tài khoản chỉ có vai trò của đúng một xưởng."""
+    user = get_current_user()
+    factories = {ROLE_FACTORY[r] for r in user.roles_in(FEATURE_KEY) if r in ROLE_FACTORY} if user else set()
+    return factories.pop() if len(factories) == 1 else None
 
 
 def explain(*reasons: str | None) -> None:

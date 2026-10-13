@@ -4,13 +4,11 @@ from datetime import date
 from decimal import Decimal
 
 from backend.core.base import BaseDTO, BaseRequestDTO, BaseResponseDTO
-from backend.features.yarn_costing.dto.common_dto import ActorDTO
 from backend.features.yarn_costing.dto.pricing_dto import PriceLineDTO
 from backend.features.yarn_costing.models.enums import FactoryCode, LineType, Technology, YarnStatus
 
 
 class CreateAdjustmentLineRequest(BaseRequestDTO):
-    actor: ActorDTO
     yarn_code: str
     line_type: LineType
     percent: Decimal
@@ -24,7 +22,6 @@ class PriceLineResponse(BaseResponseDTO):
 
 
 class DeleteAdjustmentLineRequest(BaseRequestDTO):
-    actor: ActorDTO
     line_code: str
 
 
@@ -91,6 +88,5 @@ class PriceLineListResponse(BaseResponseDTO):
 
 
 class SetAccountingCodeRequest(BaseRequestDTO):
-    actor: ActorDTO
     line_code: str
     accounting_code: str = ""

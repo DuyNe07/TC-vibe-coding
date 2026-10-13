@@ -13,7 +13,6 @@ from backend.features.yarn_costing.models.enums import FactoryCode, PriceEvent
 from backend.features.yarn_costing.repositories.exchange_rate_repository import SettingsRepository
 from backend.features.yarn_costing.repositories.price_history_repository import PriceHistoryRepository
 from backend.features.yarn_costing.repositories.recalc_batch_repository import AuditLogRepository, RecalcBatchRepository
-from backend.features.yarn_costing.repositories.user_group_repository import UserGroupRepository
 from backend.features.yarn_costing.repositories.yarn_repository import YarnRepository
 
 
@@ -34,10 +33,7 @@ class UpdateTrialFactorService(BaseService[UpdateTrialFactorRequest, RecalcResul
         self.recalc = RecalcBusiness()
 
     def execute(self, request: UpdateTrialFactorRequest) -> RecalcResultResponse:
-        a = request.actor
-        group = self.access.verify(
-            a.group_code, a.access_code, a.person_name, UserGroupRepository().list_all(), "UC-09"
-        )
+        self.access.ensure_allowed(self.current_user, "UC-09")
         self.master.ensure_positive(request.trial_factor, "Hệ số thí nghiệm phải lớn hơn 0.")
         self.master.require_date_and_reason(request.effective_date, request.reason)
         settings = self.repository.get_settings()
@@ -47,7 +43,7 @@ class UpdateTrialFactorService(BaseService[UpdateTrialFactorRequest, RecalcResul
                 update={"trial_factor": new_factor, "trial_factor_effective_date": request.effective_date}
             )
         )
-        label = self.access.actor_label(group, a.person_name)
+        label = self.access.user_label(self.current_user)
         yarn_repo = YarnRepository()
         yarns = yarn_repo.list_all()
         batch_repo = RecalcBatchRepository()
@@ -86,7 +82,7 @@ class UpdateTrialFactorService(BaseService[UpdateTrialFactorRequest, RecalcResul
             batch_repo.add(batch)
         AuditLogRepository().add(
             self.access.audit_entry(
-                group, a.person_name, "UC-09", "Hệ số thí nghiệm", f"{old_factor} → {new_factor}", request.reason
+                self.current_user, "UC-09", "Hệ số thí nghiệm", f"{old_factor} → {new_factor}", request.reason
             )
         )
         self.logger.info("Trial factor %s -> %s; %s trial lines updated", old_factor, new_factor, len(history))

@@ -11,7 +11,6 @@ from backend.features.yarn_costing.models.process_route import ProcessRoute
 from backend.features.yarn_costing.repositories.process_route_repository import ProcessRouteRepository
 from backend.features.yarn_costing.repositories.recalc_batch_repository import AuditLogRepository
 from backend.features.yarn_costing.repositories.stage_repository import StageRepository
-from backend.features.yarn_costing.repositories.user_group_repository import UserGroupRepository
 
 
 class SaveProcessRoutesService(BaseService[SaveProcessRoutesRequest, SaveCountResponse]):
@@ -22,10 +21,8 @@ class SaveProcessRoutesService(BaseService[SaveProcessRoutesRequest, SaveCountRe
         self.costing = CostingBusiness()
 
     def execute(self, request: SaveProcessRoutesRequest) -> SaveCountResponse:
-        a, factory = request.actor, request.factory_code
-        group = self.access.verify(
-            a.group_code, a.access_code, a.person_name, UserGroupRepository().list_all(), "UC-07", factory.value
-        )
+        factory = request.factory_code
+        self.access.ensure_allowed(self.current_user, "UC-07", factory.value)
         stages = StageRepository().for_factory(factory.value)
         old = {(r.yarn_group, r.technology): r for r in self.repository.for_factory(factory.value)}
         seen: set = set()
@@ -61,7 +58,7 @@ class SaveProcessRoutesService(BaseService[SaveProcessRoutesRequest, SaveCountRe
         self.repository.save_many(items)
         names = [f"{i.yarn_group} - {i.technology.value}" for i in items]
         AuditLogRepository().add(
-            self.access.audit_entry(group, a.person_name, "UC-07", factory.value, f"{len(items)} quy trình")
+            self.access.audit_entry(self.current_user, "UC-07", factory.value, f"{len(items)} quy trình")
         )
         self.logger.info("Process routes %s saved: %s", factory, len(items))
         message = (
