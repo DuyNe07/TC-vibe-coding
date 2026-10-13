@@ -103,7 +103,7 @@ Self-repair loop of `docs/rules/10-self-repair.md` until both commands pass:
 
 ## 6. Final report (Vietnamese, no jargon)
 - Nhánh nào đã được cập nhật lên phiên bản khung sườn mới nhất; đã đẩy lên đâu (hoặc lệnh để tự đẩy).
-- Những gì đã đổi trong từng chức năng (lưu vào cơ sở dữ liệu, menu gấp / mở, đăng nhập...), dữ liệu cũ được giữ thế nào.
+- Những gì đã đổi trong từng chức năng (lưu vào cơ sở dữ liệu, menu riêng của ứng dụng, đăng nhập...), dữ liệu cũ được giữ thế nào.
 - Kết quả hai lệnh kiểm tra (copy dòng cuối).
 - Nhắc người dùng: nếu chưa có `.env` thì `Copy-Item .env.example .env`, điền 5 dòng `POSTGRES_*` (giá trị xin người phụ
   trách khung sườn), rồi chạy lại `run.ps1` (thư viện mới được cài tự động).

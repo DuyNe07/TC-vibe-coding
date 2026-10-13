@@ -1,4 +1,4 @@
-"""FeatureManifest: how a feature appears on Home and in the sidebar menu.
+"""FeatureManifest: one app (= feature). It is a card on Home; its pages are the sidebar menu inside the app.
 
 Every ``frontend/features/<key>/manifest.py`` defines exactly one ``FEATURE = FeatureManifest(...)``.
 """
@@ -12,11 +12,11 @@ from frontend.core.base_page import BasePage
 @dataclass(frozen=True)
 class FeatureManifest:
     key: str  # == folder name == backend feature key
-    title: str  # shown on Home card + sidebar (Vietnamese)
+    title: str  # shown on the Home card and above the app's menu (Vietnamese)
     description: str  # one or two sentences for the Home card
     pages: tuple[type[BasePage], ...]  # first page = landing page (/<feature-slug>)
     icon: str = "🧩"  # one emoji
-    group: str = "Chức năng"  # sidebar / Home section
+    group: str = "Chức năng"  # section of the Home page (e.g. the department); shown when there are several
     owner: str = ""  # person or team responsible
     order: int = 100  # smaller = shown first inside the group
     enabled: bool = True  # False hides the feature everywhere

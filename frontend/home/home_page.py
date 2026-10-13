@@ -1,4 +1,4 @@
-"""Home page (/home): lists every enabled feature as a card, grouped, with search."""
+"""Home page (/home): the app launcher - one card per app the user may open. Opening an app shows its own menu."""
 
 import streamlit as st
 
@@ -20,12 +20,8 @@ class HomePage(BasePage):
         super().__init__("home")
 
     def render_header(self) -> None:
-        router = get_router()
-        page_header(
-            get_settings().name,
-            description=f"Chọn công cụ để bắt đầu. Bạn đang có {len(router.features)} chức năng trong "
-            f"{len(router.groups())} nhóm.",
-        )
+        count = len(get_router().features)
+        page_header(get_settings().name, description=f"Chọn ứng dụng để bắt đầu. Bạn đang có {count} ứng dụng.")
 
     def render(self) -> None:
         router = get_router()
@@ -33,25 +29,28 @@ class HomePage(BasePage):
         if not router.features:
             if router.registry.features:
                 empty_state(
-                    "Bạn chưa được cấp quyền chức năng nào.", "Liên hệ quản trị viên để được cấp quyền.", icon="🔒"
+                    "Bạn chưa được cấp quyền ứng dụng nào.", "Liên hệ quản trị viên để được cấp quyền.", icon="🔒"
                 )
             else:
                 empty_state(
-                    "Chưa có chức năng nào.",
+                    "Chưa có ứng dụng nào.",
                     "Yêu cầu AI: “Đọc docs/README.md rồi triển khai chức năng theo docs/business/<tên>.md”.",
                     icon="🧩",
                 )
             return
 
         groups = router.groups()
-        search_col, group_col = st.columns([2, 3], vertical_alignment="bottom")
-        keyword = search_col.text_input(
-            "Tìm chức năng", key=self.key("search"), placeholder="Nhập tên hoặc mô tả...", type="search"
-        )
-        selected = (
-            group_col.pills("Nhóm", [ALL_GROUPS, *groups.keys()], default=ALL_GROUPS, key=self.key("group"))
-            or ALL_GROUPS
-        )
+        keyword, selected = "", ALL_GROUPS
+        if len(router.features) > CARDS_PER_ROW:  # filters only help once the apps no longer fit on one row
+            search_col, group_col = st.columns([2, 3], vertical_alignment="bottom")
+            keyword = search_col.text_input(
+                "Tìm ứng dụng", key=self.key("search"), placeholder="Nhập tên hoặc mô tả...", type="search"
+            )
+            if len(groups) > 1:
+                selected = (
+                    group_col.pills("Nhóm", [ALL_GROUPS, *groups], default=ALL_GROUPS, key=self.key("group"))
+                    or ALL_GROUPS
+                )
 
         shown = 0
         for group, manifests in groups.items():
@@ -61,14 +60,15 @@ class HomePage(BasePage):
             if not visible:
                 continue
             shown += len(visible)
-            st.subheader(group, anchor=False)
+            if len(groups) > 1:
+                st.subheader(group, anchor=False)
             for start in range(0, len(visible), CARDS_PER_ROW):
                 columns = st.columns(CARDS_PER_ROW)
                 for column, manifest in zip(columns, visible[start : start + CARDS_PER_ROW], strict=False):
                     with column:
                         self._render_card(manifest)
         if shown == 0:
-            empty_state("Không tìm thấy chức năng phù hợp.", "Thử từ khoá khác.", icon="🔍")
+            empty_state("Không tìm thấy ứng dụng phù hợp.", "Thử từ khoá khác.", icon="🔍")
 
     def _render_card(self, manifest: FeatureManifest) -> None:
         router = get_router()
@@ -77,14 +77,14 @@ class HomePage(BasePage):
         ):
             if manifest.owner:
                 st.badge(f"Phụ trách: {manifest.owner}", color="gray")
-            if st.button("Mở chức năng", key=self.key(f"open.{manifest.key}"), type="primary", width="stretch"):
+            if st.button("Mở ứng dụng", key=self.key(f"open.{manifest.key}"), type="primary", width="stretch"):
                 st.switch_page(router.landing_page(manifest.key))
 
     def _render_load_errors(self) -> None:
         errors = get_router().registry.errors
         if not errors:
             return
-        with st.expander(f"⚠️ {len(errors)} chức năng không tải được (các chức năng khác vẫn hoạt động)", expanded=True):
+        with st.expander(f"⚠️ {len(errors)} ứng dụng không tải được (các ứng dụng khác vẫn hoạt động)", expanded=True):
             for error in errors:
                 st.markdown(f"**{error.feature_key}** - {error.message}")
                 st.code(error.traceback, language="text")

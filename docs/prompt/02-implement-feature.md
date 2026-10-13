@@ -54,7 +54,8 @@ Otherwise, for every in-scope feature:
      ```
    - Numbered questions, each with options and the proposed default marked `(đề xuất)`. Ask only what the document
      leaves open, from this list:
-     1. Menu: mỗi màn hình là một mục riêng trong menu bên trái, dưới tên chức năng; hoặc gộp thành các thẻ (tab)
+     1. Menu: mỗi màn hình là một mục riêng trong menu bên trái của ứng dụng (có thể chia theo nhóm, ví dụ Sales,
+        Phòng SO); hoặc gộp thành các thẻ (tab)
         trong một trang.
      2. Bảng dữ liệu (như Excel): (a) chỉ xem - lọc, sắp xếp, tìm kiếm, tải Excel; (b) sửa trực tiếp trong ô rồi bấm
         "Lưu"; (c) chọn một dòng để xem chi tiết / sửa.
@@ -151,8 +152,8 @@ and use that port in the health check and stop commands.
    is no central list to edit, so features never conflict. Pages import only `backend.core.*`, `backend.features.<key>`
    and `backend.features.<key>.dto.*`, and never write `<Pascal>Controller()`.
 4. **Navigation = manifest.** `frontend/features/<key>/manifest.py` (`FEATURE = FeatureManifest(...)`) lists the pages;
-   the sidebar menu (one collapsible block per feature; `menu_group` on a page = sub-group label) and the Home card are
-   generated from it; the menu shows only what the user may open. Never edit the sidebar,
+   the feature is an app: its card on Home and, once opened, its own sidebar menu (`menu_group` on a page = group label
+   in that menu) are generated from it; the menu shows only what the user may open. Never edit the sidebar,
    Home, router or `frontend/app.py`.
 5. **Traceability.** One `UC-xx` = one controller method (docstring `"""UC-xx <tên nghiệp vụ>."""`) = one service class
    in its own file. One validation `BR-xx` = one `BaseBusinessRule` subclass with `code = "BR-xx"`; one
@@ -405,8 +406,8 @@ Read first: `CLAUDE.md`, `docs/rules/00`-`03`, `06`, `07`, `09`, the business do
    rows: covered by the page render test or the app check). The screens match `Giao diện đã chốt`. Implement anything
    missing.
 3. App check: start the app (section 3), wait for the health check to return `ok`, confirm with a browser tool if you
-   have one that `/home` shows the new card and the previous features and that the sidebar shows the feature with its
-   pages, open each new page, walk through the ACs, confirm `logs/app.log` has no ERROR; then stop the app.
+   have one that `/home` shows the new app card next to the previous ones and that opening it shows its pages in the
+   sidebar, open each new page, walk through the ACs, confirm `logs/app.log` has no ERROR; then stop the app.
    Without a browser tool, rely on the tests and the health check. On any error read `logs/app.log`, fix, re-run the
    quality gate.
 

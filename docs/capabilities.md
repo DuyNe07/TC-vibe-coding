@@ -40,10 +40,10 @@ Mỗi dòng "Làm được" đều đã có sẵn thư viện và lớp dùng ch
 | Ô số liệu tổng hợp (KPI), biểu đồ cột / đường / tròn | `stat_row`, `st.bar_chart`, `st.plotly_chart` |
 | Tải file lên, tải file về | `file_upload`, `download_button` |
 | Hộp thoại xác nhận, tab, khối gấp gọn | `st.dialog`, `st.tabs`, `st.expander` |
-| Nhiều màn hình cho một chức năng, hiện ở menu bên trái | `manifest.py` (`pages=(...)`) |
-| Đăng nhập; quản trị viên tạo tài khoản, nhóm người dùng và cấp quyền theo chức năng hoặc từng màn hình (quyền = quyền cá nhân + quyền của các nhóm) | có sẵn trong khung sườn: trang "Người dùng & phân quyền", mở bằng địa chỉ `/admin` (không có trên menu) |
+| Mỗi chức năng là một ứng dụng: một thẻ ở Trang chủ, bấm vào thì menu bên trái hiện các màn hình của ứng dụng đó | `manifest.py` (`pages=(...)`) |
+| Đăng nhập; quản trị viên tạo tài khoản, nhóm người dùng và cấp quyền theo từng ứng dụng: chọn ứng dụng rồi tick màn hình cho từng người / nhóm (quyền = quyền cá nhân + quyền của các nhóm) | có sẵn trong khung sườn: trang "Người dùng & phân quyền", mở bằng địa chỉ `/admin` (không có trên menu) |
 | Chức năng mẫu tự ẩn khi app đã có chức năng thật đầu tiên | có sẵn trong khung sườn |
-| Menu bên trái gấp / mở theo chức năng, chia màn hình theo nhóm con (ví dụ Sales, Phòng SO); chỉ hiện những gì người dùng được phép mở | `manifest.py` + `menu_group` của trang |
+| Menu bên trái của ứng dụng chia màn hình theo nhóm (ví dụ Sales, Phòng SO); chỉ hiện những gì người dùng được phép mở | `manifest.py` + `menu_group` của trang |
 | Không làm được: đổi logo-màu riêng cho một chức năng, giao diện mobile riêng, tự động cập nhật theo thời gian thực | - |
 
 ## 5. Tính toán, xử lý bằng Python

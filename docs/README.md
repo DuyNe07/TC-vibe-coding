@@ -75,7 +75,7 @@ rule A.0 of [rules/00-golden-rules.md](rules/00-golden-rules.md).
 | Take data from a public web page | `backend/shared/web` (`fetch_page(url).tables()`, `fetch_file(url)`) - from builders/services only |
 | Build the UI | `frontend/core/components` (panel, stat_row, data_table, file_upload, download_button, ...) |
 | Restrict who sees a feature / page | Nothing to code: the admin grants it on `/admin` (rules 02 "Users and permissions") |
-| Group pages in the menu | `menu_group = "..."` on the page class (rules 04 #9) |
+| Group pages in the app's menu | `menu_group = "..."` on the page class (rules 04 #9) |
 | Log something | `self.logger.info(...)` in services/pages; it goes to `logs/app.log` |
 | Make a page fast | `@cached_query` on read-only controller methods (rules 02, Persistence) |
 | Add a library | Pinned line in `requirements.txt` |

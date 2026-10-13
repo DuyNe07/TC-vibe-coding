@@ -17,6 +17,11 @@ def page_permission(feature_key: str, page_slug: str) -> str:
     return f"{feature_key}/{page_slug or LANDING_PAGE_SLUG}"
 
 
+def in_app(permission: str, feature_key: str) -> bool:
+    """True when the key is about this app (the whole app or one of its pages)."""
+    return permission == feature_key or permission.startswith(f"{feature_key}/")
+
+
 @dataclass(frozen=True)
 class CurrentUser:
     username: str
@@ -30,11 +35,7 @@ class CurrentUser:
 
     def can_open_feature(self, feature_key: str) -> bool:
         """True when the user may open at least one page of the feature (gateway check)."""
-        return (
-            self.is_admin
-            or feature_key in self.permissions
-            or any(p.startswith(f"{feature_key}/") for p in self.permissions)
-        )
+        return self.is_admin or any(in_app(p, feature_key) for p in self.permissions)
 
     def can_open_page(self, feature_key: str, page_slug: str) -> bool:
         return (

@@ -13,12 +13,13 @@ import hashlib
 import hmac
 import secrets
 from datetime import datetime, timedelta
+from typing import Any
 
 from pydantic import Field
 
 from backend.core.base import BaseEntity, SqlRepository, utc_now
 from backend.core.config import get_settings
-from backend.core.current_user import CurrentUser, get_current_user
+from backend.core.current_user import CurrentUser, get_current_user, in_app
 from backend.core.exceptions import ConflictError, InvalidInputError, PermissionDeniedError
 from backend.core.logger import get_logger
 
@@ -190,14 +191,39 @@ class AccessManager:
     def set_group_members(self, group_id: str, user_ids: set[str]) -> None:
         """Make exactly ``user_ids`` members of the group."""
         self._require_admin()
-        changed = []
-        for user in self.users.list_all():
-            member = group_id in user.group_ids
-            if (user.id in user_ids) != member:
-                user.group_ids = [g for g in user.group_ids if g != group_id] + ([group_id] if not member else [])
-                changed.append(user)
+        changed = [
+            u.model_copy(update={"group_ids": [g for g in u.group_ids if g != group_id] + ([group_id] if u.id in user_ids else [])})
+            for u in self.users.list_all()
+            if (u.id in user_ids) != (group_id in u.group_ids)
+        ]  # fmt: skip
         self.users.save_many(changed)
         self.logger.info("Group %s: %s members, %s users changed", group_id, len(user_ids), len(changed))
+
+    def set_rights_in_app(self, app_key: str, users: dict[str, set[str]], groups: dict[str, set[str]]) -> int:
+        """Replace the rights in ONE app (``app_key`` = whole app, ``page_permission(...)`` = one page) of the given
+        user / group ids. Their rights in other apps are kept. Returns how many users + groups changed."""
+        self._require_admin()
+        wrong = sorted(p for rights in (*users.values(), *groups.values()) for p in rights if not in_app(p, app_key))
+        if wrong:
+            raise InvalidInputError(f"Permissions {wrong} do not belong to app '{app_key}'.")
+
+        def changed(items: list[Any], wanted: dict[str, set[str]]) -> list[Any]:
+            out = []
+            for item in items:
+                if item.id not in wanted:
+                    continue
+                permissions = [p for p in item.permissions if not in_app(p, app_key)] + sorted(wanted[item.id])
+                if set(permissions) != set(item.permissions):
+                    out.append(item.model_copy(update={"permissions": permissions}))
+            return out
+
+        changed_users, changed_groups = changed(self.users.list_all(), users), changed(self.groups.list_all(), groups)
+        if changed_users:
+            self.users.save_many(changed_users)
+        if changed_groups:
+            self.groups.save_many(changed_groups)
+        self.logger.info("Rights in %s: %s users, %s groups changed", app_key, len(changed_users), len(changed_groups))
+        return len(changed_users) + len(changed_groups)
 
     def delete_group(self, group_id: str) -> None:
         self._require_admin()

@@ -6,8 +6,9 @@ then apply it. You never change application code here.
 
 ## 1. What the app already does (read, do not re-implement)
 - Login is required. The built-in administrator `u-admin` (first password `u-admin`) can open everything and manage users.
-- Permission keys: `<feature_key>` = the whole feature; `<feature_key>/<page_slug>` = one screen (landing page without
-  slug: `<feature_key>/main`). A user's rights = personal keys + keys of ALL their groups (union).
+- Rights are given per app (= feature). Permission keys: `<feature_key>` = the whole app (also screens added later);
+  `<feature_key>/<page_slug>` = one screen (landing page without slug: `<feature_key>/main`). A user's rights = personal
+  keys + keys of ALL their groups (union).
 - The menu, Home and URLs only show what the user may open; the gateway refuses the rest. Administrators manage
   everything on the page "Người dùng & phân quyền" (`/admin`). Code: `backend/core/access.py` (`AccessManager`,
   `User`, `UserGroup`), `backend/core/current_user.py`. Rules: `docs/rules/02-backend-architecture.md` ("Users and
@@ -54,12 +55,13 @@ quản trị). Mention what will change for existing accounts. Ask the user to a
 ## 6. Step 4 - Apply
 Apply exactly the confirmed summary with ONE command (write the Python in the `-c` argument, no file), using only
 `AccessManager` methods: `save_group(UserGroup(...))`, `set_group_members(group_id, user_ids)`,
-`save_user(User(...), password)` (new users need a password; existing users: load with `list_users()`, change fields,
-`save_user(user)` without password to keep it). Re-use existing groups / users by name instead of creating duplicates.
+`save_user(User(...), password)` (new users need a password; existing users: load with `list_users()`, change fields
+with `user.model_copy(update={...})`, `save_user(user)` without password to keep it), and for the rights, once per app:
+`set_rights_in_app(app_key, {user_id: {keys}}, {group_id: {keys}})` (keys of that app only; other apps are kept). Re-use existing groups / users by name instead of creating duplicates.
 Then run the read command of Step 1 again and check the result matches the summary.
 If running Python is not possible (no `.venv`, no database access): give the administrator click-by-click steps on
-`/admin` instead (tab "Nhóm người dùng": tạo nhóm, chọn thành viên, chọn chức năng / màn hình, Lưu; tab "Người dùng":
-tạo tài khoản...).
+`/admin` instead (thẻ "Tài khoản": Thêm người dùng; thẻ "Nhóm": Thêm nhóm, chọn thành viên; thẻ "Quyền theo ứng dụng":
+chọn ứng dụng, tick màn hình cho từng người / nhóm, bấm "Lưu quyền ...").
 
 ## 7. Final report (Vietnamese, no jargon)
 - Đã tạo / sửa những nhóm và tài khoản nào, mỗi nhóm thấy gì trên menu.

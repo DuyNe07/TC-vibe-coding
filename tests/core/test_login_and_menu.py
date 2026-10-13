@@ -4,7 +4,7 @@ from pathlib import Path
 
 from streamlit.testing.v1 import AppTest
 
-from backend.core.access import AccessManager, User
+from backend.core.access import AccessManager, User, UserGroup
 from backend.core.current_user import page_permission
 from frontend.core.registry import FeatureRegistry
 
@@ -30,9 +30,32 @@ def _page_links(app: AppTest) -> list[str]:
     return [link.proto.label for link in app.get("page_link")]
 
 
-def _menu_labels(manifests) -> set[str]:
-    """Sidebar labels of fully granted features: a one-page feature is one link, otherwise one link per page."""
-    return {m.title if len(m.pages) == 1 else p.title for m in manifests for p in m.pages}
+def _app_cards(app: AppTest) -> int:
+    return sum(b.label == "Mở ứng dụng" for b in app.button)
+
+
+def _sidebar_inside_app(username: str) -> AppTest:
+    """The sidebar as the user sees it on the landing page of their first app."""
+
+    def render(name: str) -> None:
+        from backend.core.access import AccessManager
+        from backend.core.current_user import set_current_user
+        from frontend.core.components import render_sidebar_nav
+        from frontend.core.registry import FeatureRegistry
+        from frontend.core.router import Router, set_current_router
+        from frontend.home.home_page import HomePage
+
+        user = AccessManager().refresh(name)
+        set_current_user(user)
+        router = Router(FeatureRegistry.discover(), HomePage(), user)
+        set_current_router(router)
+        router.navigation()
+        render_sidebar_nav(router, router.landing_page(router.features[0].key))
+
+    app = AppTest.from_function(render, args=(username,), default_timeout=60)
+    app.run()
+    assert not app.exception, [e.value for e in app.exception]
+    return app
 
 
 def test_wrong_password_stays_on_login() -> None:
@@ -40,10 +63,17 @@ def test_wrong_password_stays_on_login() -> None:
     assert any("Sai tên đăng nhập" in e.value for e in app.error)
 
 
-def test_admin_page_is_reachable_by_url_only_and_renders() -> None:
+def test_home_lists_the_apps_and_each_app_has_its_own_menu() -> None:
     app = _login("u-admin", "u-admin")
-    links = set(_page_links(app))
-    assert _menu_labels(FeatureRegistry.discover().visible_features()) <= links
+    manifests = FeatureRegistry.discover().visible_features()
+    assert _page_links(app) == [], "Home: the sidebar shows only who is logged in, the apps are cards"
+    assert _app_cards(app) == len(manifests)
+    links = _page_links(_sidebar_inside_app("u-admin"))
+    assert links == ["Tất cả ứng dụng", *(p.title for p in manifests[0].pages)]
+
+
+def test_admin_page_is_reachable_by_url_only_and_renders() -> None:
+    links = set(_page_links(_sidebar_inside_app("u-admin")))
     assert "Người dùng & phân quyền" not in links, "the admin page must not be in the menu (open it by URL /admin)"
 
     def admin_page() -> None:
@@ -60,6 +90,13 @@ def test_admin_page_is_reachable_by_url_only_and_renders() -> None:
     page = AppTest.from_function(admin_page, default_timeout=60)
     page.run()
     assert not page.exception and not page.error, [e.value for e in [*page.exception, *page.error]]
+    group = AccessManager().save_group(UserGroup(name="Sales"))
+    AccessManager().save_user(User(username="an", group_ids=[group.id]), "pw")
+    page.run()  # with a user and a group: both rights grids, the lists and the forms
+    assert not page.exception and not page.error, [e.value for e in [*page.exception, *page.error]]
+    assert [r.value for r in page.radio] == [None, None], "nothing is open until the admin clicks a name"
+    page.radio[0].set_value(next(u.id for u in AccessManager().list_users() if u.username == "an")).run()
+    assert not page.exception and "an" in [s.value for s in page.subheader]
 
 
 def test_user_only_sees_granted_pages() -> None:
@@ -69,10 +106,9 @@ def test_user_only_sees_granted_pages() -> None:
     AccessManager().save_user(User(username="viewer", permissions=[page_permission(manifest.key, granted.slug)]), "pw")
     app = _login("viewer", "pw")
     assert "Quản trị" not in _menu_texts(app)
-    links = _page_links(app)
-    assert manifest.title in links  # a feature with one allowed page: a plain link to it
-    hidden = {p.title for p in manifest.pages if p is not granted} - {manifest.title}
-    assert not hidden & set(links) and "Người dùng & phân quyền" not in links
+    assert _app_cards(app) == 1, "only the app with a granted page is on Home"
+    links = _page_links(_sidebar_inside_app("viewer"))
+    assert links == ["Tất cả ứng dụng", granted.title], "inside the app: only the granted page"
 
 
 def test_sample_feature_is_hidden_once_a_real_feature_exists() -> None:

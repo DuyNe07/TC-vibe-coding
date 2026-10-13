@@ -110,7 +110,7 @@ def test_ping_returns_message() -> None:
 FRONTEND_FILES: dict[str, str] = {
     "__init__.py": '''"""Frontend of feature "${title}"."""
 ''',
-    "manifest.py": '''"""How "${title}" appears on Home and in the sidebar menu."""
+    "manifest.py": '''"""How "${title}" appears on Home (card) and in its own sidebar menu."""
 
 from frontend.core.feature_manifest import FeatureManifest
 from frontend.features.${key}.pages.main_page import ${pascal}MainPage

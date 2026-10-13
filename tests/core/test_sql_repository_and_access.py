@@ -5,7 +5,7 @@ import pytest
 from backend.core.access import ADMIN_USERNAME, AccessManager, User, UserGroup
 from backend.core.base import BaseEntity, SqlRepository
 from backend.core.current_user import CurrentUser, set_current_user
-from backend.core.exceptions import ConflictError, NotFoundError, PermissionDeniedError
+from backend.core.exceptions import ConflictError, InvalidInputError, NotFoundError, PermissionDeniedError
 from backend.core.gateway import GatewayCall, PermissionMiddleware
 
 
@@ -50,6 +50,31 @@ def test_effective_permissions_are_personal_plus_groups() -> None:
     assert user.can_open_page("yarn_costing", "requests") and not user.can_open_page("yarn_costing", "main")
     assert user.can_open_feature("yarn_costing") and not user.can_open_feature("other_feature")
     assert access.authenticate("an", "wrong") is None
+
+
+def test_rights_are_replaced_one_app_at_a_time() -> None:
+    access = AccessManager()
+    old = "removed_app/main"  # right of an app that no longer exists: kept untouched
+    an = access.save_user(User(username="an", permissions=["yarn_costing", "sample_product_import/main", old]), "pw")
+    binh = access.save_user(User(username="binh", permissions=["yarn_costing/requests"]), "pw")
+    sales = access.save_group(UserGroup(name="Sales", permissions=["yarn_costing"]))
+    changed = access.set_rights_in_app(
+        "yarn_costing", {an.id: {"yarn_costing/requests"}, binh.id: {"yarn_costing/requests"}}, {sales.id: set()}
+    )
+    assert changed == 2, "binh did not change, so only an + Sales are written"
+    users = {u.username: u for u in access.list_users()}
+    assert set(users["an"].permissions) == {"yarn_costing/requests", "sample_product_import/main", old}
+    assert access.list_groups()[0].permissions == []
+    with pytest.raises(InvalidInputError):
+        access.set_rights_in_app("yarn_costing", {an.id: {"sample_product_import"}}, {})
+    access.set_group_members(sales.id, {binh.id})
+    assert [u.username for u in access.list_users() if sales.id in u.group_ids] == ["binh"]
+    set_current_user(CurrentUser("an"))
+    try:
+        with pytest.raises(PermissionDeniedError):
+            access.set_rights_in_app("yarn_costing", {an.id: {"yarn_costing"}}, {})
+    finally:
+        set_current_user(None)
 
 
 def test_built_in_admin_is_protected_and_only_admins_manage_users() -> None:

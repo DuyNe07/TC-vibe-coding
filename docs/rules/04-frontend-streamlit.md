@@ -1,14 +1,16 @@
 # 04 - Frontend (Streamlit)
 
 ## How the UI is assembled (never edit these to add a feature)
-- `frontend/app.py` -> `AppShell` (page config, theme, **login**, **sidebar menu**, current page, **footer**).
+- `frontend/app.py` -> `AppShell` (page config, theme, **login**, **sidebar**, current page, **footer**).
 - Login + permissions are framework features (`frontend/core/auth.py`, `frontend/core/admin_page.py`): a user only
   sees the features/pages granted to them; pages never check permissions themselves. The admin page is reached only
   by URL `/admin` (administrators); it is not in the menu.
 - `Router` builds URLs from the manifests found in `frontend/features/*/manifest.py`:
-  `/` -> `/home`; `/home` = Home (feature cards); `/<feature-key-with-dashes>` = feature landing page;
+  `/` -> `/home`; `/home` = Home (one card per app); `/<feature-key-with-dashes>` = feature landing page;
   `/<feature>-<slug>` = other pages.
-- Home and the sidebar menu are generated from manifests: a new feature appears automatically.
+- One feature = one **app**. Home lists the apps as cards (its sidebar shows only who is logged in); opening an app
+  shows that app's own menu in the sidebar: "Tất cả ứng dụng" (back to Home), the app name, then its pages under
+  their `menu_group` labels. Both are generated from manifests: a new app appears automatically.
 - Branding (`frontend/core/branding.py`): `frontend/public/logo.png` = browser-tab icon (padded to a square),
   `frontend/public/Logo_TC.png` = logo at the top of the sidebar (`st.logo`).
   To rebrand, replace the files (same names). Features never add their own logo or page icon.
@@ -127,9 +129,8 @@ Pick the newest native element below before writing anything by hand.
    call use cases that can fail after the user acted (inside `if st.button(...)`).
 8. Layout: header (automatic) -> filters/inputs in panels -> KPIs -> tables/charts -> actions, following the
    feature's `### Giao diện đã chốt (UI concept)`. Keep it simple.
-9. A feature's navigation = its manifest: the pages listed in `FEATURE.pages` appear automatically in the sidebar
-   menu as one collapsible block per feature (click the arrow to show its pages; a one-page feature is a plain link)
-   and the feature card appears on Home. Set `menu_group = "Sales"` on a page class to show it under a sub-group label
-   inside the block (pages of a group must be consecutive in `FEATURE.pages`). Only the pages the user may open are
-   shown. The sample feature (`sample=True` in its manifest) is hidden automatically as soon as one real feature
+9. A feature's navigation = its manifest: the feature is an app with a card on Home, and the pages listed in
+   `FEATURE.pages` are the app's sidebar menu once the user opens it (first page = landing page, `/<feature-key>`).
+   Set `menu_group = "Sales"` on a page class to list it under the label "Sales" in that menu (pages of a group must be
+   consecutive in `FEATURE.pages`). Only the pages the user may open are shown. The sample feature (`sample=True` in its manifest) is hidden automatically as soon as one real feature
    exists; never delete or disable it by hand. Never edit the sidebar, Home or router to add a feature.

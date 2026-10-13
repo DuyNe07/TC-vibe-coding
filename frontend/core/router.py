@@ -1,7 +1,7 @@
 """Router: turns the registry into Streamlit pages and URLs.
 
 URLs:  /            -> redirects to /home
-       /home        -> Home page (feature cards)
+       /home        -> Home page (one card per app = feature)
        /<feature>   -> first page of a feature   (feature key with '-' instead of '_')
        /<feature>-<page-slug> -> other pages of the feature
        /admin       -> user & permission administration (admins only, typed by hand: not in the menu)
@@ -72,6 +72,11 @@ class Router:
         for manifest in self.features:
             grouped.setdefault(manifest.group, []).append(manifest)
         return grouped
+
+    def feature_of(self, page: StreamlitPage | None) -> FeatureManifest | None:
+        """The app a page belongs to (None for Home and the admin page)."""
+        path = page.url_path if page is not None else None
+        return next((e.manifest for e in self._entries if e.page.url_path == path), None)
 
     def can_open(self, page_cls: type[BasePage]) -> bool:
         return any(entry.page_cls is page_cls for entry in self._entries)

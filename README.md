@@ -68,7 +68,7 @@ lượt 3, nên cứ trao đổi nghiệp vụ thoải mái ở hai lượt đ�
    dùng giao diện (bảng như Excel chỉ xem hay sửa trực tiếp, bộ lọc, số liệu tổng hợp...; gõ "ok" để dùng đề xuất).
    Sau đó AI tự lập kế hoạch, chia việc cho các AI phụ (backend / giao diện), chạy kiểm tra mà không hỏi gì thêm, rồi
    hướng dẫn bạn cách dùng.
-3. Chạy lại `run.ps1` → chức năng mới xuất hiện ở Trang chủ và menu bên trái.
+3. Chạy lại `run.ps1` → ứng dụng mới xuất hiện ở Trang chủ; bấm vào thì menu bên trái hiện các màn hình của nó.
 
 Chức năng mẫu **"Nhập sản phẩm từ Excel (mẫu)"** cho thấy một chức năng hoàn chỉnh
 (tài liệu: `docs/business/sample_product_import.md`).

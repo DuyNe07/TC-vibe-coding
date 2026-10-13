@@ -57,11 +57,11 @@ TC-vibe-coding/
 │   │                           # auth.py (login), admin_page.py (users & permissions, /admin)
 │   ├── public/                 # static assets: logo.png (browser tab icon), Logo_TC.png (UI logo)
 │   │   └── components/         # shared UI: header, panel, sidebar menu, footer, table, files
-│   ├── home/home_page.py       # /home: feature cards (generated)
+│   ├── home/home_page.py       # /home: one card per app (generated)
 │   └── features/
 │       └── <feature_key>/
 │           ├── __init__.py
-│           ├── manifest.py     # FEATURE = FeatureManifest(...) -> card on Home + sidebar menu
+│           ├── manifest.py     # FEATURE = FeatureManifest(...) -> card on Home + the app's sidebar menu
 │           ├── pages/          # BasePage subclasses (first page = landing page)
 │           └── components/     # widgets used only by this feature
 │

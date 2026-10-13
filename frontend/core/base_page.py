@@ -5,7 +5,7 @@
         icon = "📋"
         slug = "orders"                 # required for every page except the feature's first page
         description = "Tra cứu và xuất danh sách đơn hàng."
-        menu_group = "Kinh doanh"       # optional: sub-group of the page inside the feature's menu block
+        menu_group = "Kinh doanh"       # optional: group label of the page in the app's sidebar menu
 
         def render(self) -> None:
             orders = gateway.open(OrderController)          # top layer of the business, via the gateway
@@ -35,7 +35,7 @@ class BasePage(ABC):
     icon: ClassVar[str] = "📄"
     slug: ClassVar[str] = ""
     description: ClassVar[str] = ""
-    menu_group: ClassVar[str] = ""  # sub-group label in the sidebar menu (e.g. "Sales", "Phòng SO"); "" = none
+    menu_group: ClassVar[str] = ""  # group label in the app's sidebar menu (e.g. "Sales", "Phòng SO"); "" = none
 
     def __init_subclass__(cls, **kwargs: object) -> None:
         super().__init_subclass__(**kwargs)
@@ -68,7 +68,7 @@ class BasePage(ABC):
         manifest = router.registry.get(self.feature_key) if router else None
         crumbs = ["Trang chủ"]
         if manifest:
-            crumbs += [manifest.group, manifest.title]
+            crumbs.append(manifest.title)
             if manifest.pages and manifest.pages[0] is not type(self):
                 crumbs.append(self.title)
         page_header(self.title, icon=self.icon, description=self.description, breadcrumbs=crumbs)

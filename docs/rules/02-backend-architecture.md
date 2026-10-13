@@ -136,12 +136,15 @@ JSON document in table `<developer>__<feature_key>__item` (created automatically
 - Login is required for every page. Built-in administrator: `u-admin` (first password `u-admin`), full rights.
   A login survives page reloads (F5): cookie `tc_session` -> table `core__session`, `APP_SESSION_HOURS` (default 12);
   logout or deactivating the user ends it.
-- Permission keys: `"<feature_key>"` = the whole feature, `"<feature_key>/<page_slug>"` = one page (landing page
-  without slug: `"<feature_key>/main"`). A user's rights = personal keys + keys of all their groups (union).
+- Rights are given **per app** (= feature). Permission keys: `"<feature_key>"` = the whole app (also its future pages),
+  `"<feature_key>/<page_slug>"` = one page (landing page without slug: `"<feature_key>/main"`). A user's rights =
+  personal keys + keys of all their groups (union). `AccessManager.set_rights_in_app(app_key, users, groups)` replaces
+  the rights in ONE app of the given user / group ids and keeps their rights in other apps.
 - Enforcement is automatic: the router registers only the pages the user may open (menu, Home and URLs), and the
   gateway refuses any controller call of a feature the user has no key on. Features write NO permission code.
 - Administrators grant rights on the page "Người dùng & phân quyền", opened by typing the URL `/admin` (it is not in
-  the menu; non-admins get no such page).
+  the menu; non-admins get no such page): pick an app, tick the screens per user / group in one grid, save.
+  Accounts and groups (members) are managed in the other two tabs.
 - `self.current_user` (services and pages) is the logged-in `CurrentUser` (`None` in tests): use it to record
   "who did it", never to re-implement access checks. Finer rules (e.g. "Sales only edits its own requests") are
   business rules BR-xx in `business/`, written in the business document.
