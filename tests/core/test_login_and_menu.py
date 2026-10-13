@@ -45,7 +45,9 @@ def _sidebar_inside_app(username: str) -> AppTest:
         from frontend.core.router import Router, set_current_router
         from frontend.home.home_page import HomePage
 
+        AccessManager().ensure_admin()
         user = AccessManager().refresh(name)
+        assert user is not None, name  # a real user: the router filters by their rights
         set_current_user(user)
         router = Router(FeatureRegistry.discover(), HomePage(), user)
         set_current_router(router)
