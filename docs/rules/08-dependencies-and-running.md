@@ -37,7 +37,8 @@ Rules:
 ## Configuration
 - `.env` (created from `.env.example`, git-ignored): `APP_NAME`, `APP_ENV`, `APP_LOG_LEVEL`, `APP_DATA_DIR`, `APP_PORT`,
   and the database: `POSTGRES_IP`, `POSTGRES_PORT`, `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD` (empty = local
-  SQLite file `data/app.db`). Never commit the password.
+  SQLite file `data/app.db`). Never commit the password. `APP_SESSION_HOURS` (default 12) = how long a login
+  survives page reloads.
 - Read settings with `get_settings()` (`backend/core/config.py`). New settings go there with a default.
 - Streamlit options: `.streamlit/config.toml`.
 

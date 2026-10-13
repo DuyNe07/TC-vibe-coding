@@ -63,7 +63,8 @@ tạo tài khoản...).
 
 ## 7. Final report (Vietnamese, no jargon)
 - Đã tạo / sửa những nhóm và tài khoản nào, mỗi nhóm thấy gì trên menu.
-- Cách đăng nhập: mở app → nhập tên đăng nhập + mật khẩu ban đầu; quản trị viên đổi mật khẩu cho từng người ở
-  "Người dùng & phân quyền".
+- Cách đăng nhập: mở app → nhập tên đăng nhập + mật khẩu ban đầu (nhấn F5 không phải đăng nhập lại cho tới khi hết
+  phiên hoặc bấm Đăng xuất); quản trị viên đổi mật khẩu cho từng người ở trang phân quyền: gõ địa chỉ
+  `<địa chỉ app>/admin` (trang này không có trên menu).
 - Việc còn lại: các quy tắc theo dữ liệu (chỉ thấy dữ liệu của mình / của xưởng mình) cần làm theo quy trình nghiệp vụ
   (Prompt 1 → 2) cho chức năng đó.

@@ -9,6 +9,7 @@ FEATURE_KEY_PATTERN = re.compile(r"^[a-z][a-z0-9_]{1,48}[a-z0-9]$")
 ROUTE_NAME_PATTERN = re.compile(r"^[a-z][a-z0-9_]*$")
 PAGE_SLUG_PATTERN = re.compile(r"^[a-z][a-z0-9-]*$")
 RULE_CODE_PATTERN = re.compile(r"^BR-\d{2,3}$")
+DEVELOPER_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9-]{0,38}$")  # a GitHub username
 RESERVED_FEATURE_KEYS = frozenset({"home", "core", "shared", "api", "features", "root", "index"})
 
 
@@ -22,6 +23,11 @@ def feature_key_from_module(module_name: str, package: str = FEATURES_PACKAGE) -
     if not module_name.startswith(prefix):
         return None
     return module_name[len(prefix) :].split(".")[0]
+
+
+def table_prefix(developer: str) -> str:
+    """GitHub username -> database table prefix: ``Xuan-2894`` -> ``xuan_2894``."""
+    return developer.lower().replace("-", "_")
 
 
 def feature_url_slug(feature_key: str) -> str:

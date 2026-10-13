@@ -8,7 +8,8 @@ Claude Code Stop hook (`.claude/settings.json` -> `scripts/hooks/stop_guard.sh`)
    analysing it is always allowed. Phase 0 (default) may write only `docs/business/_sources/*-discovery.md`; phase 1
    (the user pasted `docs/prompt/01-business-analysis.md`) may also write the business document and the analysis plan;
    phase 2 (the user pasted `docs/prompt/02-implement-feature.md` AND `Status: Ready for implementation`) may write the
-   feature's own code. You MUST NOT write code, run `scripts/new_feature.py`, start the app or install packages before
+   feature's own code; Prompt 3 (repair) and Prompt 6 (sync a branch with `main`) use the same key for their features;
+   Prompt 5 (permissions) writes no code. You MUST NOT write code, run `scripts/new_feature.py`, start the app or install packages before
    phase 2, and MUST NOT create `.gate-unlock` or change `scripts/hooks/` to get around the guard.
 1. You MUST read `docs/README.md`, every file in `docs/rules/` and `docs/capabilities.md` before your first change in
    a session, and MUST NOT promise the user a capability that `docs/capabilities.md` does not list.
@@ -16,7 +17,7 @@ Claude Code Stop hook (`.claude/settings.json` -> `scripts/hooks/stop_guard.sh`)
    complete it from `_TEMPLATE.md` **with the user** before writing code.
 3. You MUST NOT invent business rules. Ambiguities go to section 10 "Open questions" of the business doc,
    with the safe default you chose, and you tell the user.
-4. You MUST create features ONLY with `python scripts/new_feature.py <feature_key> --title "..."`.
+4. You MUST create features ONLY with `python scripts/new_feature.py <feature_key> --title "..." --developer <github-username>`.
    Never create feature folders by hand or copy another feature folder.
 5. You MUST finish every task with `python scripts/check.py` printing `ALL CHECKS PASSED` **and**
    `python scripts/doctor.py` printing `APP IS HEALTHY` (quality gate + every feature loads + the app really starts).

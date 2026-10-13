@@ -4,7 +4,7 @@ URLs:  /            -> redirects to /home
        /home        -> Home page (feature cards)
        /<feature>   -> first page of a feature   (feature key with '-' instead of '_')
        /<feature>-<page-slug> -> other pages of the feature
-       /admin       -> user & permission administration (admins only)
+       /admin       -> user & permission administration (admins only, typed by hand: not in the menu)
 
 Only the pages the logged-in user may open are registered: the others have no URL and no menu entry.
 """

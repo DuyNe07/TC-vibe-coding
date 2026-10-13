@@ -33,7 +33,7 @@ Gateway (backend/core/gateway.py)          uniform mechanism: middlewares + log 
 │ 2. services/     XxxService          one use case: orchestrates the layers below      │
 │ 3. business/     rules BR-xx + decisions (pure)                                        │
 │    builders/     conversions: file -> models, models -> DTO / Excel / Word             │
-│    repositories/ load / save entities (database table <key>__<name>)                   │
+│    repositories/ load / save entities (table <developer>__<key>__<name>)              │
 │ 4. models/       entities, value objects, enums                                        │
 │    dto/          input / output of use cases (shared with the page)                    │
 └────────────────────────────────────────────────────────────────────────────────────┘
@@ -114,7 +114,11 @@ Any other exception is shown as an unexpected error with its traceback, and logg
 
 ## Persistence
 Default storage = the app database: `class ItemRepository(SqlRepository[Item]): pass` stores every `Item` as one
-JSON document in table `<feature_key>__item` (created automatically; `table_name = "..."` to choose the name).
+JSON document in table `<developer>__<feature_key>__item` (created automatically; `table_name = "..."` replaces `item`).
+- ONE PostgreSQL database is shared by every developer and every feature: each feature declares the GitHub username of
+  its developer in `backend/features/<key>/__init__.py`: `DEVELOPER = "Xuan2894"` -> tables `xuan2894__<key>__...`
+  (lower case, `-` -> `_`, at most 63 characters). Set by `scripts/new_feature.py --developer`; checked by
+  `tests/architecture/test_structure.py`. Never change it once data exists (the tables would start empty).
 - Database = PostgreSQL from `POSTGRES_IP/PORT/DB/USER/PASSWORD` in `.env`; without them a local SQLite file
   `data/app.db`; `APP_DATABASE_URL` overrides both. Tests always get a throw-away SQLite database (`conftest.py`).
 - `backend/core/db.py` runs SQLAlchemy 2 **async** (asyncpg / aiosqlite) on one background event loop; repositories
@@ -124,11 +128,14 @@ JSON document in table `<feature_key>__item` (created automatically; `table_name
 
 ## Users and permissions (framework: `backend/core/access.py`, `backend/core/current_user.py`)
 - Login is required for every page. Built-in administrator: `u-admin` (first password `u-admin`), full rights.
+  A login survives page reloads (F5): cookie `tc_session` -> table `core__session`, `APP_SESSION_HOURS` (default 12);
+  logout or deactivating the user ends it.
 - Permission keys: `"<feature_key>"` = the whole feature, `"<feature_key>/<page_slug>"` = one page (landing page
   without slug: `"<feature_key>/main"`). A user's rights = personal keys + keys of all their groups (union).
 - Enforcement is automatic: the router registers only the pages the user may open (menu, Home and URLs), and the
   gateway refuses any controller call of a feature the user has no key on. Features write NO permission code.
-- Administrators grant rights on the page "Người dùng & phân quyền" (`/admin`).
+- Administrators grant rights on the page "Người dùng & phân quyền", opened by typing the URL `/admin` (it is not in
+  the menu; non-admins get no such page).
 - `self.current_user` (services and pages) is the logged-in `CurrentUser` (`None` in tests): use it to record
   "who did it", never to re-implement access checks. Finer rules (e.g. "Sales only edits its own requests") are
   business rules BR-xx in `business/`, written in the business document.

@@ -1,11 +1,11 @@
 """Scaffold a new feature (backend + frontend + business doc) that already follows every rule.
 
 Usage:
-    python scripts/new_feature.py <feature_key> --title "Tên chức năng" [--description "..."]
-                                  [--icon 🧩] [--group "Chức năng"] [--owner "Tên người phụ trách"]
+    python scripts/new_feature.py <feature_key> --title "Tên chức năng" --developer <github-username>
+                                  [--description "..."] [--icon 🧩] [--group "Chức năng"] [--owner "..."]
 
 Example:
-    python scripts/new_feature.py leave_request --title "Đơn nghỉ phép" --icon 🏖️ --owner "Phòng HCNS"
+    python scripts/new_feature.py leave_request --title "Đơn nghỉ phép" --developer Xuan2894 --icon 🏖️ --owner "Phòng HCNS"
 """
 
 import argparse
@@ -16,7 +16,7 @@ from string import Template
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-from backend.core.naming import feature_url_slug, is_valid_feature_key, to_pascal_case  # noqa: E402
+from backend.core.naming import DEVELOPER_PATTERN, feature_url_slug, is_valid_feature_key, to_pascal_case  # noqa: E402
 
 BACKEND_FILES: dict[str, str] = {
     "__init__.py": '''"""Feature "${title}". Business spec: docs/business/${key}.md
@@ -26,6 +26,8 @@ Layers below (services, business, builders, repositories, models) are internal t
 """
 
 from backend.features.${key}.controllers.${key}_controller import ${pascal}Controller
+
+DEVELOPER = "${developer}"  # GitHub username of the developer: prefix of this feature's database tables
 
 __all__ = ["${pascal}Controller"]
 ''',
@@ -170,6 +172,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="Scaffold a new feature (backend + frontend + docs).")
     parser.add_argument("key", help="snake_case feature key, e.g. leave_request")
     parser.add_argument("--title", required=True, help="Display name (Vietnamese)")
+    parser.add_argument("--developer", required=True, help="GitHub username of the developer (database table prefix)")
     parser.add_argument("--description", default="", help="One sentence shown on the Home card")
     parser.add_argument("--icon", default="🧩")
     parser.add_argument("--group", default="Chức năng")
@@ -179,6 +182,9 @@ def main() -> int:
     key = args.key.strip()
     if not is_valid_feature_key(key):
         print(f"ERROR: invalid feature key {key!r}. Use snake_case (a-z, 0-9, _), 3-50 chars, not reserved.")
+        return 1
+    if not DEVELOPER_PATTERN.match(args.developer.strip()):
+        print(f"ERROR: --developer {args.developer!r} must be a GitHub username (letters, digits and dashes).")
         return 1
     backend_dir = ROOT / "backend" / "features" / key
     frontend_dir = ROOT / "frontend" / "features" / key
@@ -200,6 +206,7 @@ def main() -> int:
         "icon": quote(args.icon.strip() or "🧩"),
         "group": quote(args.group.strip() or "Chức năng"),
         "owner": quote(args.owner.strip()),
+        "developer": args.developer.strip(),
     }
     created = write_tree(backend_dir, BACKEND_FILES, values)
     created += write_tree(frontend_dir, FRONTEND_FILES, values)

@@ -59,8 +59,7 @@ class ProductImportBusiness(BaseBusiness[ImportRow]):
 
 ### Repository
 ```python
-class ProductRepository(SqlRepository[Product]):  # -> table sample_product_import__product
-
+class ProductRepository(SqlRepository[Product]):  # -> table duyne07__sample_product_import__product
     def index_by_code(self) -> dict[str, Product]:
         return {p.code: p for p in self.list_all()}
 ```

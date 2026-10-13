@@ -8,4 +8,6 @@ from backend.features.sample_product_import.controllers.sample_product_import_co
     SampleProductImportController,
 )
 
+DEVELOPER = "duyne07"  # GitHub username of the developer: prefix of this feature's database tables
+
 __all__ = ["SampleProductImportController"]

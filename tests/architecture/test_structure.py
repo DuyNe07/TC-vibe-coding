@@ -2,7 +2,7 @@
 
 import pytest
 
-from backend.core.naming import is_valid_feature_key
+from backend.core.naming import DEVELOPER_PATTERN, is_valid_feature_key
 from tests.architecture.helpers import (
     BACKEND,
     BACKEND_FEATURES,
@@ -84,3 +84,14 @@ def test_every_python_folder_is_a_package() -> None:
             if any(folder.glob("*.py")) and not (folder / "__init__.py").exists():
                 missing.append(rel(folder))
     assert not missing, f"Add __init__.py to: {missing}"
+
+
+@pytest.mark.parametrize("key", BE_KEYS)
+def test_feature_declares_its_developer(key: str) -> None:
+    import importlib
+
+    developer = getattr(importlib.import_module(f"backend.features.{key}"), "DEVELOPER", None)
+    assert isinstance(developer, str) and DEVELOPER_PATTERN.match(developer), (
+        f'backend/features/{key}/__init__.py must declare DEVELOPER = "<github username>": the shared database '
+        "prefixes every table of the feature with it (docs/rules/02-backend-architecture.md, Persistence)"
+    )

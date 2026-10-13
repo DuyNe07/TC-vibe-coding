@@ -2,6 +2,7 @@
 
 Section (manifest.group) -> one collapsible block per feature (click the arrow to show its pages) -> pages,
 optionally under sub-group labels (``BasePage.menu_group``). Only the pages the user may open are listed.
+The admin page is never in the menu: administrators open it by URL (/admin), where the sidebar shows only a way back.
 """
 
 from html import escape
@@ -33,30 +34,40 @@ def render_sidebar_nav(router: "Router", current: StreamlitPage | None = None) -
                   <div class="tc-brand-sub">Cổng công cụ nội bộ</div></div></div>""",
             unsafe_allow_html=True,
         )
-        st.page_link(router.home, label="Trang chủ", icon="🏠")
-        for group, manifests in router.groups().items():
-            st.markdown(f'<div class="tc-nav-group">{escape(group)}</div>', unsafe_allow_html=True)
-            for manifest in manifests:
-                entries = router.entries_of(manifest.key)
-                if len(entries) == 1:
-                    st.page_link(entries[0].page, label=manifest.title, icon=manifest.icon)
-                    continue
-                is_open = any(e.page.url_path == current_path for e in entries)
-                with st.expander(f"{manifest.icon} {manifest.title}", expanded=is_open):
-                    _page_links(entries)
-        if router.admin is not None:
-            st.markdown('<div class="tc-nav-group">Quản trị</div>', unsafe_allow_html=True)
-            st.page_link(router.admin, label="Người dùng & phân quyền", icon="🛡️")
-        if router.registry.errors:
-            st.warning(f"{len(router.registry.errors)} chức năng đang lỗi - xem chi tiết ở Trang chủ.", icon="⚠️")
-        if router.user is not None:
-            st.divider()
-            left, right = st.columns([3, 2], vertical_alignment="center")
-            left.caption(f"👤 {router.user.display_name}")
-            if right.button("Đăng xuất", key="tc-logout", width="stretch"):
-                from frontend.core.auth import logout
+        on_admin = router.admin is not None and current_path == router.admin.url_path
+        if on_admin:
+            st.page_link(router.home, label="Về ứng dụng", icon="⬅️")
+        else:
+            _feature_menu(router, current_path)
+        _user_box(router)
 
-                logout()
+
+def _feature_menu(router: "Router", current_path: str | None) -> None:
+    st.page_link(router.home, label="Trang chủ", icon="🏠")
+    for group, manifests in router.groups().items():
+        st.markdown(f'<div class="tc-nav-group">{escape(group)}</div>', unsafe_allow_html=True)
+        for manifest in manifests:
+            entries = router.entries_of(manifest.key)
+            if len(entries) == 1:
+                st.page_link(entries[0].page, label=manifest.title, icon=manifest.icon)
+                continue
+            is_open = any(e.page.url_path == current_path for e in entries)
+            with st.expander(f"{manifest.icon} {manifest.title}", expanded=is_open):
+                _page_links(entries)
+    if router.registry.errors:
+        st.warning(f"{len(router.registry.errors)} chức năng đang lỗi - xem chi tiết ở Trang chủ.", icon="⚠️")
+
+
+def _user_box(router: "Router") -> None:
+    if router.user is None:
+        return
+    st.divider()
+    left, right = st.columns([3, 2], vertical_alignment="center")
+    left.caption(f"👤 {router.user.display_name}")
+    if right.button("Đăng xuất", key="tc-logout", width="stretch"):
+        from frontend.core.auth import logout
+
+        logout()
 
 
 def _page_links(entries: "list[PageEntry]") -> None:

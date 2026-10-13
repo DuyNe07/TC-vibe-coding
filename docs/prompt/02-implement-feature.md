@@ -63,6 +63,8 @@ Otherwise, for every in-scope feature:
      4. Bộ lọc phía trên bảng và thứ tự cột của bảng (đề xuất từ mục 4 và 8 của tài liệu).
      5. Ô số liệu tổng hợp và biểu đồ: những số nào, loại biểu đồ nào - hoặc không cần.
      6. Hỏi lại trước khi lưu / xoá (hộp thoại xác nhận): có / không.
+     7. Tên tài khoản GitHub của người làm chức năng này (dùng làm tiền tố tên bảng dữ liệu, vì cơ sở dữ liệu dùng chung
+        cho mọi người) - đề xuất lấy từ `git config user.name` / `git remote -v` nếu đã rõ. Chỉ hỏi khi tạo chức năng mới.
    - End with exactly: "Trả lời theo số (ví dụ: 1a, 2b, 5: bỏ biểu đồ), hoặc gõ "ok" để dùng toàn bộ đề xuất. Sau câu
      trả lời này AI sẽ tự làm đến khi xong, không hỏi thêm."
 3. **STOP** and wait for the reply.
@@ -105,7 +107,7 @@ py -3.13 -m venv .venv
 .venv/Scripts/python.exe -X utf8 -m pytest backend/features/<key>/tests -q
 
 # Scaffold a NEW feature (never for an existing one)
-.venv/Scripts/python.exe -X utf8 scripts/new_feature.py <key> --title "<VI title>" --description "<VI sentence>" --icon "<emoji>" --group "<VI group>" --owner "<owner>"
+.venv/Scripts/python.exe -X utf8 scripts/new_feature.py <key> --title "<VI title>" --developer <github-username> --description "<VI sentence>" --icon "<emoji>" --group "<VI group>" --owner "<owner>"
 
 # Gateway registration check: lists the use cases the pages can call through the gateway
 .venv/Scripts/python.exe -X utf8 -c "from backend.features.<key> import <Pascal>Controller as C; print(sorted(C.actions()))"
@@ -267,7 +269,7 @@ Read first: `CLAUDE.md`, `docs/rules/00`-`03`, `06`, `07`, `09`, the business do
    decisions, state transitions. Pure. Write the BR unit tests now (a passing and a failing case each).
 3. **constants.py / exceptions.py** - UPPER_CASE constants only (column specs, limits); errors inherit `AppError` /
    `FileProcessingError` with Vietnamese messages.
-4. **repositories/** - `class XRepository(SqlRepository[X])` (table `<key>__x`, created automatically) + simple queries.
+4. **repositories/** - `class XRepository(SqlRepository[X])` (table `<developer>__<key>__x`, created automatically) + simple queries.
 5. **builders/** - `BaseBuilder[T]` (inputs in `__init__`, `build()` returns output): file -> models (`ExcelReader`,
    `WordReader`, `PdfTextReader` from `backend.shared.file_io`; `normalize_key`, `parse_decimal` from
    `backend.shared.utils`; `UploadedFileDTO.ensure_valid(...)`), models -> response DTOs, models -> files (`ExcelWriter`,

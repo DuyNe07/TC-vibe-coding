@@ -54,7 +54,8 @@ Rules of the gate:
 - Never promise a capability that [docs/capabilities.md](docs/capabilities.md) does not list (Excel/Word/PDF, stored
   data in the app database, login + permissions per feature/screen, Excel-like tables, Python calculations, fetching
   public web pages; NO e-mail, scheduled jobs, ERP/external SQL connection, Google search).
-- Create features ONLY with `python scripts/new_feature.py <feature_key> --title "..."` (phase 2 only).
+- Create features ONLY with `python scripts/new_feature.py <feature_key> --title "..." --developer <github-username>` (phase 2
+  only). The shared database prefixes every table of a feature with its `DEVELOPER`.
 - Every class inherits its layer's base class from `backend.core.base`; one use case = one controller
   method = one service.
 - Never `print()`: use `self.logger`; logs go to `logs/app.log` and the on-screen log panel.

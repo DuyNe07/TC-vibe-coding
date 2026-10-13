@@ -25,7 +25,7 @@ Mỗi dòng "Làm được" đều đã có sẵn thư viện và lớp dùng ch
 ## 3. Lưu dữ liệu trong ứng dụng
 | Làm được | Ở đâu |
 |---|---|
-| Lưu danh sách/bản ghi lâu dài (thêm, sửa, xoá, tìm, lọc) trong cơ sở dữ liệu PostgreSQL của ứng dụng | `SqlRepository` -> bảng `<chức_năng>__<tên>` |
+| Lưu danh sách/bản ghi lâu dài (thêm, sửa, xoá, tìm, lọc) trong cơ sở dữ liệu PostgreSQL của ứng dụng | `SqlRepository` -> bảng `<github người làm>__<chức_năng>__<tên>` (một cơ sở dữ liệu dùng chung cho mọi người) |
 | Trạng thái và luồng duyệt (ví dụ Nháp -> Đã gửi -> Đã duyệt) | enum trong `models/` + quy tắc chuyển trạng thái trong `business/` |
 | Lịch sử thay đổi (ai sửa, lúc nào) nếu nghiệp vụ cần | thêm trường vào model, lấy người đang đăng nhập từ `self.current_user` |
 | Không làm được: nối tới SQL Server / ERP / Google Sheets của hệ thống khác; nhiều người sửa cùng một dòng cùng lúc | - |
@@ -42,7 +42,7 @@ Mỗi dòng "Làm được" đều đã có sẵn thư viện và lớp dùng ch
 | Hộp thoại xác nhận, tab, khối gấp gọn | `st.dialog`, `st.tabs`, `st.expander` |
 | Nhiều màn hình cho một chức năng, hiện ở menu bên trái | `manifest.py` (`pages=(...)`) |
 | Khung nhật ký chạy (log) để copy khi gặp lỗi | có sẵn ở cuối mỗi trang |
-| Đăng nhập; quản trị viên tạo tài khoản, nhóm người dùng và cấp quyền theo chức năng hoặc từng màn hình (quyền = quyền cá nhân + quyền của các nhóm) | có sẵn trong khung sườn: trang "Người dùng & phân quyền" |
+| Đăng nhập; quản trị viên tạo tài khoản, nhóm người dùng và cấp quyền theo chức năng hoặc từng màn hình (quyền = quyền cá nhân + quyền của các nhóm) | có sẵn trong khung sườn: trang "Người dùng & phân quyền", mở bằng địa chỉ `/admin` (không có trên menu) |
 | Menu bên trái gấp / mở theo chức năng, chia màn hình theo nhóm con (ví dụ Sales, Phòng SO); chỉ hiện những gì người dùng được phép mở | `manifest.py` + `menu_group` của trang |
 | Không làm được: đổi logo-màu riêng cho một chức năng, giao diện mobile riêng, tự động cập nhật theo thời gian thực | - |
 

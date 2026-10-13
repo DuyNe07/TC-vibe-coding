@@ -3,7 +3,8 @@
 ## How the UI is assembled (never edit these to add a feature)
 - `frontend/app.py` -> `AppShell` (page config, theme, **login**, **sidebar menu**, current page, **footer**).
 - Login + permissions are framework features (`frontend/core/auth.py`, `frontend/core/admin_page.py`): a user only
-  sees the features/pages granted to them; pages never check permissions themselves.
+  sees the features/pages granted to them; pages never check permissions themselves. The admin page is reached only
+  by URL `/admin` (administrators); it is not in the menu.
 - `Router` builds URLs from the manifests found in `frontend/features/*/manifest.py`:
   `/` -> `/home`; `/home` = Home (feature cards); `/<feature-key-with-dashes>` = feature landing page;
   `/<feature>-<slug>` = other pages.

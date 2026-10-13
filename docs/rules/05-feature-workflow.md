@@ -25,7 +25,7 @@ and rule A.0 of `00-golden-rules.md`.
      sub-agent (studies https://docs.streamlit.io/develop/api-reference, writes `docs/plans/<key>-ui-design.md`) in
      parallel, then UI-build sub-agent (`frontend/features/<key>/`). Without sub-agents, do the same roles in sequence.
    - Only touch the feature's own folders, its document and its plans; never break other features.
-4. **Scaffold**: `python scripts/new_feature.py <key> --title "..." --description "..." --icon "..." --owner "..."`.
+4. **Scaffold**: `python scripts/new_feature.py <key> --title "..." --developer <github-username> --description "..." --icon "..." --owner "..."`.
    It creates backend + frontend + doc stub with a working `ping` use case. Run `run.ps1` to see the card.
 5. **Map the doc to code** (write this mapping in section 11 of the doc as you go):
 

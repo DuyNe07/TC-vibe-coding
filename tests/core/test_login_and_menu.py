@@ -33,10 +33,11 @@ def test_wrong_password_stays_on_login() -> None:
     assert any("Sai tên đăng nhập" in e.value for e in app.error)
 
 
-def test_admin_sees_admin_menu_and_admin_page_renders() -> None:
+def test_admin_page_is_reachable_by_url_only_and_renders() -> None:
     app = _login("u-admin", "u-admin")
-    assert "Quản trị" in _menu_texts(app)
-    assert {"Nhập sản phẩm từ Excel", "Danh sách sản phẩm", "Người dùng & phân quyền"} <= set(_page_links(app))
+    links = set(_page_links(app))
+    assert {"Nhập sản phẩm từ Excel", "Danh sách sản phẩm"} <= links
+    assert "Người dùng & phân quyền" not in links, "the admin page must not be in the menu (open it by URL /admin)"
 
     def admin_page() -> None:
         from backend.core.current_user import CurrentUser, set_current_user

@@ -20,6 +20,8 @@ class Settings(BaseSettings):
     data_dir: Path = PROJECT_ROOT / "data"
     log_dir: Path = PROJECT_ROOT / "logs"
 
+    session_hours: int = 12  # a login survives page reloads (F5) for this long
+
     # Database (backend/core/db.py). APP_DATABASE_URL wins; else PostgreSQL from POSTGRES_*; else data/app.db (SQLite)
     database_url: str = ""
     postgres_ip: str = Field("", validation_alias="POSTGRES_IP")

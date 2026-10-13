@@ -5,6 +5,7 @@ implement ``_load`` / ``_save``. Features subclass ``SqlRepository[MyEntity]`` (
 ``JsonFileRepository`` (files in data/) and ``InMemoryRepository`` (tests) keep the same API.
 """
 
+import importlib
 import json
 import os
 import threading
@@ -20,7 +21,7 @@ from backend.core.base._generics import generic_args
 from backend.core.base.base_model import BaseEntity
 from backend.core.config import get_settings
 from backend.core.exceptions import ConfigurationError, ConflictError, NotFoundError
-from backend.core.naming import feature_key_from_module, to_snake_case
+from backend.core.naming import DEVELOPER_PATTERN, feature_key_from_module, table_prefix, to_snake_case
 
 TEntity = TypeVar("TEntity", bound=BaseEntity)
 
@@ -182,6 +183,7 @@ class JsonFileRepository(BaseRepository[TEntity]):
         os.replace(tmp, self.file_path)  # atomic write
 
 
+MAX_TABLE_NAME = 63  # PostgreSQL identifier limit
 _CHUNK = 500  # ids per IN (...) clause, below every driver's parameter limit
 
 
@@ -189,12 +191,26 @@ def _chunks(values: list[str]) -> list[list[str]]:
     return [values[start : start + _CHUNK] for start in range(0, len(values), _CHUNK)]
 
 
+def feature_developer(feature_key: str) -> str:
+    """Table prefix of a feature, from ``DEVELOPER = "<github username>"`` in ``backend/features/<key>/__init__.py``."""
+    developer = getattr(importlib.import_module(f"backend.features.{feature_key}"), "DEVELOPER", "")
+    if not isinstance(developer, str) or not DEVELOPER_PATTERN.match(developer):
+        raise ConfigurationError(
+            f'backend/features/{feature_key}/__init__.py must declare DEVELOPER = "<github username>" '
+            "(prefix of the feature's database tables, shared database)"
+        )
+    return table_prefix(developer)
+
+
 class SqlRepository(BaseRepository[TEntity]):
     """Persists entities in the app database (PostgreSQL; SQLite in tests): one table per repository,
     one JSON document per entity. DEFAULT storage of every feature::
 
         class ProductRepository(SqlRepository[Product]):
-            pass  # table "sample_product_import__product"; set table_name = "..." to choose another name
+            pass  # table "<developer>__sample_product_import__product"; table_name = "..." replaces "product"
+
+    One database is shared by every developer: a feature's tables start with the GitHub username declared in
+    ``backend/features/<key>/__init__.py`` as ``DEVELOPER = "<github username>"``.
 
     Same API as ``JsonFileRepository``; each call is one async SQLAlchemy transaction run through ``db.run``.
     """
@@ -203,11 +219,20 @@ class SqlRepository(BaseRepository[TEntity]):
 
     def __init__(self) -> None:
         super().__init__()
-        self.table = db.document_table(self.table_name or self._default_table_name())
+        self.table = db.document_table(self._full_table_name())
 
-    def _default_table_name(self) -> str:
-        feature_key = feature_key_from_module(type(self).__module__) or "core"
-        return f"{feature_key}__{to_snake_case(type(self).__name__.removesuffix('Repository'))}"
+    def _full_table_name(self) -> str:
+        """Feature: ``<developer>__<feature_key>__<name>``; framework (no feature): ``table_name`` or ``core__<name>``."""
+        name = self.table_name or to_snake_case(type(self).__name__.removesuffix("Repository"))
+        feature_key = feature_key_from_module(type(self).__module__)
+        if feature_key is None:
+            return name if self.table_name else f"core__{name}"
+        full = f"{feature_developer(feature_key)}__{feature_key}__{name}"
+        if len(full) > MAX_TABLE_NAME:
+            raise ConfigurationError(
+                f"Table name {full!r} is longer than {MAX_TABLE_NAME} characters: set a shorter table_name"
+            )
+        return full
 
     # ---- async primitives ----
     async def _fetch(self, ids: list[str] | None = None) -> dict[str, TEntity]:

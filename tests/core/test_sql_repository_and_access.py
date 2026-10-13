@@ -77,3 +77,29 @@ def test_gateway_refuses_features_without_permission() -> None:
         assert middleware.handle(call, lambda c: "ok") == "ok"
     finally:
         set_current_user(None)
+
+
+def test_feature_tables_are_prefixed_with_the_developer() -> None:
+    from backend.features.sample_product_import.repositories.product_repository import ProductRepository
+
+    assert ProductRepository().table.name == "duyne07__sample_product_import__product"
+
+
+def test_login_session_survives_reload_until_logout_or_expiry() -> None:
+    from datetime import timedelta
+
+    from backend.core.base import utc_now
+
+    access = AccessManager()
+    access.ensure_admin()
+    token = access.start_session(ADMIN_USERNAME)
+    resumed = access.resume(token)
+    assert resumed is not None and resumed.username == ADMIN_USERNAME
+    assert access.resume("forged-token") is None
+    access.end_session(token)
+    assert access.resume(token) is None
+    expired = access.start_session(ADMIN_USERNAME)
+    session = access.sessions.list_all()[0]
+    session.expires_at = utc_now() - timedelta(minutes=1)
+    access.sessions.update(session)
+    assert access.resume(expired) is None

@@ -5,15 +5,19 @@ Effective permissions of a user = personal permissions + permissions of every gr
 start (password ``u-admin``: change it on the admin page) and can not be deleted or lose its admin right.
 
 The UI uses ``AccessManager`` (login + the admin page); permission keys are described in ``current_user.py``.
+A login is also a ``LoginSession``: the browser keeps its random token in a cookie, so a page reload (F5) logs the
+user back in until it expires (``APP_SESSION_HOURS``), the user logs out, or the account is deactivated.
 """
 
 import hashlib
 import hmac
 import secrets
+from datetime import datetime, timedelta
 
 from pydantic import Field
 
-from backend.core.base import BaseEntity, SqlRepository
+from backend.core.base import BaseEntity, SqlRepository, utc_now
+from backend.core.config import get_settings
 from backend.core.current_user import CurrentUser, get_current_user
 from backend.core.exceptions import ConflictError, InvalidInputError, PermissionDeniedError
 from backend.core.logger import get_logger
@@ -54,6 +58,16 @@ class UserGroup(BaseEntity):
     permissions: list[str] = Field(default_factory=list)
 
 
+class LoginSession(BaseEntity):
+    token_hash: str  # sha256 of the cookie token (the token itself is never stored)
+    username: str
+    expires_at: datetime
+
+
+def _token_hash(token: str) -> str:
+    return hashlib.sha256(token.encode()).hexdigest()
+
+
 class UserRepository(SqlRepository[User]):
     table_name = "core__user"
 
@@ -66,12 +80,22 @@ class UserGroupRepository(SqlRepository[UserGroup]):
     table_name = "core__user_group"
 
 
+class LoginSessionRepository(SqlRepository[LoginSession]):
+    table_name = "core__session"
+
+
 class AccessManager:
     """Login, effective permissions and user/group administration (admin only)."""
 
-    def __init__(self, users: UserRepository | None = None, groups: UserGroupRepository | None = None) -> None:
+    def __init__(
+        self,
+        users: UserRepository | None = None,
+        groups: UserGroupRepository | None = None,
+        sessions: LoginSessionRepository | None = None,
+    ) -> None:
         self.users = users or UserRepository()
         self.groups = groups or UserGroupRepository()
+        self.sessions = sessions or LoginSessionRepository()
         self.logger = get_logger(__name__)
 
     # ---- login ----
@@ -96,6 +120,30 @@ class AccessManager:
         """Current rights of a logged-in user (None when deleted or deactivated meanwhile)."""
         user = self.users.by_username(username)
         return self._session_of(user) if user and user.active else None
+
+    # ---- sessions (stay logged in after a page reload) ----
+    def start_session(self, username: str) -> str:
+        """New session for a logged-in user; returns the token the browser keeps in a cookie."""
+        now = utc_now()
+        for stale in self.sessions.find(lambda s: s.expires_at <= now):
+            self.sessions.delete(stale.id)
+        token = secrets.token_urlsafe(32)
+        expires = now + timedelta(hours=get_settings().session_hours)
+        self.sessions.add(LoginSession(token_hash=_token_hash(token), username=username, expires_at=expires))
+        return token
+
+    def resume(self, token: str) -> CurrentUser | None:
+        """The user of a valid session token (None when unknown, expired, or the user is deactivated)."""
+        digest = _token_hash(token)
+        session = self.sessions.find_one(lambda s: hmac.compare_digest(s.token_hash, digest))
+        if session is None or session.expires_at <= utc_now():
+            return None
+        return self.refresh(session.username)
+
+    def end_session(self, token: str) -> None:
+        digest = _token_hash(token)
+        for session in self.sessions.find(lambda s: s.token_hash == digest):
+            self.sessions.delete(session.id)
 
     def _session_of(self, user: User) -> CurrentUser:
         groups = {g.id: g for g in self.groups.list_all()}

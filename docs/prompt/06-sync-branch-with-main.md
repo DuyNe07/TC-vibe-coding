@@ -51,7 +51,9 @@ Simple Vietnamese, numbered, defaults marked `(đề xuất)`:
 Compare what the framework offers now with what the feature built itself, and move to the framework version. A worked
 example: branch `origin/vibe/tinh-gia-soi-1210`, commit "refactor(yarn_costing): PostgreSQL storage + collapsible menu"
 (`git show --stat <commit>`). Typical changes (check each one for every feature of the branch):
-1. **Storage = database.** Every repository inherits `SqlRepository[Entity]` (one table `<key>__<name>`), never
+0. **Developer prefix.** `backend/features/<key>/__init__.py` declares `DEVELOPER = "<github username of the branch
+   author>"` (from `git log --format=%an` / the branch name / the fork owner; ask in the question round if unclear).
+1. **Storage = database.** Every repository inherits `SqlRepository[Entity]` (table `<developer>__<key>__<name>`), never
    `JsonFileRepository`. If the feature already has user data in `data/<key>/*.json` (it ran before), keep it: add a
    small base class in the feature's `repositories/` that imports the old file once when the table is empty:
    ```python
