@@ -488,7 +488,7 @@ xưởng đó (để người dùng sửa rồi tải lên lại). Sheet "4. Ban
 - **Chép lỗi:** nếu một file bị thiếu hoặc hỏng, màn hình không bị dừng; khung nhật ký chạy ghi rõ tên file không đọc được
   và Phòng SO chép lại file đó từ app cũ.
 - **Lưu trong cơ sở dữ liệu (từ 2026-10-13):** app lưu dữ liệu trong cơ sở dữ liệu PostgreSQL của công ty (mỗi loại dữ liệu một
-  bảng `yarn_costing__<tên>`). Cách chép ở trên vẫn dùng được: lần đầu mở app, khi bảng còn trống, app tự nhập file đã chép vào
+  bảng `xuan2894__yarn_costing__<tên>`). Cách chép ở trên vẫn dùng được: lần đầu mở app, khi bảng còn trống, app tự nhập file đã chép vào
   `data\yarn_costing\` (kèm chuyển cách lưu cũ như trên) rồi đổi tên file thành `<tên>.json.imported` để không nhập lại lần hai.
 
 ### 5.7 File khai báo thành phần sợi pha (UC-44 out, UC-45 in)

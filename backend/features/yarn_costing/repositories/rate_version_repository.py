@@ -1,4 +1,4 @@
-"""Table yarn_costing__rate_version (starts empty: versions come from UC-04 / UC-34)."""
+"""Table xuan2894__yarn_costing__rate_version (starts empty: versions come from UC-04 / UC-34)."""
 
 from typing import Any
 

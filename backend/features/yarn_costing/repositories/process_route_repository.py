@@ -1,4 +1,4 @@
-"""Table yarn_costing__process_route."""
+"""Table xuan2894__yarn_costing__process_route."""
 
 from backend.features.yarn_costing.models.process_route import ProcessRoute
 from backend.features.yarn_costing.repositories.yarn_sql_repository import YarnSqlRepository

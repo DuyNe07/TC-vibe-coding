@@ -1,6 +1,6 @@
 """Database storage of the feature, importing the data of the previous app once (BR-61, section 5.6).
 
-Each repository is one table ``yarn_costing__<name>``. While its table is empty, the first read imports the JSON file
+Each repository is one table ``xuan2894__yarn_costing__<name>``. While its table is empty, the first read imports the JSON file
 the previous app kept in ``data/yarn_costing/<legacy_file>`` (old formats converted by ``_convert``); the file is then
 renamed ``<name>.imported`` so it is never imported twice. No file -> the seed rows (``_seed``), if any.
 A broken file raises ``DataFileError`` naming it so Phòng SO can copy it again; other tables keep working.

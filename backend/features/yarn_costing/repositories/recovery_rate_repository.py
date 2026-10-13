@@ -1,4 +1,4 @@
-"""Table yarn_costing__recovery_rate. Seeds S4 1.5% / 1% / 2.5% and S1 2% / 1% / 1%."""
+"""Table xuan2894__yarn_costing__recovery_rate. Seeds S4 1.5% / 1% / 2.5% and S1 2% / 1% / 1%."""
 
 from backend.features.yarn_costing.constants import SEED_RECOVERY
 from backend.features.yarn_costing.models.enums import FactoryCode, RecoveryType
