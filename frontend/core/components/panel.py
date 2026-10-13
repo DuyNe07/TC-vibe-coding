@@ -8,7 +8,6 @@ stat_row([("Tổng", 120), ("Hợp lệ", 118), ("Lỗi", 2)])
 
 from collections.abc import Iterator, Sequence
 from contextlib import contextmanager
-from html import escape
 from typing import Any
 
 import streamlit as st
@@ -19,7 +18,7 @@ def panel(title: str | None = None, *, icon: str = "", description: str = "", ke
     """Bordered card grouping related widgets. Use it for every logical block of a page."""
     with st.container(border=True, key=key):
         if title:
-            st.markdown(f'<div class="tc-panel-title">{escape(icon)} {escape(title)}</div>', unsafe_allow_html=True)
+            st.markdown(f"**{icon} {title}**" if icon else f"**{title}**")
         if description:
             st.caption(description)
         yield
@@ -35,10 +34,8 @@ def stat_row(items: Sequence[tuple[str, Any]] | Sequence[tuple[str, Any, str]]) 
 
 
 def empty_state(message: str, hint: str = "", icon: str = "📭") -> None:
-    st.markdown(
-        f"""<div class="tc-empty"><div class="tc-empty-icon">{escape(icon)}</div><div><b>{escape(message)}</b></div><div>{escape(hint)}</div></div>""",
-        unsafe_allow_html=True,
-    )
+    with st.container(border=True):
+        st.markdown(f"{icon} **{message}**" + (f"\n\n{hint}" if hint else ""), text_alignment="center")
 
 
 def section_title(text: str, icon: str = "") -> None:

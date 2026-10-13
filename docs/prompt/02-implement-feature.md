@@ -307,6 +307,11 @@ Read first: `CLAUDE.md`, `docs/rules/00`-`03`, `06`, `07`, `09`, the business do
 4. Prefer the shared components (`data_table`, `editable_table`, `panel`, `stat_row`, `file_upload`, `download_button`,
    `empty_state`) and plain `st.*` for the rest. The users live in Excel: tables with `column_config` (Vietnamese
    labels, `NumberColumn(format="localized")`, `DateColumn(format="DD/MM/YYYY")`, `SelectboxColumn(options=...)`).
+   **Design with the newest native elements** of the table "Look & feel: native Streamlit 1.64 only" in rules/04:
+   statuses as `st.badge`, short filters as `st.segmented_control` / `st.pills`, button rows in
+   `st.container(horizontal=True)`, heavy tabs/expanders LAZY (`key=`, `on_change="rerun"`, `if tab.open:`), every
+   export as `download_button(lambda: ..., file_name=...)`, filters the user comes back to with
+   `persist_state="session"`, `st.toast` after a save. No HTML/CSS: the theme already gives the TC colours and font.
 5. Write `docs/plans/<key>-ui-design.md`, per screen in menu order: page class (`XxxPage`), slug (kebab-case, not for
    the first page), title, icon, description (VI); the text sketch; blocks from top to bottom, each with the exact call
    (component or `st.*`), Vietnamese label from the document, widget key name, default value; every table: component,
@@ -385,8 +390,10 @@ Read first: `CLAUDE.md`, `docs/rules/00`-`03`, `06`, `07`, `09`, the business do
 - Table rows go to DTOs only through `editable_table` / `data_table(selection=...)` / `frame_to_records` (never raw
   `DataFrame.to_dict()`: NaN breaks the DTO validation).
 - Models forbid unknown fields (`extra="forbid"`); request DTOs are immutable (create a new one per call).
-- Streamlit: unique widget keys; no `st.set_page_config`; no global CSS; use `width="stretch"` (not
-  `use_container_width`); only functions and parameters that exist in the installed version.
+- Streamlit: unique widget keys; no `st.set_page_config`; no global CSS, no HTML (`unsafe_allow_html`, `st.html`):
+  use the native elements of rules/04 "Look & feel" (`st.badge`, `st.container(horizontal=True)`, `st.space`, lazy
+  tabs); use `width="stretch"` (not `use_container_width`); only functions and parameters that exist in the installed
+  version.
 - Fix loop: read each failure (it names file, line and rule), fix your code, re-run. If the same failure repeats 3 times,
   re-read the rule in `docs/rules/` and compare with the reference feature before trying again.
 

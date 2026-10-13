@@ -10,7 +10,7 @@
   `/<feature>-<slug>` = other pages.
 - Home and the sidebar menu are generated from manifests: a new feature appears automatically.
 - Branding (`frontend/core/branding.py`): `frontend/public/logo.png` = browser-tab icon (padded to a square),
-  `frontend/public/Logo_TC.png` = logo in the sidebar (fixed height, width keeps the ratio).
+  `frontend/public/Logo_TC.png` = logo at the top of the sidebar (`st.logo`).
   To rebrand, replace the files (same names). Features never add their own logo or page icon.
 - A feature that fails to load is reported on Home; the other features keep working.
 
@@ -52,14 +52,15 @@ else:
 ## Shared components (`frontend.core.components`) - use them before writing new widgets
 | Component | Use |
 |---|---|
-| `page_header(...)`, `hero(...)` | headers (BasePage/Home already call them) |
+| `page_header(...)` | page title with breadcrumb and the brand stripe (BasePage/Home already call it) |
 | `panel(title, icon=, description=)` | bordered block: `with panel("Bộ lọc"):` - use for every logical block |
 | `stat_row([(label, value), ...])` | KPI tiles |
 | `data_table(rows, column_config=, selection="single"/"multi", key=)` | read-only Excel-like table (sort, search, fullscreen) with empty state; with `selection` returns the ticked rows (list of dicts) |
 | `editable_table(rows, key=, columns=, column_config=, disabled=, allow_add_delete=)` | grid edited like an Excel sheet; returns the edited rows (empty cells = `None`, ready for DTOs) |
 | `frame_to_records(df)` | DataFrame -> list of dicts without NaN/numpy values (always use it before building DTOs) |
 | `file_upload(label, types=, key=)` | returns `UploadedFileDTO` (bytes) or None |
-| `download_button(file_dto, label=, key=)` | download a `FileDownloadDTO` |
+| `download_button(file_dto, label=, key=)` | download a `FileDownloadDTO` already built |
+| `download_button(lambda: feature.export(req), label=, key=, file_name="x.xlsx")` | build the file only when the user clicks (use it for every export: reruns stay fast) |
 | `empty_state(msg, hint)`, `section_title(text)` | helpers |
 | `show_error(exc)`, `show_success(msg)` | feedback |
 | `render_sidebar_nav`, `render_footer` | used by AppShell only |
@@ -82,6 +83,26 @@ of the business document (agreed with the user at the start of Prompt 2) decides
 | Quick choices / filters | `st.segmented_control`, `st.pills`, `st.selectbox`, `st.multiselect`, `st.date_input`, `st.toggle` |
 | Charts | `st.bar_chart` / `st.line_chart` (simple), `st.plotly_chart(fig)` (plotly is installed) |
 | Files | `file_upload(...)` / `download_button(...)` (shared components) |
+
+### Look & feel: native Streamlit 1.64 only (less code, faster, matches the theme)
+The brand theme (TC logo colours, font Be Vietnam Pro, radius, table header colour) lives in `.streamlit/config.toml`
+`[theme]`; every native element picks it up. So: no HTML, no `unsafe_allow_html`, no CSS, no `st.html` in features.
+Pick the newest native element below before writing anything by hand.
+
+| Need | Native element (verified in 1.64) |
+|---|---|
+| Status / tag next to a value ("Đã duyệt", "Nháp") | `st.badge("Đã duyệt", color="green", icon=":material/check:")`; inside text: `:green-badge[Đã duyệt]` |
+| Coloured text, icons | `:red[...]`, `:green[...]`, `:orange[...]`; Material icons `":material/download:"` (in `icon=` of buttons, tabs, expanders, badges) |
+| Filter with a few choices | `st.segmented_control(...)` (2-5 choices) / `st.pills(...)` (more, or `selection_mode="multi"`) |
+| Buttons in one row, toolbar | `with st.container(horizontal=True, gap="small"):` then the buttons (no `st.columns` for buttons) |
+| Space between blocks | `st.space("small" / "medium" / "large")` (never empty `st.write("")`) |
+| Several actions in one button | `st.menu_button("Thao tác", ["Sửa", "Xoá"], key=...)` -> the picked option (or None) |
+| Heavy tab / expander (big table, chart) | lazy: `tab_a, tab_b = st.tabs([...], key=self.key("tabs"), on_change="rerun")`, then `with tab_a: if tab_a.open: ...` - only the open tab runs its use cases. Same for `st.expander(..., key=, on_change="rerun")` + `.open` |
+| Very long table (> 1000 rows) | `data_table` already sends only the visible rows (`lazy`); for paging: `page = st.pagination(n_pages, key=...)` |
+| KPI with a trend | `st.metric(label, value, delta, chart_data=[...], chart_type="bar", border=True)` |
+| Remember a filter when the user comes back to the page | widget argument `persist_state="session"` |
+| Short confirmation after an action | `st.toast("Đã lưu", icon=":material/check:")`; pop-up form: `@st.dialog("Tiêu đề", icon=...)` |
+| Placeholder while something slow loads | `st.skeleton(height=200)` |
 
 - Official API reference: https://docs.streamlit.io/develop/api-reference (e.g. `/data/st.dataframe`,
   `/data/st.data_editor`, `/data/st.column_config`, `/widgets`, `/layout`, `/charts`, `/execution-flow/st.dialog`).

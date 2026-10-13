@@ -6,7 +6,7 @@ from frontend.core.components.data_table import data_table, editable_table, fram
 from frontend.core.components.feedback import show_error, show_success, show_unexpected_error
 from frontend.core.components.files import download_button, file_upload
 from frontend.core.components.footer import render_footer
-from frontend.core.components.header import hero, page_header
+from frontend.core.components.header import page_header
 from frontend.core.components.panel import empty_state, panel, section_title, stat_row
 from frontend.core.components.sidebar_nav import render_sidebar_nav
 
@@ -17,7 +17,6 @@ __all__ = [
     "empty_state",
     "file_upload",
     "frame_to_records",
-    "hero",
     "page_header",
     "panel",
     "render_footer",

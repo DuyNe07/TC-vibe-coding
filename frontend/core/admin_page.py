@@ -40,7 +40,7 @@ class AdminPage(BasePage):
     # ---- users ----
     def _users_tab(self, access: AccessManager, users: list[User], groups: list[UserGroup], catalog: dict) -> None:
         group_names = {g.id: g.name for g in groups}
-        left, right = st.columns([2, 3], gap="large")
+        left, right = st.columns(2, gap="large")
         with left:
             if st.button("➕ Tạo người dùng mới", key=self.key("user.new"), width="stretch"):
                 self.state.set("user", NEW)
@@ -107,7 +107,7 @@ class AdminPage(BasePage):
 
     # ---- groups ----
     def _groups_tab(self, access: AccessManager, users: list[User], groups: list[UserGroup], catalog: dict) -> None:
-        left, right = st.columns([2, 3], gap="large")
+        left, right = st.columns(2, gap="large")
         with left:
             if st.button("➕ Tạo nhóm mới", key=self.key("group.new"), width="stretch"):
                 self.state.set("group", NEW)

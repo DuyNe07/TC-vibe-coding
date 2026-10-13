@@ -5,10 +5,10 @@
 Replace the files to rebrand; keep the names. Missing files fall back to an emoji / text.
 """
 
-import base64
 from functools import lru_cache
 from pathlib import Path
 
+import streamlit as st
 from PIL import Image
 
 PUBLIC_DIR = Path(__file__).resolve().parents[1] / "public"
@@ -30,9 +30,7 @@ def page_icon() -> Image.Image | str:
     return canvas
 
 
-@lru_cache
-def logo_data_uri() -> str | None:
-    """Logo_TC.png as a data URI for ``<img>`` (None when the file is missing)."""
-    if not LOGO_PATH.exists():
-        return None
-    return "data:image/png;base64," + base64.b64encode(LOGO_PATH.read_bytes()).decode("ascii")
+def show_logo() -> None:
+    """Logo_TC.png at the top of the sidebar (``st.logo``: also shown when the sidebar is collapsed)."""
+    if LOGO_PATH.exists():
+        st.logo(str(LOGO_PATH), size="large", icon_image=str(FAVICON_PATH) if FAVICON_PATH.exists() else None)

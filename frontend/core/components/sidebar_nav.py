@@ -5,35 +5,21 @@ optionally under sub-group labels (``BasePage.menu_group``). Only the pages the 
 The admin page is never in the menu: administrators open it by URL (/admin), where the sidebar shows only a way back.
 """
 
-from html import escape
 from typing import TYPE_CHECKING
 
 import streamlit as st
 from streamlit.navigation.page import StreamlitPage
 
 from backend.core.config import get_settings
-from frontend.core.branding import logo_data_uri
 
 if TYPE_CHECKING:
     from frontend.core.router import PageEntry, Router
 
 
 def render_sidebar_nav(router: "Router", current: StreamlitPage | None = None) -> None:
-    settings = get_settings()
-    logo_uri = logo_data_uri()
-    if logo_uri:
-        logo = f'<img class="tc-brand-img" src="{logo_uri}" alt="logo">'
-    else:
-        initials = "".join(word[0] for word in settings.name.split()[:2]).upper() or "TC"
-        logo = f'<div class="tc-brand-logo">{escape(initials)}</div>'
     current_path = current.url_path if current is not None else None
     with st.sidebar:
-        st.markdown(
-            f"""<div class="tc-brand">{logo}
-                  <div><div class="tc-brand-name">{escape(settings.name)}</div>
-                  <div class="tc-brand-sub">Cổng công cụ nội bộ</div></div></div>""",
-            unsafe_allow_html=True,
-        )
+        st.markdown(f"**{get_settings().name}**")
         on_admin = router.admin is not None and current_path == router.admin.url_path
         if on_admin:
             st.page_link(router.home, label="Về ứng dụng", icon="⬅️")
@@ -45,7 +31,7 @@ def render_sidebar_nav(router: "Router", current: StreamlitPage | None = None) -
 def _feature_menu(router: "Router", current_path: str | None) -> None:
     st.page_link(router.home, label="Trang chủ", icon="🏠")
     for group, manifests in router.groups().items():
-        st.markdown(f'<div class="tc-nav-group">{escape(group)}</div>', unsafe_allow_html=True)
+        st.caption(f"**{group}**")
         for manifest in manifests:
             entries = router.entries_of(manifest.key)
             if len(entries) == 1:
@@ -76,6 +62,6 @@ def _page_links(entries: "list[PageEntry]") -> None:
     for entry in entries:
         group = entry.page_cls.menu_group
         if group and group != last_group:
-            st.markdown(f'<div class="tc-nav-sub">{escape(group)}</div>', unsafe_allow_html=True)
+            st.caption(group)
         last_group = group
         st.page_link(entry.page, label=entry.page_cls.title, icon=entry.page_cls.icon)

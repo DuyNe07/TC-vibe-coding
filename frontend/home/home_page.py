@@ -1,12 +1,10 @@
 """Home page (/home): lists every enabled feature as a card, grouped, with search."""
 
-from html import escape
-
 import streamlit as st
 
 from backend.core.config import get_settings
 from frontend.core.base_page import BasePage
-from frontend.core.components import empty_state, hero, panel
+from frontend.core.components import empty_state, page_header, panel
 from frontend.core.feature_manifest import FeatureManifest
 from frontend.core.router import get_router
 
@@ -23,10 +21,10 @@ class HomePage(BasePage):
 
     def render_header(self) -> None:
         router = get_router()
-        hero(
+        page_header(
             get_settings().name,
-            "Cổng tổng hợp các công cụ nội bộ. Chọn một chức năng bên dưới để bắt đầu.",
-            meta=f"{len(router.features)} chức năng · {len(router.groups())} nhóm",
+            description=f"Chọn công cụ để bắt đầu. Bạn đang có {len(router.features)} chức năng trong "
+            f"{len(router.groups())} nhóm.",
         )
 
     def render(self) -> None:
@@ -63,7 +61,7 @@ class HomePage(BasePage):
             if not visible:
                 continue
             shown += len(visible)
-            st.markdown(f"##### {group}")
+            st.subheader(group, anchor=False)
             for start in range(0, len(visible), CARDS_PER_ROW):
                 columns = st.columns(CARDS_PER_ROW)
                 for column, manifest in zip(columns, visible[start : start + CARDS_PER_ROW], strict=False):
@@ -74,14 +72,12 @@ class HomePage(BasePage):
 
     def _render_card(self, manifest: FeatureManifest) -> None:
         router = get_router()
-        with panel(key=f"tc-card-{manifest.key}"):
-            st.markdown(
-                f"""<div class="tc-card-title">{escape(manifest.icon)} {escape(manifest.title)}</div>
-                    <div class="tc-card-desc">{escape(manifest.description)}</div>
-                    <div class="tc-card-meta">{escape(manifest.owner and "Phụ trách: " + manifest.owner)}</div>""",
-                unsafe_allow_html=True,
-            )
-            if st.button("Mở chức năng →", key=self.key(f"open.{manifest.key}"), width="stretch"):
+        with panel(
+            f"{manifest.icon} {manifest.title}", description=manifest.description, key=f"tc-card-{manifest.key}"
+        ):
+            if manifest.owner:
+                st.badge(f"Phụ trách: {manifest.owner}", color="gray")
+            if st.button("Mở chức năng", key=self.key(f"open.{manifest.key}"), type="primary", width="stretch"):
                 st.switch_page(router.landing_page(manifest.key))
 
     def _render_load_errors(self) -> None:

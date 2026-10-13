@@ -10,6 +10,7 @@ import streamlit as st
 from frontend.core.components.panel import empty_state
 
 Rows = Sequence[Mapping[str, Any]] | pd.DataFrame
+LAZY_ROWS = 1000  # bigger tables send only the rows on screen to the browser (fast reruns)
 
 
 def _to_frame(rows: Rows, columns: Sequence[str] | None = None) -> pd.DataFrame:
@@ -60,6 +61,7 @@ def data_table(
         empty_state(empty_message)
         return []
     options: dict[str, Any] = {
+        "lazy": len(frame) > LAZY_ROWS,
         "hide_index": True,
         "column_config": column_config,
         "column_order": column_order,

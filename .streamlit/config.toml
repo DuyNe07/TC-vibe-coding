@@ -12,5 +12,27 @@ gatherUsageStats = false
 toolbarMode = "minimal"
 showSidebarNavigation = false  # navigation is rendered by frontend/core/components/sidebar_nav.py
 
+# Brand theme from the TC logo: navy (primary), sky blue (info), green (success), orange (warning).
+# Native options only: features never add global CSS (docs/rules/04-frontend-streamlit.md).
 [theme]
-primaryColor = "#0F62FE"
+base = "light"
+primaryColor = "#224086"
+backgroundColor = "#FFFFFF"
+secondaryBackgroundColor = "#F2F5FA"
+textColor = "#1B2433"
+linkColor = "#224086"
+borderColor = "#DCE3EE"
+blueColor = "#25AAE1"
+greenColor = "#119C4A"
+orangeColor = "#F79521"
+# Be Vietnam Pro: drawn for Vietnamese diacritics; falls back to the system sans-serif when Google Fonts is blocked
+font = "Be Vietnam Pro:https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap, sans-serif"
+baseFontSize = 15
+headingFontWeights = [700, 700, 600, 600, 600, 600]
+baseRadius = "medium"
+showSidebarBorder = true
+dataframeHeaderBackgroundColor = "#EAF0F8"
+chartCategoricalColors = ["#224086", "#25AAE1", "#119C4A", "#F79521", "#7C8DBE", "#8FD3EF", "#7CC69B", "#FBC27F"]
+
+[theme.sidebar]
+backgroundColor = "#F2F5FA"

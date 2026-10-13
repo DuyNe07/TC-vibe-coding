@@ -1,6 +1,7 @@
 """File upload / download widgets that speak DTOs (the backend never sees Streamlit objects)."""
 
-from collections.abc import Sequence
+import mimetypes
+from collections.abc import Callable, Sequence
 
 import streamlit as st
 
@@ -15,14 +16,30 @@ def file_upload(label: str, *, types: Sequence[str], key: str, help: str | None 
     return UploadedFileDTO(filename=uploaded.name, content=uploaded.getvalue(), mime_type=uploaded.type)
 
 
-def download_button(file: FileDownloadDTO, *, label: str, key: str, primary: bool = False) -> None:
+def download_button(
+    file: FileDownloadDTO | Callable[[], FileDownloadDTO],
+    *,
+    label: str,
+    key: str,
+    primary: bool = False,
+    file_name: str | None = None,
+) -> None:
+    """Download a file. Pass a FUNCTION (``lambda: feature.export(request)``) plus ``file_name`` to build the file only
+    when the user clicks - heavy Excel exports then cost nothing on page reruns."""
+    if callable(file):
+        if not file_name:
+            raise ValueError("download_button(<function>) needs file_name")
+        build = file
+        data, name, mime = (lambda: build().content), file_name, mimetypes.guess_type(file_name)[0]
+    else:
+        data, name, mime = file.content, file.filename, file.mime_type
     st.download_button(
         label,
-        data=file.content,
-        file_name=file.filename,
-        mime=file.mime_type,
+        data=data,
+        file_name=name,
+        mime=mime,
         key=key,
         type="primary" if primary else "secondary",
-        icon="⬇️",
+        icon=":material/download:",
         on_click="ignore",
     )
