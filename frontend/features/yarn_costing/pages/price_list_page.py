@@ -1,5 +1,7 @@
 """Screen 1 (landing) - Bảng giá đã tính (UC-22, UC-25..UC-30)."""
 
+from datetime import date
+
 import streamlit as st
 
 from backend.core.gateway import gateway
@@ -163,17 +165,20 @@ class PriceListPage(BasePage):
 
     # ---- buttons under the table ----
     def _table_actions(self, feature: YarnCostingController, request: ListPriceLinesRequest) -> None:
-        left, middle, _ = st.columns([1, 1, 3])
-        if left.button("Xuất Excel", icon="📤", key=self.key("export")):
-            self.state.set("price_export", feature.export_price_lines(ExportPriceLinesRequest(**request.model_dump())))
-        if middle.button("Kiểm tra giá bất thường", icon="⚠️", key=self.key("anomaly")):
-            self.state.set(
-                "price_anomaly",
-                feature.check_price_anomalies(CheckPriceAnomaliesRequest(factory_code=request.factory_code)),
+        export = ExportPriceLinesRequest(**request.model_dump())
+        with st.container(horizontal=True, gap="small"):
+            download_button(  # UC-29: the file is built only when the user clicks
+                lambda: feature.export_price_lines(export),
+                label="Xuất Excel",
+                key=self.key("export_dl"),
+                primary=True,
+                file_name=f"bang-gia-soi-{date.today():%Y%m%d}.xlsx",
             )
-        export = self.state.get("price_export")
-        if export is not None:
-            download_button(export, label="Tải file Excel", key=self.key("export_dl"), primary=True)
+            if st.button("Kiểm tra giá bất thường", icon="⚠️", key=self.key("anomaly")):
+                self.state.set(
+                    "price_anomaly",
+                    feature.check_price_anomalies(CheckPriceAnomaliesRequest(factory_code=request.factory_code)),
+                )
         anomaly = self.state.get("price_anomaly")
         if anomaly is not None:
             section_title("Giá bất thường", "⚠️")
