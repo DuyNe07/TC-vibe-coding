@@ -264,6 +264,10 @@ class SqlRepository(BaseRepository[TEntity]):
     # ---- storage primitives (whole table; used by list_all / find / find_one) ----
     # ponytail: whole tables live in RAM and are filtered in Python; add SQL filters on `data` past ~100k rows
     def _load(self) -> dict[str, TEntity]:
+        return self._rows()
+
+    def _rows(self) -> dict[str, TEntity]:
+        """The stored rows (RAM cache, else the database). Not overridden: subclasses may seed in ``_load``."""
         items = db.cached_table(self.table.name)
         if items is None:
             version = db.data_version()
@@ -276,7 +280,7 @@ class SqlRepository(BaseRepository[TEntity]):
 
     # ---- row-level API (no full-table rewrite) ----
     def get(self, entity_id: str) -> TEntity | None:
-        return self._load().get(entity_id)
+        return self._rows().get(entity_id)
 
     def exists(self, entity_id: str) -> bool:
         return self.get(entity_id) is not None
@@ -303,7 +307,7 @@ class SqlRepository(BaseRepository[TEntity]):
         saved = list(entities)
         ids = [entity.id for entity in saved]
         with self._lock:
-            existing = self._load()
+            existing = self._rows()
             for entity in saved:
                 if entity.id in existing:
                     entity.touch()

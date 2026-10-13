@@ -138,3 +138,19 @@ def test_reads_come_from_ram_until_this_process_writes() -> None:
     assert notes.count_notes(CountRequest()).count == 1 and len(calls) == 1  # served from RAM
     repo.add(Note(text="b"))  # any write invalidates
     assert notes.count_notes(CountRequest()).count == 2 and len(calls) == 2
+
+
+def test_a_repository_that_seeds_on_first_read_does_not_recurse() -> None:
+    class SeededRepository(SqlRepository[Note]):
+        table_name = "core__seeded_note"
+
+        def _load(self) -> dict[str, Note]:
+            items = super()._load()
+            if not items:
+                seed = [Note(text="seed")]
+                self.save_many(seed)  # save_many reads the stored rows: it must not call this _load again
+                return {n.id: n for n in seed}
+            return items
+
+    assert [n.text for n in SeededRepository().list_all()] == ["seed"]
+    assert SeededRepository().count() == 1
