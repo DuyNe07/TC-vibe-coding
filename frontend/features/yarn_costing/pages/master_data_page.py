@@ -177,23 +177,21 @@ class MasterDataPage(BasePage):
         ref = feature.get_reference_data(GetReferenceDataRequest(factory_code=factory))
         factory_dto = next((f for f in reference.factories if str(f.code) == factory), None)
 
-        tabs = st.tabs(
-            ["Công đoạn", "Định mức", "Đóng gói", "Hồi phế", "Quy trình", "Tỷ giá & hệ số TN", "Các lần tính lại"]
-        )
-        with tabs[0]:
-            self._stages_tab(feature, actor, factory, ref, factory_dto)
-        with tabs[1]:
-            self._rates_tab(feature, actor, factory, ref)
-        with tabs[2]:
-            self._packaging_tab(feature, actor, factory, ref)
-        with tabs[3]:
-            self._recovery_tab(feature, actor, factory, ref)
-        with tabs[4]:
-            self._routes_tab(feature, actor, factory, ref)
-        with tabs[5]:
-            self._exchange_tab(feature, actor, reference)
-        with tabs[6]:
-            self._batches_tab(feature, actor, factory)
+        bodies = {
+            "Công đoạn": lambda: self._stages_tab(feature, actor, factory, ref, factory_dto),
+            "Định mức": lambda: self._rates_tab(feature, actor, factory, ref),
+            "Đóng gói": lambda: self._packaging_tab(feature, actor, factory, ref),
+            "Hồi phế": lambda: self._recovery_tab(feature, actor, factory, ref),
+            "Quy trình": lambda: self._routes_tab(feature, actor, factory, ref),
+            "Tỷ giá & hệ số TN": lambda: self._exchange_tab(feature, actor, reference),
+            "Các lần tính lại": lambda: self._batches_tab(feature, actor, factory),
+        }
+        # lazy tabs: only the open tab builds its tables on each rerun
+        tabs = st.tabs(list(bodies), key=self.key("tabs"), on_change="rerun")
+        for tab, body in zip(tabs, bodies.values(), strict=True):
+            with tab:
+                if tab.open:
+                    body()
 
     # ---- shared pieces ----
     def _last_batch(self, feature: YarnCostingController, container: Any) -> None:
