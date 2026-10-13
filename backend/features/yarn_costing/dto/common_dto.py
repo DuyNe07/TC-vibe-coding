@@ -1,9 +1,15 @@
-"""Shared DTOs (actor of every mutating request, simple responses) and the enums pages need."""
+"""Shared DTOs (simple responses), the enums and the role tables pages need."""
 
 from datetime import date, datetime
 from decimal import Decimal
 
 from backend.core.base import BaseDTO, BaseResponseDTO
+from backend.features.yarn_costing.models.access import (
+    INITIAL_IMPORT_USE_CASE,
+    ROLE_FACTORY,
+    ROLE_LABELS,
+    USE_CASE_PERMISSIONS,
+)
 from backend.features.yarn_costing.models.enums import (
     FactoryCode,
     GroupCode,
@@ -21,7 +27,10 @@ from backend.features.yarn_costing.models.enums import (
 )
 
 __all__ = [
-    "ActorDTO",
+    "INITIAL_IMPORT_USE_CASE",
+    "ROLE_FACTORY",
+    "ROLE_LABELS",
+    "USE_CASE_PERMISSIONS",
     "FactoryCode",
     "GroupCode",
     "ImportMode",
@@ -40,14 +49,6 @@ __all__ = [
     "YarnOrigin",
     "YarnStatus",
 ]
-
-
-class ActorDTO(BaseDTO):
-    """Nhóm + mã nội bộ + tên người thao tác, gửi kèm mọi lệnh làm thay đổi dữ liệu (BR-46)."""
-
-    group_code: str = ""
-    access_code: str = ""
-    person_name: str = ""
 
 
 class YarnComponentDTO(BaseDTO):

@@ -23,7 +23,7 @@ from backend.features.yarn_costing.services.get_legacy_comparison_service import
 from backend.features.yarn_costing.services.get_yarn_detail_service import GetYarnDetailService
 from backend.features.yarn_costing.services.import_workbook_service import ImportWorkbookService
 from backend.features.yarn_costing.services.list_import_batches_service import ListImportBatchesService
-from backend.features.yarn_costing.tests.helpers import S4_FILE_NSM, S4_LOSSES, S4_NAME, S4_RATES, SO, add_member
+from backend.features.yarn_costing.tests.helpers import S4_FILE_NSM, S4_LOSSES, S4_NAME, S4_RATES, acting_as, user_with
 
 D = Decimal
 S4 = FactoryCode.S4
@@ -225,10 +225,9 @@ def s4_workbook(
     return buffer.getvalue()
 
 
-def run(content: bytes, commit: bool = True, mode: ImportMode = ImportMode.BAN_DAU, actor=SO, name: str = "s4.xlsx"):
+def run(content: bytes, commit: bool = True, mode: ImportMode = ImportMode.BAN_DAU, name: str = "s4.xlsx"):
     return ImportWorkbookService().handle(
         ImportWorkbookRequest(
-            actor=actor,
             factory_code=S4,
             mode=mode,
             cutoff_date=date(2026, 10, 1),
@@ -278,10 +277,16 @@ def test_file_type_sheets_and_permissions() -> None:
     with pytest.raises(AppError, match="File thiếu sheet: Hoi phe"):
         run(s4_workbook(sheets={"Dinh muc (phut)", "1. Input NSM"}))
     run(s4_workbook())
-    xs4 = add_member("XS4", "XS40000", "An")
-    with pytest.raises(BusinessRuleViolation, match="không được thực hiện thao tác này"):
-        run(s4_workbook(), actor=xs4)
-    res = run(s4_workbook(), actor=xs4, mode=ImportMode.HANG_LOAT, commit=False)
+    xs4 = user_with("XS4", username="xs4")
+    with (
+        acting_as(xs4),
+        pytest.raises(BusinessRuleViolation, match="chưa có vai trò cho thao tác 'Chuyển dữ liệu ban đầu'"),
+    ):
+        run(s4_workbook())  # BR-45 / BR-47: the initial import is Phòng SO only
+    with acting_as(user_with("XS1", username="xs1")), pytest.raises(BusinessRuleViolation, match="xưởng S1"):
+        run(s4_workbook(), mode=ImportMode.HANG_LOAT)  # BR-48: S4 file, S1 account
+    with acting_as(xs4):
+        res = run(s4_workbook(), mode=ImportMode.HANG_LOAT, commit=False)
     skipped = {s.sheet: s.skipped_message for s in res.sheets}
     assert skipped["Dinh muc (phut)"] == "Sheet 'Dinh muc (phut)' chỉ Phòng SO được cập nhật, đã bỏ qua."
     assert skipped["1. Input NSM"] == ""

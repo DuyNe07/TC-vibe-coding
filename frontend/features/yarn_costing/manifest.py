@@ -1,5 +1,6 @@
 """How "Tính giá sợi" appears on Home and in the sidebar menu."""
 
+from backend.features.yarn_costing.dto.common_dto import ROLE_LABELS, GroupCode
 from frontend.core.feature_manifest import FeatureManifest
 from frontend.features.yarn_costing.pages.dashboard_page import DashboardPage
 from frontend.features.yarn_costing.pages.excel_import_page import ExcelImportPage
@@ -18,7 +19,7 @@ FEATURE = FeatureManifest(
     group="Tính Giá Sợi",
     owner="Phòng SO",
     pages=(
-        # sắp theo nhóm người dùng: Dùng chung, Sales, Xưởng sợi, Phòng SO (Kế toán dùng Bảng giá)
+        # sắp theo vai trò: Dùng chung, Sales, Xưởng sợi, Phòng SO (Kế toán dùng Bảng giá)
         PriceListPage,
         DashboardPage,
         YarnRequestPage,
@@ -28,4 +29,7 @@ FEATURE = FeatureManifest(
         ExcelImportPage,
         UserAuditPage,
     ),
+    # Vai trò của ứng dụng (BR-47, BR-48): quản trị viên tích cho từng tài khoản / nhóm ở trang /admin.
+    # Lấy từ GroupCode của backend nên mã và nhãn luôn khớp với quy tắc phân quyền.
+    roles=tuple((code.value, ROLE_LABELS[code]) for code in GroupCode),
 )

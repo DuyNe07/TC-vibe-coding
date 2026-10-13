@@ -7,7 +7,7 @@ import streamlit as st
 
 from backend.core.gateway import gateway
 from backend.features.yarn_costing import YarnCostingController
-from backend.features.yarn_costing.dto.common_dto import ActorDTO, LossGroupLevel, Technology
+from backend.features.yarn_costing.dto.common_dto import LossGroupLevel, Technology
 from backend.features.yarn_costing.dto.loss_dto import (
     ComponentRowDTO,
     CreatePrimaryLossGroupRequest,
@@ -22,7 +22,6 @@ from backend.features.yarn_costing.dto.reference_dto import GetReferenceDataRequ
 from frontend.core.base_page import BasePage
 from frontend.core.components import data_table, editable_table, panel, section_title
 from frontend.core.formatting import format_number
-from frontend.features.yarn_costing.components.actor_block import actor_factory, actor_is_so, render_actor_block
 from frontend.features.yarn_costing.components.data_warnings import show_data_warnings
 from frontend.features.yarn_costing.components.dialogs import confirm_dialog
 from frontend.features.yarn_costing.components.display import from_percent, pct, pct_exact, yes_no
@@ -35,7 +34,7 @@ from frontend.features.yarn_costing.components.labels import (
     all_or,
     label_of,
 )
-from frontend.features.yarn_costing.components.permissions import action_state, explain
+from frontend.features.yarn_costing.components.permissions import action_state, explain, is_so, own_factory
 
 LOSS_PREFILL_KEY = "loss_prefill"
 FORM_KEY = "loss_form"
@@ -91,11 +90,10 @@ class LossGroupPage(BasePage):
             st.session_state[self.key("factory")] = prefill["factory_code"]
             self.state.set(FORM_KEY, "new_secondary")
             self.state.set(PREFILL_DATA_KEY, prefill)
-        actor = render_actor_block(feature, self.state, reference)
         show_flash(self.state)
 
         with panel("Bộ lọc", icon="🔎"):
-            factory = factory_segment(reference.factories, self.key("factory"), actor_factory(self.state))
+            factory = factory_segment(reference.factories, self.key("factory"), own_factory())
             if factory is None:
                 return
             c1, c2, c3 = st.columns([2, 3, 2], vertical_alignment="bottom")
@@ -121,8 +119,8 @@ class LossGroupPage(BasePage):
                 key=self.key(f"groups.{factory}"),
                 empty_message="Chưa có nhóm tiêu hao nào.",
             )
-            p_disabled, p_why = action_state(self.state, "UC-11", factory)
-            s_disabled, s_why = action_state(self.state, "UC-12", factory)
+            p_disabled, p_why = action_state("UC-11", factory)
+            s_disabled, s_why = action_state("UC-12", factory)
             left, right, _ = st.columns([1, 1, 3])
             if left.button("Thêm nhóm sơ cấp", icon="➕", key=self.key("add_primary"), disabled=p_disabled, help=p_why):
                 self.state.set(FORM_KEY, "new_primary")
@@ -136,13 +134,13 @@ class LossGroupPage(BasePage):
 
         form = self.state.get(FORM_KEY)
         if form == "new_primary":
-            self._primary_form(feature, actor, factory, stage_codes)
+            self._primary_form(feature, factory, stage_codes)
         elif form == "new_secondary":
-            self._secondary_form(feature, actor, factory, all_groups, stage_codes)
+            self._secondary_form(feature, factory, all_groups, stage_codes)
         elif picked:
             group = next((g for g in data.items if g.group_key == picked[0]["Nhóm"]), None)
             if group is not None:
-                self._selected_group(feature, actor, factory, group, all_groups, stage_codes)
+                self._selected_group(feature, factory, group, all_groups, stage_codes)
 
     @staticmethod
     def _group_rows(data: LossGroupListResponse, stage_codes: list[str]) -> list[dict[str, Any]]:
@@ -190,9 +188,7 @@ class LossGroupPage(BasePage):
         return label, material, technology or Technology.RING
 
     # ---- UC-11 ----
-    def _primary_form(
-        self, feature: YarnCostingController, actor: ActorDTO | None, factory: str, stage_codes: list[str]
-    ) -> None:
+    def _primary_form(self, feature: YarnCostingController, factory: str, stage_codes: list[str]) -> None:
         with panel("Thêm nhóm sơ cấp", icon="➕"):
             label, material, technology = self._header_inputs(f"new_primary.{factory}", {})
             rows = editable_table(
@@ -202,12 +198,11 @@ class LossGroupPage(BasePage):
                 disabled=[STAGE_COL],
                 column_config={LOSS_COL: st.column_config.NumberColumn(LOSS_COL, **PERCENT_EDIT)},
             )
-            disabled, why = action_state(self.state, "UC-11", factory)
+            disabled, why = action_state("UC-11", factory)
             left, right, _ = st.columns([1, 1, 3])
             if left.button("Lưu nhóm", type="primary", key=self.key("primary_save"), disabled=disabled, help=why):
                 result = feature.create_primary_loss_group(
                     CreatePrimaryLossGroupRequest(
-                        actor=actor,
                         factory_code=factory,
                         yarn_group_label=label,
                         material=material,
@@ -226,7 +221,6 @@ class LossGroupPage(BasePage):
     def _secondary_form(
         self,
         feature: YarnCostingController,
-        actor: ActorDTO | None,
         factory: str,
         all_groups: LossGroupListResponse,
         stage_codes: list[str],
@@ -248,11 +242,10 @@ class LossGroupPage(BasePage):
                 },
             )
             st.caption("Từ 1 đến 5 thành phần, tổng tỷ lệ 100%.")
-            disabled, why = action_state(self.state, "UC-12", factory)
+            disabled, why = action_state("UC-12", factory)
 
             def build(save: bool) -> CreateSecondaryLossGroupRequest:
                 return CreateSecondaryLossGroupRequest(
-                    actor=actor,
                     factory_code=factory,
                     yarn_group_label=label,
                     material=material,
@@ -284,7 +277,6 @@ class LossGroupPage(BasePage):
     def _selected_group(
         self,
         feature: YarnCostingController,
-        actor: ActorDTO | None,
         factory: str,
         g: LossGroupDTO,
         all_groups: LossGroupListResponse,
@@ -355,16 +347,15 @@ class LossGroupPage(BasePage):
                 key=self.key(f"g_used.{gk}"),
             )
 
-            upd_disabled, upd_why = action_state(self.state, "UC-13", factory)
-            if not upd_disabled and g.is_locked and not actor_is_so(self.state):
+            upd_disabled, upd_why = action_state("UC-13", factory)
+            if not upd_disabled and g.is_locked and not is_so():
                 upd_disabled = True
                 upd_why = (
                     f"Nhóm tiêu hao '{gk}' đang được dùng cho sợi đã có mã kế toán ({locked_list}). "
                     "Chỉ Phòng SO được sửa."
                 )
-            del_disabled, del_why = action_state(self.state, "UC-14", factory)
+            del_disabled, del_why = action_state("UC-14", factory)
             request = UpdateLossGroupRequest(
-                actor=actor or ActorDTO(),
                 factory_code=factory,
                 group_key=gk,
                 material=material,
@@ -393,9 +384,7 @@ class LossGroupPage(BasePage):
                     f"Xoá nhóm '{gk}'? Chỉ xoá được nhóm không có mã sợi nào dùng và không là thành phần của nhóm khác.",
                     "Xoá nhóm",
                     lambda: (
-                        feature.delete_loss_group(
-                            DeleteLossGroupRequest(actor=actor or ActorDTO(), factory_code=factory, group_key=gk)
-                        ).message
+                        feature.delete_loss_group(DeleteLossGroupRequest(factory_code=factory, group_key=gk)).message
                     ),
                 )
             explain(upd_why, del_why)

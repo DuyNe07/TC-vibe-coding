@@ -13,7 +13,6 @@ from backend.features.yarn_costing.repositories.factory_data_loader import load_
 from backend.features.yarn_costing.repositories.price_history_repository import PriceHistoryRepository
 from backend.features.yarn_costing.repositories.recalc_batch_repository import AuditLogRepository, RecalcBatchRepository
 from backend.features.yarn_costing.repositories.recovery_rate_repository import RecoveryRateRepository
-from backend.features.yarn_costing.repositories.user_group_repository import UserGroupRepository
 from backend.features.yarn_costing.repositories.yarn_repository import YarnRepository
 
 
@@ -25,10 +24,8 @@ class SaveRecoveryRatesService(BaseService[SaveRecoveryRatesRequest, RecalcResul
         self.recalc = RecalcBusiness()
 
     def execute(self, request: SaveRecoveryRatesRequest) -> RecalcResultResponse:
-        a, factory = request.actor, request.factory_code
-        group = self.access.verify(
-            a.group_code, a.access_code, a.person_name, UserGroupRepository().list_all(), "UC-06", factory.value
-        )
+        factory = request.factory_code
+        self.access.ensure_allowed(self.current_user, "UC-06", factory.value)
         rows = [r for r in request.rows if r.recovery_type != RecoveryType.KHONG]
         for r in rows:
             self.master.ensure_recovery_rate(r.rate if r.rate is not None else -1)  # type: ignore[arg-type]
@@ -46,7 +43,7 @@ class SaveRecoveryRatesService(BaseService[SaveRecoveryRatesRequest, RecalcResul
             )  # type: ignore[arg-type]
             items.append(item)
         self.repository.save_many(items)
-        label = self.access.actor_label(group, a.person_name)
+        label = self.access.user_label(self.current_user)
         yarn_repo = YarnRepository()
         yarns = yarn_repo.list_all()
         batch_repo = RecalcBatchRepository()
@@ -68,7 +65,7 @@ class SaveRecoveryRatesService(BaseService[SaveRecoveryRatesRequest, RecalcResul
         )  # type: ignore[arg-type]
         batch_repo.add(batch)
         AuditLogRepository().add(
-            self.access.audit_entry(group, a.person_name, "UC-06", factory.value, "; ".join(details), request.reason)
+            self.access.audit_entry(self.current_user, "UC-06", factory.value, "; ".join(details), request.reason)
         )
         self.logger.info("Recovery rates %s saved; recalculated %s yarns", factory, outcome.yarn_count)
         return RecalcResultResponse(

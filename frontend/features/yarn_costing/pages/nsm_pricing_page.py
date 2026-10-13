@@ -6,7 +6,7 @@ import streamlit as st
 
 from backend.core.gateway import gateway
 from backend.features.yarn_costing import YarnCostingController
-from backend.features.yarn_costing.dto.common_dto import ActorDTO, NsmMode, YarnStatus
+from backend.features.yarn_costing.dto.common_dto import NsmMode, YarnStatus
 from backend.features.yarn_costing.dto.pricing_dto import (
     CorrectYarnNsmRequest,
     CreateNsmRevisionRequest,
@@ -26,7 +26,6 @@ from backend.features.yarn_costing.dto.request_dto import (
 from frontend.core.base_page import BasePage
 from frontend.core.components import data_table, editable_table, panel, stat_row
 from frontend.core.formatting import format_number
-from frontend.features.yarn_costing.components.actor_block import actor_factory, render_actor_block
 from frontend.features.yarn_costing.components.columns import (
     COMPONENT_CONFIG,
     NO_CARDING,
@@ -61,7 +60,7 @@ from frontend.features.yarn_costing.components.labels import (
     factory_codes,
     label_of,
 )
-from frontend.features.yarn_costing.components.permissions import action_state, explain
+from frontend.features.yarn_costing.components.permissions import action_state, explain, own_factory
 from frontend.features.yarn_costing.pages.loss_group_page import LOSS_PREFILL_KEY, LossGroupPage
 
 OPEN_YARN_KEY = "open_yarn"
@@ -107,12 +106,11 @@ class NsmPricingPage(BasePage):
             st.session_state[self.key("factory")] = pending["factory_code"]
             self.state.set(OPEN_CODE_KEY, pending["yarn_code"])
 
-        actor = render_actor_block(feature, self.state, reference)
         show_flash(self.state)
         if not codes:
             return
 
-        factory = factory_segment(reference.factories, self.key("factory"), actor_factory(self.state)) or codes[0]
+        factory = factory_segment(reference.factories, self.key("factory"), own_factory()) or codes[0]
         tiles = st.container()
         with panel("Bộ lọc", icon="🔎"):
             c1, c2 = st.columns([3, 2])
@@ -155,10 +153,10 @@ class NsmPricingPage(BasePage):
         if str(detail.yarn.factory_code) != str(factory):
             self.state.pop(OPEN_CODE_KEY)
             return
-        self._open_yarn(feature, actor, detail)
+        self._open_yarn(feature, detail)
 
     # ---- the open yarn ----
-    def _open_yarn(self, feature: YarnCostingController, actor: ActorDTO | None, detail: YarnDetailResponse) -> None:
+    def _open_yarn(self, feature: YarnCostingController, detail: YarnDetailResponse) -> None:
         y = detail.yarn
         code = y.yarn_code
         factory = str(y.factory_code)
@@ -226,9 +224,9 @@ class NsmPricingPage(BasePage):
 
             if mode == "edit":
                 ref_code = prefill.get("reference_yarn_code") if prefill else y.reference_yarn_code
-                self._edit_buttons(feature, actor, detail, components, nsm, nsm_mode, ref_code, warn_reason)
+                self._edit_buttons(feature, detail, components, nsm, nsm_mode, ref_code, warn_reason)
             else:
-                self._revision_buttons(feature, actor, detail, components, nsm, adjust_reason, warn_reason)
+                self._revision_buttons(feature, detail, components, nsm, adjust_reason, warn_reason)
 
         if result is not None:
             self._result_block(code, result)
@@ -248,7 +246,7 @@ class NsmPricingPage(BasePage):
             key=self.key(f"nsm_mode.{code}"),
         )
         if nsm_mode == NsmMode.TU_DIEN:
-            disabled, why = action_state(self.state, "UC-20", factory)
+            disabled, why = action_state("UC-20", factory)
             if right.button(
                 "Lấy NSM từ sợi cùng nhóm", icon="🪄", key=self.key(f"suggest.{code}"), disabled=disabled, help=why
             ):
@@ -379,7 +377,6 @@ class NsmPricingPage(BasePage):
     def _edit_buttons(
         self,
         feature: YarnCostingController,
-        actor: ActorDTO | None,
         detail: YarnDetailResponse,
         components: list[YarnComponentDTO],
         nsm: dict[str, Any],
@@ -392,7 +389,7 @@ class NsmPricingPage(BasePage):
         factory = str(y.factory_code)
         correcting = y.status not in EDITABLE_STATUSES
         uc = "UC-23" if correcting else "UC-21"
-        disabled, why = action_state(self.state, uc, factory)
+        disabled, why = action_state(uc, factory)
         if y.is_locked:
             disabled, why = True, self._locked_message(code)
         request_cls = CorrectYarnNsmRequest if correcting else SaveYarnNsmRequest
@@ -400,7 +397,6 @@ class NsmPricingPage(BasePage):
 
         def build(save: bool) -> SaveYarnNsmRequest:
             return request_cls(
-                actor=actor,
                 yarn_code=code,
                 components=components,
                 nsm=nsm,
@@ -420,7 +416,7 @@ class NsmPricingPage(BasePage):
         ):
             self._after_save(code, "edit", method(build(True)))
         if detail.lines:
-            rev_disabled, rev_why = action_state(self.state, "UC-24", factory)
+            rev_disabled, rev_why = action_state("UC-24", factory)
             reasons.append(rev_why)
             if b3.button(
                 "Tạo bản ĐCNSM", icon="🧬", key=self.key(f"revision.{code}"), disabled=rev_disabled, help=rev_why
@@ -442,7 +438,7 @@ class NsmPricingPage(BasePage):
             self.go_to(LossGroupPage)
 
         if y.status == YarnStatus.CHO_XUONG_XEM:
-            rej_disabled, rej_why = action_state(self.state, "UC-18", factory)
+            rej_disabled, rej_why = action_state("UC-18", factory)
             reasons.append(rej_why)
             left, right = st.columns([4, 1], vertical_alignment="bottom")
             reason = left.text_input("Lý do từ chối", max_chars=500, key=self.key(f"reject_reason.{code}"))
@@ -460,9 +456,7 @@ class NsmPricingPage(BasePage):
                     f"Từ chối yêu cầu {code} - {y.yarn_name}? Sales sẽ thấy lý do bạn nhập.",
                     "Từ chối",
                     lambda: (
-                        feature.reject_yarn_request(
-                            RejectYarnRequestRequest(actor=actor, yarn_code=code, reason=reason)
-                        ).message
+                        feature.reject_yarn_request(RejectYarnRequestRequest(yarn_code=code, reason=reason)).message
                     ),
                 )
         explain(*reasons)
@@ -470,7 +464,6 @@ class NsmPricingPage(BasePage):
     def _revision_buttons(
         self,
         feature: YarnCostingController,
-        actor: ActorDTO | None,
         detail: YarnDetailResponse,
         components: list[YarnComponentDTO],
         nsm: dict[str, Any],
@@ -479,11 +472,10 @@ class NsmPricingPage(BasePage):
     ) -> None:
         y = detail.yarn
         code = y.yarn_code
-        disabled, why = action_state(self.state, "UC-24", str(y.factory_code))
+        disabled, why = action_state("UC-24", str(y.factory_code))
 
         def build(save: bool) -> CreateNsmRevisionRequest:
             return CreateNsmRevisionRequest(
-                actor=actor,
                 source_yarn_code=code,
                 adjust_reason=adjust_reason,
                 components=components,

@@ -1,5 +1,5 @@
 """Tests of the app-migration changes (2026-09-29): BR-61 data copied from the previous app, BR-62 packaging save
-confirmation, BR-63 / UC-42 reasons of the disabled "Gửi yêu cầu" button (AC-62..AC-69)."""
+confirmation, BR-63 / UC-42 reason of the disabled "Gửi yêu cầu" button (AC-62..AC-69)."""
 
 import json
 from decimal import Decimal
@@ -14,9 +14,8 @@ from backend.features.yarn_costing.dto.pricing_dto import SaveYarnNsmRequest
 from backend.features.yarn_costing.dto.reference_dto import GetReferenceDataRequest
 from backend.features.yarn_costing.dto.request_dto import CheckRequestSubmitRequest
 from backend.features.yarn_costing.exceptions import DataFileError
-from backend.features.yarn_costing.models.enums import FactoryCode, GroupCode, YarnStatus
+from backend.features.yarn_costing.models.enums import FactoryCode, YarnStatus
 from backend.features.yarn_costing.models.packaging_type import PackagingType
-from backend.features.yarn_costing.models.user_group import GroupMember, UserGroup
 from backend.features.yarn_costing.models.yarn import Yarn
 from backend.features.yarn_costing.repositories.recalc_batch_repository import RecalcBatchRepository
 from backend.features.yarn_costing.repositories.stage_repository import StageRepository
@@ -31,11 +30,11 @@ from backend.features.yarn_costing.tests.helpers import (
     S4_NAME,
     S4_NSM,
     S4_PACKAGING,
-    SO,
     TODAY,
-    add_member,
+    acting_as,
     create_request,
     setup_factory,
+    user_with,
 )
 
 D = Decimal
@@ -61,7 +60,7 @@ def _yarn(code: str, packaging: str, status: YarnStatus) -> Yarn:
 
 def _save_packaging(rows: list[PackagingRowDTO], preview: bool = False, **extra: object):
     return SavePackagingTypesService().handle(
-        SavePackagingTypesRequest(actor=SO, factory_code=S4, rows=rows, preview=preview, **extra)  # type: ignore[arg-type]
+        SavePackagingTypesRequest(factory_code=S4, rows=rows, preview=preview, **extra)  # type: ignore[arg-type]
     )
 
 
@@ -99,9 +98,7 @@ def test_br61_old_stage_format_is_converted_when_read() -> None:  # AC-63
 def test_br61_copied_data_is_kept_without_recalculation() -> None:  # AC-62 (small copy)
     setup_factory()
     code = create_request(S4_NAME)
-    SaveYarnNsmService().handle(
-        SaveYarnNsmRequest(actor=SO, yarn_code=code, components=S4_COMPONENTS, nsm=S4_NSM, save=True)
-    )
+    SaveYarnNsmService().handle(SaveYarnNsmRequest(yarn_code=code, components=S4_COMPONENTS, nsm=S4_NSM, save=True))
     before = {y.yarn_code: (y.status, y.lines[0].total_vnd) for y in YarnRepository().list_all()}
     batches = RecalcBatchRepository().count()
     # "copy" = the same files read again by a fresh repository (as after copying the folder)
@@ -172,43 +169,26 @@ def test_uc05_minutes_change_of_unused_type_does_not_recalculate() -> None:  # A
 
 
 # ---- BR-63 / UC-42 ----
-def _group(code: GroupCode, name: str, members: list[str]) -> UserGroup:
-    return UserGroup(code=code, name=name, access_code="ABCD1234", members=[GroupMember(name=m) for m in members])
-
-
 def test_br63_reasons() -> None:
     business = RequestBusiness()
-    sales = _group(GroupCode.SALES, "Sales", ["An"])
-    empty_sales = _group(GroupCode.SALES, "Sales", [])
-    kt = _group(GroupCode.KT, "Kế toán", ["Bình"])
-    assert business.submit_block_reasons(None, sales, None, False) == [
-        "Bạn chưa xác nhận người thao tác. Vui lòng chọn nhóm, nhập mã nội bộ và chọn tên ở đầu trang."
+    assert business.submit_block_reasons(None, False) == []  # no factory chosen yet
+    assert business.submit_block_reasons("S1", False) == [
+        "Xưởng S1 chưa có loại đóng gói chọn được. Vui lòng báo Phòng SO khai báo loại đóng gói và định mức."
     ]
-    assert business.submit_block_reasons(None, empty_sales, None, False) == [
-        "Nhóm Sales chưa có thành viên. Vui lòng báo Phòng SO thêm tên."
-    ]
-    assert business.submit_block_reasons(kt, sales, "S1", False) == [
-        "Nhóm 'Kế toán' không được gửi yêu cầu tính giá.",
-        "Xưởng S1 chưa có loại đóng gói chọn được. Vui lòng báo Phòng SO khai báo loại đóng gói và định mức.",
-    ]
-    assert business.submit_block_reasons(sales, sales, "S4", True) == []
+    assert business.submit_block_reasons("S4", True) == []
 
 
-def test_uc42_check_request_submit() -> None:  # AC-68, AC-69
+def test_uc42_check_request_submit() -> None:  # AC-68, AC-69: the answer depends on the factory only, never on the user
     service = CheckRequestSubmitService()
-    first = service.handle(CheckRequestSubmitRequest())
-    assert first.reasons == ["Nhóm Sales chưa có thành viên. Vui lòng báo Phòng SO thêm tên."] and not first.allowed
-    add_member("SALES", "SALES0000", "Nguyễn Văn A")
-    assert service.handle(CheckRequestSubmitRequest()).reasons[0].startswith("Bạn chưa xác nhận người thao tác.")
-    no_pack = service.handle(CheckRequestSubmitRequest(group_code="SALES", factory_code=FactoryCode.S1))
-    assert no_pack.reasons == [
+    assert service.handle(CheckRequestSubmitRequest()).allowed
+    no_pack = service.handle(CheckRequestSubmitRequest(factory_code=FactoryCode.S1))
+    assert not no_pack.allowed and no_pack.reasons == [
         "Xưởng S1 chưa có loại đóng gói chọn được. Vui lòng báo Phòng SO khai báo loại đóng gói và định mức."
     ]
     setup_factory()
-    ok = service.handle(CheckRequestSubmitRequest(group_code="SALES", factory_code=S4))
-    assert ok.allowed and ok.reasons == []
-    kt = service.handle(CheckRequestSubmitRequest(group_code="KT", factory_code=S4))
-    assert kt.reasons == ["Nhóm 'Kế toán' không được gửi yêu cầu tính giá."]
+    for user in (None, user_with("KT", username="kt")):
+        with acting_as(user):
+            assert service.handle(CheckRequestSubmitRequest(factory_code=S4)).allowed
 
 
 # ---- Fix 2026-09-29: losses with more than 2 decimals (in %) are kept exactly ----
@@ -221,7 +201,7 @@ def test_losses_below_one_hundredth_percent_are_kept_exactly() -> None:
     losses = {"R": D("0.00395"), "W": D("0.005"), "S": D("0.00125")}  # 0,395% - 0,5% - 0,125%
     CreatePrimaryLossGroupService().handle(
         CreatePrimaryLossGroupRequest(
-            actor=SO, factory_code=S4, yarn_group_label="PE TEST", technology=Technology.RING, losses=losses
+            factory_code=S4, yarn_group_label="PE TEST", technology=Technology.RING, losses=losses
         )
     )
     stored = next(g for g in LossGroupRepository().for_factory("S4") if g.group_key == "PE TEST")
@@ -237,13 +217,11 @@ def _price_with_losses(losses: dict) -> "object":
     setup_factory(with_loss_group=False)
     label = S4_NAME.replace(S4_NAME.split()[1] + " ", "", 1)
     CreatePrimaryLossGroupService().handle(
-        CreatePrimaryLossGroupRequest(
-            actor=SO, factory_code=S4, yarn_group_label=label, technology=Technology.MVS, losses=losses
-        )
+        CreatePrimaryLossGroupRequest(factory_code=S4, yarn_group_label=label, technology=Technology.MVS, losses=losses)
     )
     code = create_request(S4_NAME)
     return code, SaveYarnNsmService().handle(
-        SaveYarnNsmRequest(actor=SO, yarn_code=code, components=S4_COMPONENTS, nsm=S4_NSM, save=False)
+        SaveYarnNsmRequest(yarn_code=code, components=S4_COMPONENTS, nsm=S4_NSM, save=False)
     )
 
 
@@ -300,9 +278,7 @@ def test_uc43_recalculate_not_priced() -> None:  # AC-75, AC-76
 
     setup_factory()
     code = create_request(S4_NAME)
-    SaveYarnNsmService().handle(
-        SaveYarnNsmRequest(actor=SO, yarn_code=code, components=S4_COMPONENTS, nsm=S4_NSM, save=True)
-    )
+    SaveYarnNsmService().handle(SaveYarnNsmRequest(yarn_code=code, components=S4_COMPONENTS, nsm=S4_NSM, save=True))
     other = create_request("PE 30/1")  # "Chờ xưởng xem": must not be touched
     repo = YarnRepository()
     yarns = repo.list_all()
@@ -313,12 +289,10 @@ def test_uc43_recalculate_not_priced() -> None:  # AC-75, AC-76
     repo.store(yarns, [waiting])
     service = RecalculateNotPricedService()
     with pytest.raises(AppError, match="Vui lòng chọn ngày hiệu lực và nhập lý do."):
-        service.handle(RecalculateNotPricedRequest(actor=SO, factory_code=S4, effective_date=TODAY, reason=""))
+        service.handle(RecalculateNotPricedRequest(factory_code=S4, effective_date=TODAY, reason=""))
     when = _date(2026, 10, 1)
     batches = RecalcBatchRepository().count()
-    result = service.handle(
-        RecalculateNotPricedRequest(actor=SO, factory_code=S4, effective_date=when, reason="Áp dụng BR-64")
-    )
+    result = service.handle(RecalculateNotPricedRequest(factory_code=S4, effective_date=when, reason="Áp dụng BR-64"))
     assert result.message == "Đã tính lại 1 mã chưa tính được của xưởng S4: 1 mã đã có giá, 0 mã vẫn chưa tính được."
     assert RecalcBatchRepository().count() == batches + 1
     assert RecalcBatchRepository().newest_first()[0].trigger == PriceEvent.TINH_LAI_CHUA_TINH
@@ -328,10 +302,9 @@ def test_uc43_recalculate_not_priced() -> None:  # AC-75, AC-76
     untouched = next(y for y in YarnRepository().list_all() if y.yarn_code == other)
     assert untouched.status == YarnStatus.CHO_XUONG_XEM
     with pytest.raises(AppError, match="Xưởng S4 không có mã nào đang 'Chưa tính được'."):
-        service.handle(RecalculateNotPricedRequest(actor=SO, factory_code=S4, effective_date=when, reason="Lần 2"))
-    xs1 = add_member("XS1", "XS10000", "Nguyễn Văn B")
-    with pytest.raises(AppError, match="không được thực hiện thao tác này"):
-        service.handle(RecalculateNotPricedRequest(actor=xs1, factory_code=S4, effective_date=when, reason="x"))
+        service.handle(RecalculateNotPricedRequest(factory_code=S4, effective_date=when, reason="Lần 2"))
+    with acting_as(user_with("XS1", username="xs1")), pytest.raises(AppError, match="chưa có vai trò cho thao tác"):
+        service.handle(RecalculateNotPricedRequest(factory_code=S4, effective_date=when, reason="x"))  # BR-47
 
 
 def test_export_has_loss_note_column() -> None:  # AC-77
@@ -344,9 +317,7 @@ def test_export_has_loss_note_column() -> None:  # AC-77
 
     losses = {k: v for k, v in S4_LOSSES.items() if k != "C3"} | {"C2": S4_LOSSES["C3"]}
     code, _ = _price_with_losses(losses)
-    SaveYarnNsmService().handle(
-        SaveYarnNsmRequest(actor=SO, yarn_code=code, components=S4_COMPONENTS, nsm=S4_NSM, save=True)
-    )
+    SaveYarnNsmService().handle(SaveYarnNsmRequest(yarn_code=code, components=S4_COMPONENTS, nsm=S4_NSM, save=True))
     file = ExportPriceLinesService().handle(ExportPriceLinesRequest(factory_code=S4))
     ws = load_workbook(BytesIO(file.content))["Chi tiet cong doan"]
     rows = list(ws.iter_rows(values_only=True))

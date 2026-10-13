@@ -214,16 +214,6 @@ class MasterBusiness(BaseBusiness[Stage]):
         """UC-08 / UC-09: tỷ giá / hệ số thí nghiệm > 0."""
         self.require(value is not None and value > 0, message)
 
-    def ensure_access_code(self, access_code: str) -> None:
-        """UC-01: mã nội bộ 4-20 ký tự."""
-        self.require(4 <= len(access_code.strip()) <= 20, "Mã nội bộ phải dài từ 4 đến 20 ký tự.")
-
-    def ensure_unique_members(self, names: Sequence[str]) -> None:
-        """UC-01: tên thành viên không trùng trong nhóm."""
-        counts = Counter(n.strip() for n in names)
-        duplicate = next((n for n, c in counts.items() if c > 1), None)
-        self.require(duplicate is None, f"Tên '{duplicate}' đã có trong nhóm.")
-
     def version_code(self, factory_code: str, existing: Sequence[str]) -> str:
         """4.5: mã phiên bản DM-<xưởng>-NNN."""
         prefix = f"DM-{factory_code}-"

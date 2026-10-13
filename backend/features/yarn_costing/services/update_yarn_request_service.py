@@ -11,7 +11,6 @@ from backend.features.yarn_costing.exceptions import YarnNotFoundError
 from backend.features.yarn_costing.repositories.packaging_type_repository import PackagingTypeRepository
 from backend.features.yarn_costing.repositories.rate_version_repository import RateVersionRepository
 from backend.features.yarn_costing.repositories.recalc_batch_repository import AuditLogRepository
-from backend.features.yarn_costing.repositories.user_group_repository import UserGroupRepository
 from backend.features.yarn_costing.repositories.yarn_repository import YarnRepository
 
 
@@ -24,19 +23,11 @@ class UpdateYarnRequestService(BaseService[UpdateYarnRequestRequest, YarnRespons
         self.master = MasterBusiness()
 
     def execute(self, request: UpdateYarnRequestRequest) -> YarnResponse:
-        a = request.actor
         yarns = self.repository.list_all()
         yarn = next((y for y in yarns if y.yarn_code == request.yarn_code), None)
         if yarn is None:
             raise YarnNotFoundError(f"Không tìm thấy yêu cầu {request.yarn_code}.")
-        group = self.access.verify(
-            a.group_code,
-            a.access_code,
-            a.person_name,
-            UserGroupRepository().list_all(),
-            "UC-16",
-            yarn.factory_code.value,
-        )
+        self.access.ensure_allowed(self.current_user, "UC-16", yarn.factory_code.value)
         self.requests.ensure_pending(yarn)
         name = collapse_spaces(request.yarn_name)
         parsed = self.names.analyze(name)
@@ -62,7 +53,7 @@ class UpdateYarnRequestService(BaseService[UpdateYarnRequestRequest, YarnRespons
         self.requests.ensure_unique_name(updated, yarns)
         self.repository.store(yarns, [updated])
         detail = f"{yarn.yarn_name} / {yarn.packaging_code} → {name} / {updated.packaging_code}"
-        AuditLogRepository().add(self.access.audit_entry(group, a.person_name, "UC-16", yarn.yarn_code, detail))
+        AuditLogRepository().add(self.access.audit_entry(self.current_user, "UC-16", yarn.yarn_code, detail))
         self.logger.info("Yarn request %s updated", yarn.yarn_code)
         return YarnResponse(
             message=f"Đã cập nhật yêu cầu {yarn.yarn_code}.", yarn=yarn_dto(updated, packaging_name=chosen.name)

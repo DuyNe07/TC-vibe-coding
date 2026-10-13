@@ -8,14 +8,15 @@ from backend.core.base import BaseDTO, BaseRequestDTO, BaseResponseDTO
 class ListAuditLogRequest(BaseRequestDTO):
     date_from: date | None = None
     date_to: date | None = None
-    group_code: str | None = None
+    username: str | None = None
+    action: str | None = None
     keyword: str = ""
 
 
 class AuditLogDTO(BaseDTO):
     at: datetime
-    group_code: str
-    person_name: str
+    username: str
+    display_name: str
     action: str
     object_ref: str = ""
     detail: str = ""
@@ -24,3 +25,5 @@ class AuditLogDTO(BaseDTO):
 
 class AuditLogListResponse(BaseResponseDTO):
     items: list[AuditLogDTO] = []
+    usernames: list[str] = []  # accounts found in the date range (filter choices)
+    actions: list[str] = []  # actions found in the date range (filter choices)

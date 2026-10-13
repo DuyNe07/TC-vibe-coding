@@ -1,4 +1,4 @@
-"""UC-38 Lấy dữ liệu tham chiếu (danh sách chọn, khối xác thực, thẻ dữ liệu nền); BR-61 file mã sợi hỏng -> cảnh báo."""
+"""UC-38 Lấy dữ liệu tham chiếu (danh sách chọn, thẻ dữ liệu nền); BR-61 file mã sợi hỏng -> cảnh báo."""
 
 from datetime import date
 
@@ -6,7 +6,6 @@ from backend.core.base import BaseService
 from backend.features.yarn_costing.builders.dto_builders import (
     exchange_rate_dto,
     factory_dto,
-    group_dto,
     packaging_row,
     rate_version_dto,
     recovery_row,
@@ -27,13 +26,12 @@ from backend.features.yarn_costing.repositories.process_route_repository import 
 from backend.features.yarn_costing.repositories.rate_version_repository import RateVersionRepository
 from backend.features.yarn_costing.repositories.recovery_rate_repository import RecoveryRateRepository
 from backend.features.yarn_costing.repositories.stage_repository import StageRepository
-from backend.features.yarn_costing.repositories.user_group_repository import UserGroupRepository
 from backend.features.yarn_costing.repositories.yarn_repository import YarnRepository
 
 
 class GetReferenceDataService(BaseService[GetReferenceDataRequest, ReferenceDataResponse]):
-    def __init__(self, repository: UserGroupRepository | None = None) -> None:
-        self.repository = repository or UserGroupRepository()
+    def __init__(self, repository: StageRepository | None = None) -> None:
+        self.repository = repository or StageRepository()
         self.costing = CostingBusiness()
         self.master = MasterBusiness()
 
@@ -43,7 +41,7 @@ class GetReferenceDataService(BaseService[GetReferenceDataRequest, ReferenceData
         version_repo = RateVersionRepository()
         stages, versions, packaging, recovery, routes = [], [], [], [], []
         current = None
-        stage_repo, packaging_repo = StageRepository(), PackagingTypeRepository()
+        stage_repo, packaging_repo = self.repository, PackagingTypeRepository()
         factory_dtos = []
         for f in FactoryCode:
             factory_stages = stage_repo.for_factory(f.value)
@@ -80,7 +78,6 @@ class GetReferenceDataService(BaseService[GetReferenceDataRequest, ReferenceData
             len(packaging),
         )
         return ReferenceDataResponse(
-            groups=[group_dto(g) for g in self.repository.list_ordered()],
             factories=factory_dtos,
             stages=stages,
             current_rate=current,

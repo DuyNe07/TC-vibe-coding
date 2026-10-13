@@ -13,7 +13,6 @@ from backend.features.yarn_costing.models.yarn import Yarn
 from backend.features.yarn_costing.repositories.packaging_type_repository import PackagingTypeRepository
 from backend.features.yarn_costing.repositories.rate_version_repository import RateVersionRepository
 from backend.features.yarn_costing.repositories.recalc_batch_repository import AuditLogRepository
-from backend.features.yarn_costing.repositories.user_group_repository import UserGroupRepository
 from backend.features.yarn_costing.repositories.yarn_repository import YarnRepository
 
 PACKAGING_MESSAGE = "Vui lòng chọn loại đóng gói đang dùng của xưởng."
@@ -28,10 +27,8 @@ class CreateYarnRequestService(BaseService[CreateYarnRequestRequest, YarnRespons
         self.master = MasterBusiness()
 
     def execute(self, request: CreateYarnRequestRequest) -> YarnResponse:
-        a, factory = request.actor, request.factory_code
-        group = self.access.verify(
-            a.group_code, a.access_code, a.person_name, UserGroupRepository().list_all(), "UC-15", factory.value
-        )
+        factory = request.factory_code
+        self.access.ensure_allowed(self.current_user, "UC-15", factory.value)
         name = collapse_spaces(request.yarn_name)
         parsed = self.names.analyze(name)
         self.names.ensure_valid(parsed)
@@ -40,7 +37,7 @@ class CreateYarnRequestService(BaseService[CreateYarnRequestRequest, YarnRespons
         chosen = packaging.get(request.packaging_code.strip())
         self.master.require(chosen is not None and self.master.is_selectable(chosen, version), PACKAGING_MESSAGE)
         yarns = self.repository.list_all()
-        label = self.access.actor_label(group, a.person_name)
+        label = self.access.user_label(self.current_user)
         code = self.requests.next_base_code(factory, yarns)
         yarn = Yarn(
             factory_code=factory,
@@ -60,7 +57,7 @@ class CreateYarnRequestService(BaseService[CreateYarnRequestRequest, YarnRespons
         self.requests.ensure_unique_name(yarn, yarns)
         self.repository.store(yarns, [yarn])
         AuditLogRepository().add(
-            self.access.audit_entry(group, a.person_name, "UC-15", code, f"{name} / {yarn.packaging_code}")
+            self.access.audit_entry(self.current_user, "UC-15", code, f"{name} / {yarn.packaging_code}")
         )
         self.logger.info("Yarn request %s created for %s (%s)", code, factory, name)
         return YarnResponse(

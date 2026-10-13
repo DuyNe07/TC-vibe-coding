@@ -5,7 +5,7 @@ from decimal import Decimal
 import pytest
 
 from backend.core.exceptions import AppError, BusinessRuleViolation
-from backend.features.yarn_costing.dto.common_dto import ActorDTO, YarnComponentDTO
+from backend.features.yarn_costing.dto.common_dto import YarnComponentDTO
 from backend.features.yarn_costing.dto.dashboard_dto import (
     CheckNsmAnomaliesRequest,
     CheckPriceAnomaliesRequest,
@@ -72,11 +72,11 @@ from backend.features.yarn_costing.tests.helpers import (
     S4_COMPONENTS,
     S4_NAME,
     S4_NSM,
-    SO,
     TODAY,
-    add_member,
+    acting_as,
     create_request,
     setup_factory,
+    user_with,
 )
 
 D = Decimal
@@ -85,9 +85,9 @@ S4 = FactoryCode.S4
 CORE_KEY = "CORE (COTTON/ FDY 30D/24F/1) (70/30) MVS"
 
 
-def save_nsm(code: str, actor: ActorDTO = SO, save: bool = True, **kw) -> object:
+def save_nsm(code: str, save: bool = True, **kw) -> object:
     values = {"components": S4_COMPONENTS, "nsm": S4_NSM} | kw
-    return SaveYarnNsmService().handle(SaveYarnNsmRequest(actor=actor, yarn_code=code, save=save, **values))
+    return SaveYarnNsmService().handle(SaveYarnNsmRequest(yarn_code=code, save=save, **values))
 
 
 def priced_yarn() -> str:
@@ -100,36 +100,36 @@ def priced_yarn() -> str:
 # ---- UC-15..UC-19, UC-40 --------------------------------------------------------------------------------------------
 def test_create_update_cancel_reject_requests() -> None:
     setup_factory(S4)
-    sales = add_member("SALES", "SALES0000", "Bình")
-    res = CreateYarnRequestService().handle(
-        CreateYarnRequestRequest(actor=sales, factory_code=S4, yarn_name="CVC 30/1 (60/40)", packaging_code="Type 3")
-    )
+    sales = user_with("SALES", username="binh", full_name="Bình")
+    with acting_as(sales):
+        res = CreateYarnRequestService().handle(
+            CreateYarnRequestRequest(factory_code=S4, yarn_name="CVC 30/1 (60/40)", packaging_code="Type 3")
+        )
     assert res.yarn.yarn_code == "S4-2020" and res.yarn.status == YarnStatus.CHO_XUONG_XEM  # AC-03
     assert res.message == "Đã gửi yêu cầu S4-2020 - CVC 30/1 (60/40) cho Xưởng Sợi 4."
-    with pytest.raises(BusinessRuleViolation, match="đã có ở mã S4-2020"):  # AC-05
+    with acting_as(sales), pytest.raises(BusinessRuleViolation, match="đã có ở mã S4-2020"):  # AC-05
         CreateYarnRequestService().handle(
-            CreateYarnRequestRequest(
-                actor=sales, factory_code=S4, yarn_name="cvc 30/1  (60/40)", packaging_code="Type 3"
-            )
+            CreateYarnRequestRequest(factory_code=S4, yarn_name="cvc 30/1  (60/40)", packaging_code="Type 3")
         )
-    updated = UpdateYarnRequestService().handle(
-        UpdateYarnRequestRequest(
-            actor=sales, yarn_code="S4-2020", yarn_name="CVC 32/1 (60/40)", packaging_code="Type 3"
+    with acting_as(sales):
+        updated = UpdateYarnRequestService().handle(
+            UpdateYarnRequestRequest(yarn_code="S4-2020", yarn_name="CVC 32/1 (60/40)", packaging_code="Type 3")
         )
-    )
     assert updated.yarn.count == 32 and updated.message == "Đã cập nhật yêu cầu S4-2020."
     second = create_request("PE 30/1")
-    CancelYarnRequestService().handle(CancelYarnRequestRequest(actor=sales, yarn_code=second))
+    with acting_as(sales):
+        CancelYarnRequestService().handle(CancelYarnRequestRequest(yarn_code=second))
     assert create_request("PE 40/1") == "S4-2022"  # AC-06: cancelled code not reused
-    xs4 = add_member("XS4", "XS40000", "An")
-    with pytest.raises(BusinessRuleViolation, match="Vui lòng nhập lý do."):  # AC-07
-        RejectYarnRequestService().handle(RejectYarnRequestRequest(actor=xs4, yarn_code="S4-2022"))
-    rejected = RejectYarnRequestService().handle(
-        RejectYarnRequestRequest(actor=xs4, yarn_code="S4-2022", reason="Không có máy")
-    )
-    assert rejected.yarn.status == YarnStatus.TU_CHOI
-    with pytest.raises(BusinessRuleViolation, match="Chỉ sửa hoặc huỷ"):
-        CancelYarnRequestService().handle(CancelYarnRequestRequest(actor=sales, yarn_code="S4-2022"))
+    xs4 = user_with("XS4", username="an", full_name="An")
+    with acting_as(xs4), pytest.raises(BusinessRuleViolation, match="Vui lòng nhập lý do."):  # AC-07
+        RejectYarnRequestService().handle(RejectYarnRequestRequest(yarn_code="S4-2022"))
+    with acting_as(xs4):
+        rejected = RejectYarnRequestService().handle(
+            RejectYarnRequestRequest(yarn_code="S4-2022", reason="Không có máy")
+        )
+    assert rejected.yarn.status == YarnStatus.TU_CHOI and rejected.yarn.handled_by == "An"  # BR-49: the account's name
+    with acting_as(sales), pytest.raises(BusinessRuleViolation, match="Chỉ sửa hoặc huỷ"):
+        CancelYarnRequestService().handle(CancelYarnRequestRequest(yarn_code="S4-2022"))
     listing = ListYarnsService().handle(
         ListYarnsRequest(factory_code=S4, statuses=[YarnStatus.CHO_XUONG_XEM], oldest_first=True)
     )
@@ -177,7 +177,7 @@ def test_save_nsm_without_loss_group_then_group_added_recalculates() -> None:
     for key, losses in (("PE NORMAL - RING", {"C2": D("0.025"), "W": D("0.01")}), ("VISCOSE - RING", {"W": D("0.02")})):
         CreatePrimaryLossGroupService().handle(
             CreatePrimaryLossGroupRequest(
-                actor=SO, factory_code=S4, yarn_group_label=key, technology=Technology.RING, losses=losses
+                factory_code=S4, yarn_group_label=key, technology=Technology.RING, losses=losses
             )
         )
     group_components = [
@@ -186,7 +186,6 @@ def test_save_nsm_without_loss_group_then_group_added_recalculates() -> None:
     ]
     preview = CreateSecondaryLossGroupService().handle(
         CreateSecondaryLossGroupRequest(
-            actor=SO,
             factory_code=S4,
             yarn_group_label="TR (65/35)",
             technology=Technology.RING,
@@ -196,7 +195,6 @@ def test_save_nsm_without_loss_group_then_group_added_recalculates() -> None:
     assert not preview.saved and preview.group.losses["W"] == D("0.0135")  # AC-20
     saved = CreateSecondaryLossGroupService().handle(
         CreateSecondaryLossGroupRequest(
-            actor=SO,
             factory_code=S4,
             yarn_group_label="TR (65/35)",
             technology=Technology.RING,
@@ -214,12 +212,14 @@ def test_nsm_validation_permission_and_warning() -> None:
     other = create_request("CORE 30/1 (COTTON/ FDY 30D/24F/1) (70/30) MVS")
     with pytest.raises(BusinessRuleViolation, match="hiện là 90,00%"):  # AC-10
         save_nsm(other, components=[S4_COMPONENTS[0].model_copy(update={"ratio": D("0.6")}), S4_COMPONENTS[1]])
-    sales = add_member("SALES", "SALES0000", "Bình")
-    with pytest.raises(BusinessRuleViolation, match="Nhóm 'Sales' không được thực hiện thao tác này."):  # AC-28
-        save_nsm(other, actor=sales)
-    xs1 = add_member("XS1", "XS10000", "Cường")
-    with pytest.raises(BusinessRuleViolation, match="xưởng S1"):
-        save_nsm(other, actor=xs1)
+    with acting_as(user_with("SALES", username="binh")), pytest.raises(BusinessRuleViolation, match="chưa có vai trò"):
+        save_nsm(other)  # AC-28 (BR-47)
+    with acting_as(user_with(username="khach")), pytest.raises(BusinessRuleViolation, match="chưa có vai trò"):
+        save_nsm(other)  # an account without any role of the app
+    with acting_as(user_with("XS1", username="cuong")), pytest.raises(BusinessRuleViolation, match="xưởng S1"):
+        save_nsm(other)  # BR-48
+    with acting_as(user_with("XS4", "XS1", username="hai")):
+        assert save_nsm(other, save=False)  # one of the roles covers the factory
     suggestion = SuggestNsmService().handle(SuggestNsmRequest(yarn_code=other))
     assert suggestion.found and suggestion.reference_yarn_code == code and suggestion.nsm["CM"] == 50  # AC-22
     assert [(c.material_label, c.carding_stage, c.nsm_carding) for c in suggestion.components] == [
@@ -239,28 +239,28 @@ def test_nsm_validation_permission_and_warning() -> None:
 def test_correct_nsm_and_lock_by_accounting_code_then_revision() -> None:
     code = priced_yarn()
     corrected = CorrectYarnNsmService().handle(
-        CorrectYarnNsmRequest(actor=SO, yarn_code=code, components=S4_COMPONENTS, nsm={**S4_NSM, "V": D(26)}, save=True)
+        CorrectYarnNsmRequest(yarn_code=code, components=S4_COMPONENTS, nsm={**S4_NSM, "V": D(26)}, save=True)
     )
     assert corrected.line.total_vnd < D("19777.8356")  # type: ignore[union-attr]  # AC-39
     assert {h.event for h in PriceHistoryRepository().list_all()} == {PriceEvent.TINH_LAN_DAU, PriceEvent.SUA_NSM}
-    kt = add_member("KT", "KT0000", "Dung")
-    res = SetAccountingCodeService().handle(
-        SetAccountingCodeRequest(actor=kt, line_code=f"{code}TN", accounting_code=" S42003 ")
-    )
+    kt = user_with("KT", username="dung", full_name="Dung")
+    with acting_as(kt):
+        res = SetAccountingCodeService().handle(
+            SetAccountingCodeRequest(line_code=f"{code}TN", accounting_code=" S42003 ")
+        )
     assert res.line.accounting_code == "S42003" and res.message == f"Đã lưu mã kế toán cho dòng {code}TN."  # AC-15
     detail = GetYarnDetailService().handle(GetYarnDetailRequest(yarn_code=code))
     assert detail.yarn.status == YarnStatus.CO_MA_KE_TOAN and detail.yarn.is_locked
     with pytest.raises(BusinessRuleViolation, match="đã có mã kế toán nên không sửa được"):
         CorrectYarnNsmService().handle(
-            CorrectYarnNsmRequest(actor=SO, yarn_code=code, components=S4_COMPONENTS, nsm=S4_NSM, save=True)
+            CorrectYarnNsmRequest(yarn_code=code, components=S4_COMPONENTS, nsm=S4_NSM, save=True)
         )
     with pytest.raises(BusinessRuleViolation, match="Vui lòng nhập lý do điều chỉnh."):  # AC-16
         CreateNsmRevisionService().handle(
-            CreateNsmRevisionRequest(actor=SO, source_yarn_code=code, components=S4_COMPONENTS, nsm=S4_NSM, save=True)
+            CreateNsmRevisionRequest(source_yarn_code=code, components=S4_COMPONENTS, nsm=S4_NSM, save=True)
         )
     revision = CreateNsmRevisionService().handle(
         CreateNsmRevisionRequest(
-            actor=SO,
             source_yarn_code=code,
             adjust_reason="Đơn 50 tấn",
             components=S4_COMPONENTS,
@@ -271,13 +271,12 @@ def test_correct_nsm_and_lock_by_accounting_code_then_revision() -> None:
     assert revision.yarn.yarn_code == f"{code} (ĐCNSM1)" and revision.message.startswith(
         f"Đã tạo bản {code} (ĐCNSM1): "
     )
-    cleared = SetAccountingCodeService().handle(
-        SetAccountingCodeRequest(actor=kt, line_code=f"{code}TN", accounting_code="")
-    )
+    with acting_as(kt):
+        cleared = SetAccountingCodeService().handle(SetAccountingCodeRequest(line_code=f"{code}TN", accounting_code=""))
     assert cleared.message == f"Đã xoá mã kế toán của dòng {code}TN."
     assert GetYarnDetailService().handle(GetYarnDetailRequest(yarn_code=code)).yarn.status == YarnStatus.DA_TINH_GIA
-    with pytest.raises(AppError, match="Mã kế toán tối đa 100 ký tự."):
-        SetAccountingCodeService().handle(SetAccountingCodeRequest(actor=kt, line_code=code, accounting_code="x" * 101))
+    with acting_as(kt), pytest.raises(AppError, match="Mã kế toán tối đa 100 ký tự."):
+        SetAccountingCodeService().handle(SetAccountingCodeRequest(line_code=code, accounting_code="x" * 101))
 
 
 # ---- UC-25..UC-29 ---------------------------------------------------------------------------------------------------
@@ -285,7 +284,6 @@ def test_adjustment_lines_listing_and_export() -> None:
     code = priced_yarn()
     ck = CreateAdjustmentLineService().handle(
         CreateAdjustmentLineRequest(
-            actor=SO,
             yarn_code=code,
             line_type=LineType.CHIET_KHAU,
             percent=D("0.05"),
@@ -296,9 +294,7 @@ def test_adjustment_lines_listing_and_export() -> None:
     assert ck.line.line_code == f"{code} (CK1)" and ck.message.startswith(f"Đã tạo dòng {code} (CK1): ")  # AC-14
     with pytest.raises(BusinessRuleViolation, match="Vui lòng nhập lý do và đơn hàng cụ thể."):
         CreateAdjustmentLineService().handle(
-            CreateAdjustmentLineRequest(
-                actor=SO, yarn_code=code, line_type=LineType.PHU_PHI, percent=D("0.1"), reason="x"
-            )
+            CreateAdjustmentLineRequest(yarn_code=code, line_type=LineType.PHU_PHI, percent=D("0.1"), reason="x")
         )
     listing = ListPriceLinesService().handle(ListPriceLinesRequest(factory_code=S4))
     assert [r.line_type for r in listing.items] == [LineType.THUONG, LineType.THI_NGHIEM, LineType.CHIET_KHAU]
@@ -309,15 +305,15 @@ def test_adjustment_lines_listing_and_export() -> None:
     assert only_regular.total_count == 1  # AC-40
     file = ExportPriceLinesService().handle(ExportPriceLinesRequest(factory_code=S4, line_types=[LineType.THUONG]))
     assert file.filename.startswith("bang-gia-soi-") and file.content[:2] == b"PK"  # AC-30
-    DeleteAdjustmentLineService().handle(DeleteAdjustmentLineRequest(actor=SO, line_code=f"{code} (CK1)"))  # AC-32
+    DeleteAdjustmentLineService().handle(DeleteAdjustmentLineRequest(line_code=f"{code} (CK1)"))  # AC-32
     assert ListPriceLinesService().handle(ListPriceLinesRequest(factory_code=S4)).total_count == 2
     with pytest.raises(BusinessRuleViolation):
-        DeleteAdjustmentLineService().handle(DeleteAdjustmentLineRequest(actor=SO, line_code=code))
+        DeleteAdjustmentLineService().handle(DeleteAdjustmentLineRequest(line_code=code))
     waiting = create_request("PE 30/1")
     with pytest.raises(AppError, match="chưa có giá, chưa tạo được dòng CK/PP"):
         CreateAdjustmentLineService().handle(
             CreateAdjustmentLineRequest(
-                actor=SO, yarn_code=waiting, line_type=LineType.PHU_PHI, percent=D("0.1"), reason="x", order_ref="y"
+                yarn_code=waiting, line_type=LineType.PHU_PHI, percent=D("0.1"), reason="x", order_ref="y"
             )
         )
 
@@ -328,7 +324,6 @@ def test_loss_groups_list_update_lock_and_delete() -> None:
     with pytest.raises(BusinessRuleViolation, match="Tiêu hao phải từ 0% đến dưới 100%."):  # AC-37
         CreatePrimaryLossGroupService().handle(
             CreatePrimaryLossGroupRequest(
-                actor=SO,
                 factory_code=S4,
                 yarn_group_label="LINEN - RING",
                 technology=Technology.RING,
@@ -337,7 +332,6 @@ def test_loss_groups_list_update_lock_and_delete() -> None:
         )
     CreatePrimaryLossGroupService().handle(
         CreatePrimaryLossGroupRequest(
-            actor=SO,
             factory_code=S4,
             yarn_group_label="linen - ring",
             technology=Technology.RING,
@@ -346,32 +340,31 @@ def test_loss_groups_list_update_lock_and_delete() -> None:
     )
     listing = ListLossGroupsService().handle(ListLossGroupsRequest(factory_code=S4, keyword="linen"))
     assert listing.items[0].group_key == "LINEN - RING" and listing.items[0].used_count == 0
-    xs4 = add_member("XS4", "XS40000", "An")
-    res = UpdateLossGroupService().handle(
-        UpdateLossGroupRequest(
-            actor=xs4,
-            factory_code=S4,
-            group_key=CORE_KEY,
-            technology=Technology.MVS,
-            losses={
-                "V": D("0.0315"),
-                "MD3": D("0.002"),
-                "MD2": D("0.002"),
-                "MD1": D("0.0006"),
-                "CM": D("0.15"),
-                "SBD": D("0.0035"),
-                "C3": D("0.034"),
-                "C1": D("0.075"),
-            },
-            reason="Đo lại",
+    xs4 = user_with("XS4", username="an")
+    with acting_as(xs4):
+        res = UpdateLossGroupService().handle(
+            UpdateLossGroupRequest(
+                factory_code=S4,
+                group_key=CORE_KEY,
+                technology=Technology.MVS,
+                losses={
+                    "V": D("0.0315"),
+                    "MD3": D("0.002"),
+                    "MD2": D("0.002"),
+                    "MD1": D("0.0006"),
+                    "CM": D("0.15"),
+                    "SBD": D("0.0035"),
+                    "C3": D("0.034"),
+                    "C1": D("0.075"),
+                },
+                reason="Đo lại",
+            )
         )
-    )
     assert res.recalculated_count == 1 and "trong đó 0 mã đã có mã kế toán" in res.message  # AC-19
-    SetAccountingCodeService().handle(SetAccountingCodeRequest(actor=SO, line_code=code, accounting_code="KT1"))
-    with pytest.raises(BusinessRuleViolation, match="Chỉ Phòng SO được sửa."):  # AC-18
+    SetAccountingCodeService().handle(SetAccountingCodeRequest(line_code=code, accounting_code="KT1"))
+    with acting_as(xs4), pytest.raises(BusinessRuleViolation, match="Chỉ Phòng SO được sửa."):  # AC-18
         UpdateLossGroupService().handle(
             UpdateLossGroupRequest(
-                actor=xs4,
                 factory_code=S4,
                 group_key=CORE_KEY,
                 technology=Technology.MVS,
@@ -384,8 +377,8 @@ def test_loss_groups_list_update_lock_and_delete() -> None:
         == CORE_KEY
     )
     with pytest.raises(BusinessRuleViolation, match="đang được dùng bởi 1 mã sợi"):  # AC-31
-        DeleteLossGroupService().handle(DeleteLossGroupRequest(actor=SO, factory_code=S4, group_key=CORE_KEY))
-    DeleteLossGroupService().handle(DeleteLossGroupRequest(actor=SO, factory_code=S4, group_key="LINEN - RING"))
+        DeleteLossGroupService().handle(DeleteLossGroupRequest(factory_code=S4, group_key=CORE_KEY))
+    DeleteLossGroupService().handle(DeleteLossGroupRequest(factory_code=S4, group_key="LINEN - RING"))
     assert all(
         i.group_key != "LINEN - RING"
         for i in ListLossGroupsService().handle(ListLossGroupsRequest(factory_code=S4)).items

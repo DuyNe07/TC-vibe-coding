@@ -7,7 +7,7 @@ from frontend.features.yarn_costing.components.labels import factory_codes, fact
 
 
 def factory_segment(factories: list[FactoryDTO], key: str, preferred: str | None = None) -> str | None:
-    """Nút chọn xưởng bắt buộc; mặc định xưởng của nhóm đang thao tác (nếu có) hoặc xưởng đầu tiên."""
+    """Nút chọn xưởng bắt buộc; mặc định xưởng của tài khoản (nếu chỉ có vai trò của một xưởng) hoặc xưởng đầu tiên."""
     codes = factory_codes(factories)
     if not codes:
         return None

@@ -4,7 +4,6 @@ from collections.abc import Mapping
 from typing import Any
 
 from backend.features.yarn_costing.dto.common_dto import (
-    GroupCode,
     ImportMode,
     LineType,
     LossGroupLevel,
@@ -29,13 +28,6 @@ IMPORT_MODE_LABELS = {mode: mode.value for mode in ImportMode}
 NSM_MODE_LABELS = {mode: mode.value for mode in NsmMode}
 SECONDARY_METHOD_LABELS = {method: method.value for method in SecondaryMethod}
 RATE_SOURCE_LABELS = {source: source.value for source in RateCodeSource}
-GROUP_LABELS = {
-    GroupCode.SALES: "Sales",
-    GroupCode.XS1: "Xưởng S1",
-    GroupCode.XS4: "Xưởng S4",
-    GroupCode.SO: "Phòng SO",
-    GroupCode.KT: "Kế toán",
-}
 STATUS_ORDER = [
     YarnStatus.CHO_XUONG_XEM,
     YarnStatus.CHUA_TINH_DUOC,

@@ -12,12 +12,11 @@ from backend.features.yarn_costing.business.name_business import collapse_spaces
 from backend.features.yarn_costing.business.recalc_business import RecalcBusiness
 from backend.features.yarn_costing.dto.loss_dto import LossGroupSaveResponse, UpdateLossGroupRequest
 from backend.features.yarn_costing.exceptions import YarnNotFoundError
-from backend.features.yarn_costing.models.enums import GroupCode, LossGroupLevel, PriceEvent
+from backend.features.yarn_costing.models.enums import LossGroupLevel, PriceEvent
 from backend.features.yarn_costing.repositories.factory_data_loader import load_factory_data
 from backend.features.yarn_costing.repositories.loss_group_repository import LossGroupRepository
 from backend.features.yarn_costing.repositories.price_history_repository import PriceHistoryRepository
 from backend.features.yarn_costing.repositories.recalc_batch_repository import AuditLogRepository, RecalcBatchRepository
-from backend.features.yarn_costing.repositories.user_group_repository import UserGroupRepository
 from backend.features.yarn_costing.repositories.yarn_repository import YarnRepository
 
 
@@ -30,10 +29,8 @@ class UpdateLossGroupService(BaseService[UpdateLossGroupRequest, LossGroupSaveRe
         self.recalc = RecalcBusiness()
 
     def execute(self, request: UpdateLossGroupRequest) -> LossGroupSaveResponse:
-        a, factory = request.actor, request.factory_code
-        group = self.access.verify(
-            a.group_code, a.access_code, a.person_name, UserGroupRepository().list_all(), "UC-13", factory.value
-        )
+        factory = request.factory_code
+        self.access.ensure_allowed(self.current_user, "UC-13", factory.value)
         data = load_factory_data(factory)
         current = data.loss_groups.get(request.group_key)
         if current is None:
@@ -43,9 +40,9 @@ class UpdateLossGroupService(BaseService[UpdateLossGroupRequest, LossGroupSaveRe
         groups = list(data.loss_groups.values())
         affected = self.business.affected_groups(current.group_key, groups)
         locked = self.business.locked_codes(affected, factory.value, yarns)
-        self.business.ensure_can_edit(current.group_key, locked, group.code == GroupCode.SO)
+        self.business.ensure_can_edit(current.group_key, locked, self.access.is_so(self.current_user))
         self.master.require(bool(request.reason.strip()), "Vui lòng nhập lý do.")
-        label = self.access.actor_label(group, a.person_name)
+        label = self.access.user_label(self.current_user)
         update: dict = {
             "material": collapse_spaces(request.material),
             "technology": request.technology,
@@ -97,7 +94,7 @@ class UpdateLossGroupService(BaseService[UpdateLossGroupRequest, LossGroupSaveRe
         )
         AuditLogRepository().add(
             self.access.audit_entry(
-                group, a.person_name, "UC-13", f"{factory.value} / {updated.group_key}", detail, request.reason
+                self.current_user, "UC-13", f"{factory.value} / {updated.group_key}", detail, request.reason
             )
         )
         self.logger.info(

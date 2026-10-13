@@ -4,7 +4,7 @@ from datetime import date, datetime
 from decimal import Decimal
 
 from backend.core.base import BaseDTO, BaseRequestDTO, BaseResponseDTO
-from backend.features.yarn_costing.dto.common_dto import ActorDTO, YarnComponentDTO
+from backend.features.yarn_costing.dto.common_dto import YarnComponentDTO
 from backend.features.yarn_costing.models.enums import FactoryCode, NsmMode, Technology, YarnOrigin, YarnStatus
 
 
@@ -68,26 +68,22 @@ class YarnSummaryDTO(BaseDTO):
 
 
 class CreateYarnRequestRequest(BaseRequestDTO):
-    actor: ActorDTO
     factory_code: FactoryCode
     yarn_name: str
     packaging_code: str = ""
 
 
 class UpdateYarnRequestRequest(BaseRequestDTO):
-    actor: ActorDTO
     yarn_code: str
     yarn_name: str
     packaging_code: str = ""
 
 
 class CancelYarnRequestRequest(BaseRequestDTO):
-    actor: ActorDTO
     yarn_code: str
 
 
 class RejectYarnRequestRequest(BaseRequestDTO):
-    actor: ActorDTO
     yarn_code: str
     reason: str = ""
 
@@ -130,9 +126,8 @@ class YarnNameAnalysisResponse(BaseResponseDTO):
 
 
 class CheckRequestSubmitRequest(BaseRequestDTO):
-    """UC-42: ``group_code`` = nhóm đã xác nhận trong phiên làm việc (None = chưa xác nhận)."""
+    """UC-42: lý do khoá nút "Gửi yêu cầu" theo dữ liệu của xưởng đang chọn (không phụ thuộc người dùng)."""
 
-    group_code: str | None = None
     factory_code: FactoryCode | None = None
 
 

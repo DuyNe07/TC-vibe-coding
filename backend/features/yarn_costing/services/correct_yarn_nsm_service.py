@@ -16,7 +16,6 @@ from backend.features.yarn_costing.repositories.exchange_rate_repository import 
 from backend.features.yarn_costing.repositories.factory_data_loader import load_factory_data
 from backend.features.yarn_costing.repositories.price_history_repository import PriceHistoryRepository
 from backend.features.yarn_costing.repositories.recalc_batch_repository import AuditLogRepository
-from backend.features.yarn_costing.repositories.user_group_repository import UserGroupRepository
 from backend.features.yarn_costing.repositories.yarn_repository import YarnRepository
 
 
@@ -29,20 +28,12 @@ class CorrectYarnNsmService(BaseService[CorrectYarnNsmRequest, PricingResultResp
         self.costing = CostingBusiness()
 
     def execute(self, request: CorrectYarnNsmRequest) -> PricingResultResponse:
-        a = request.actor
         yarn_repo = self.repository
         yarns = yarn_repo.list_all()
         yarn = next((y for y in yarns if y.yarn_code == request.yarn_code), None)
         if yarn is None:
             raise YarnNotFoundError(f"Không tìm thấy mã {request.yarn_code}.")
-        group = self.access.verify(
-            a.group_code,
-            a.access_code,
-            a.person_name,
-            UserGroupRepository().list_all(),
-            "UC-23",
-            yarn.factory_code.value,
-        )
+        self.access.ensure_allowed(self.current_user, "UC-23", yarn.factory_code.value)
         self.pricing.ensure_status(yarn)
         data = load_factory_data(yarn.factory_code)
         preview = self.pricing.preview(
@@ -61,7 +52,7 @@ class CorrectYarnNsmService(BaseService[CorrectYarnNsmRequest, PricingResultResp
                 preview, None, data.trial_factor, rate_value, self.pricing.message(preview, rate_value, saved=False)
             ).build()
         self.pricing.ensure_can_save(preview, request.nsm_warning_reason)
-        label = self.access.actor_label(group, a.person_name)
+        label = self.access.user_label(self.current_user)
         now = utc_now()
         event = PriceEvent.SUA_NSM if yarn.regular_line is not None else PriceEvent.TINH_LAN_DAU
         candidate = preview.candidate.model_copy(
@@ -80,7 +71,7 @@ class CorrectYarnNsmService(BaseService[CorrectYarnNsmRequest, PricingResultResp
         PriceHistoryRepository().add_many(history)
         detail = f"NSM: {dict(yarn.nsm)} → {dict(saved.nsm)}; thành phần: {len(saved.components)}; trạng thái: {yarn.status.value} → {saved.status.value}"
         AuditLogRepository().add(
-            self.access.audit_entry(group, a.person_name, "UC-23", yarn.yarn_code, detail, request.nsm_warning_reason)
+            self.access.audit_entry(self.current_user, "UC-23", yarn.yarn_code, detail, request.nsm_warning_reason)
         )
         self.logger.info("NSM of %s saved (status=%s, history=%s)", yarn.yarn_code, saved.status, len(history))
         return PricingResultBuilder(

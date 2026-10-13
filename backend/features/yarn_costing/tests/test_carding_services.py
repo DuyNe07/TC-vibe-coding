@@ -26,7 +26,7 @@ from backend.features.yarn_costing.services.get_yarn_detail_service import GetYa
 from backend.features.yarn_costing.services.list_price_lines_service import ListPriceLinesService
 from backend.features.yarn_costing.services.save_packaging_types_service import SavePackagingTypesService
 from backend.features.yarn_costing.services.save_yarn_nsm_service import SaveYarnNsmService
-from backend.features.yarn_costing.tests.helpers import SO, create_request, setup_factory
+from backend.features.yarn_costing.tests.helpers import create_request, setup_factory
 from backend.features.yarn_costing.tests.test_import_services import run, s4_workbook
 
 D = Decimal
@@ -37,7 +37,6 @@ def test_default_packaging_is_exposed_and_single() -> None:
     setup_factory(S4)
     res = SavePackagingTypesService().handle(
         SavePackagingTypesRequest(
-            actor=SO,
             factory_code=S4,
             rows=[
                 PackagingRowDTO(code="Type 3", name="Xe", minutes_per_kg=D("0.2194564694564695"), is_default=True),
@@ -55,7 +54,6 @@ def test_default_packaging_is_exposed_and_single() -> None:
     with pytest.raises(BusinessRuleViolation, match="Mỗi xưởng chỉ được chọn một loại đóng gói mặc định."):
         SavePackagingTypesService().handle(
             SavePackagingTypesRequest(
-                actor=SO,
                 factory_code=S4,
                 rows=[
                     PackagingRowDTO(code="Type 3", name="Xe", minutes_per_kg=D("0.2194564694564695"), is_default=True),
@@ -114,7 +112,6 @@ def test_template_keeps_the_file_layout_and_remark() -> None:
     code = create_request("CORE 20/1 (COTTON/ FDY 30D/24F/1) (70/30) MVS")
     SaveYarnNsmService().handle(
         SaveYarnNsmRequest(
-            actor=SO,
             yarn_code=code,
             nsm={"CM": D(50), "MD1": D(100), "MD2": D(90), "MD3": D(83), "V": D(25)},
             components=[

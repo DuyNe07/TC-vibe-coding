@@ -6,7 +6,7 @@ import streamlit as st
 
 from backend.core.gateway import gateway
 from backend.features.yarn_costing import YarnCostingController
-from backend.features.yarn_costing.dto.common_dto import ActorDTO, YarnStatus
+from backend.features.yarn_costing.dto.common_dto import YarnStatus
 from backend.features.yarn_costing.dto.reference_dto import GetReferenceDataRequest, ReferenceDataResponse
 from backend.features.yarn_costing.dto.request_dto import (
     AnalyzeYarnNameRequest,
@@ -19,7 +19,6 @@ from backend.features.yarn_costing.dto.request_dto import (
 )
 from frontend.core.base_page import BasePage
 from frontend.core.components import data_table, panel
-from frontend.features.yarn_costing.components.actor_block import render_actor_block
 from frontend.features.yarn_costing.components.columns import YARN_SUMMARY_CONFIG, yarn_summary_rows
 from frontend.features.yarn_costing.components.data_warnings import show_data_warnings
 from frontend.features.yarn_costing.components.dialogs import confirm_dialog
@@ -65,19 +64,16 @@ class YarnRequestPage(BasePage):
         feature = gateway.open(YarnCostingController)
         reference = feature.get_reference_data(GetReferenceDataRequest(factory_code=None))
         show_data_warnings(reference)
-        actor = render_actor_block(feature, self.state, reference)
         show_flash(self.state)
 
-        self._create_form(feature, actor, reference)
+        self._create_form(feature, reference)
         items = self._request_list(feature, reference)
         picked = items["picked"]
         if picked:
-            self._edit_block(feature, actor, reference, picked)
+            self._edit_block(feature, reference, picked)
 
     # ---- create ----
-    def _create_form(
-        self, feature: YarnCostingController, actor: ActorDTO | None, reference: ReferenceDataResponse
-    ) -> None:
+    def _create_form(self, feature: YarnCostingController, reference: ReferenceDataResponse) -> None:
         factories = reference.factories
         with panel("Tạo yêu cầu tính giá", icon="📝"):
             c1, c2, c3 = st.columns([1, 3, 2])
@@ -122,10 +118,11 @@ class YarnRequestPage(BasePage):
                         )
                 if (not analysis.valid or analysis.duplicate_code) and analysis.message:
                     st.warning(analysis.message, icon="⚠️")
-            # BR-63 / UC-42: lý do khoá nút hiện ngay cạnh nút
-            check = feature.check_request_submit(
-                CheckRequestSubmitRequest(group_code=actor.group_code if actor else None, factory_code=factory)
-            )
+            # BR-63 / UC-42 + BR-47: lý do khoá nút hiện ngay cạnh nút
+            check = feature.check_request_submit(CheckRequestSubmitRequest(factory_code=factory))
+            no_role, no_role_why = action_state("UC-15", factory)
+            reasons = [*([no_role_why] if no_role_why else []), *check.reasons]
+            allowed = check.allowed and not no_role
             missing = not (factory and name.strip() and pack)
             button_col, reason_col = st.columns([1, 4], vertical_alignment="center")
             if button_col.button(
@@ -133,18 +130,17 @@ class YarnRequestPage(BasePage):
                 type="primary",
                 icon="📨",
                 key=self.key("send"),
-                disabled=not check.allowed or missing,
-                help="Vui lòng chọn xưởng, nhập tên sợi và chọn loại đóng gói." if missing and check.allowed else None,
+                disabled=not allowed or missing,
+                help="Vui lòng chọn xưởng, nhập tên sợi và chọn loại đóng gói." if missing and allowed else None,
             ):
                 result = feature.create_yarn_request(
-                    CreateYarnRequestRequest(actor=actor, factory_code=factory, yarn_name=name, packaging_code=pack)
+                    CreateYarnRequestRequest(factory_code=factory, yarn_name=name, packaging_code=pack)
                 )
                 set_flash(self.state, result.message)
                 st.session_state.pop(self.key("new_name"), None)
                 st.rerun()
             with reason_col:
-                for reason in check.reasons:
-                    st.caption(f"🔒 {reason}")
+                explain(*reasons)
 
     # ---- list ----
     def _request_list(self, feature: YarnCostingController, reference: ReferenceDataResponse) -> dict:
@@ -201,7 +197,6 @@ class YarnRequestPage(BasePage):
     def _edit_block(
         self,
         feature: YarnCostingController,
-        actor: ActorDTO | None,
         reference: ReferenceDataResponse,
         item: YarnSummaryDTO,
     ) -> None:
@@ -228,8 +223,8 @@ class YarnRequestPage(BasePage):
                 key=self.key(f"edit_pack.{code}"),
             )
             st.caption("Không đổi được xưởng; muốn đổi xưởng hãy huỷ và tạo yêu cầu mới.")
-            save_disabled, save_why = action_state(self.state, "UC-16")
-            cancel_disabled, cancel_why = action_state(self.state, "UC-17")
+            save_disabled, save_why = action_state("UC-16")
+            cancel_disabled, cancel_why = action_state("UC-17")
             left, right, _ = st.columns([1, 1, 3])
             if left.button(
                 "Lưu sửa đổi",
@@ -239,7 +234,7 @@ class YarnRequestPage(BasePage):
                 help=save_why,
             ):
                 result = feature.update_yarn_request(
-                    UpdateYarnRequestRequest(actor=actor, yarn_code=code, yarn_name=name, packaging_code=pack or "")
+                    UpdateYarnRequestRequest(yarn_code=code, yarn_name=name, packaging_code=pack or "")
                 )
                 set_flash(self.state, result.message)
                 st.rerun()
@@ -256,6 +251,6 @@ class YarnRequestPage(BasePage):
                     "Xác nhận huỷ yêu cầu",
                     f"Huỷ yêu cầu {code} - {item.yarn_name}? Mã {code} sẽ không được dùng lại.",
                     "Huỷ yêu cầu",
-                    lambda: feature.cancel_yarn_request(CancelYarnRequestRequest(actor=actor, yarn_code=code)).message,
+                    lambda: feature.cancel_yarn_request(CancelYarnRequestRequest(yarn_code=code)).message,
                 )
             explain(save_why, cancel_why)

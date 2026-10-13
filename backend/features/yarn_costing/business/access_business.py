@@ -1,31 +1,38 @@
-"""BR-46 xác thực thao tác, BR-47 quyền theo nhóm, BR-48 phạm vi xưởng, BR-49 nhật ký."""
+"""BR-47 vai trò được làm thao tác, BR-48 phạm vi xưởng, BR-49 nhật ký (BR-46: thay bằng đăng nhập của ứng dụng)."""
 
 from collections.abc import Sequence
 
 from backend.core.base import BaseBusiness, BaseBusinessRule
-from backend.features.yarn_costing.constants import USE_CASE_ACTIONS, USE_CASE_PERMISSIONS
-from backend.features.yarn_costing.models.access import ActorCheck, FactoryScopeCheck, PermissionCheck
+from backend.core.current_user import CurrentUser
+from backend.features.yarn_costing.constants import (
+    FEATURE_KEY,
+    SYSTEM_DISPLAY_NAME,
+    SYSTEM_USERNAME,
+    USE_CASE_ACTIONS,
+)
+from backend.features.yarn_costing.models.access import (
+    ROLE_FACTORY,
+    USE_CASE_PERMISSIONS,
+    FactoryScopeCheck,
+    PermissionCheck,
+)
 from backend.features.yarn_costing.models.audit_log import AuditLog
-from backend.features.yarn_costing.models.user_group import UserGroup
+
+SO_ROLE = "SO"
 
 
-class ActorRule(BaseBusinessRule[ActorCheck]):
-    code = "BR-46"
-    message = "Vui lòng chọn nhóm, nhập đúng mã nội bộ và chọn tên của bạn."
-
-    def is_satisfied_by(self, target: ActorCheck) -> bool:
-        return target.is_authenticated
-
-
-class GroupPermissionRule(BaseBusinessRule[PermissionCheck]):
+class RolePermissionRule(BaseBusinessRule[PermissionCheck]):
     code = "BR-47"
-    message = "Nhóm không được thực hiện thao tác này."
+    message = "Tài khoản của bạn chưa có vai trò cho thao tác này. Hãy nhờ quản trị viên cấp vai trò ở trang /admin."
 
     def is_satisfied_by(self, target: PermissionCheck) -> bool:
         return target.allowed
 
     def describe_violation(self, target: PermissionCheck) -> str:
-        return f"Nhóm '{target.group_name}' không được thực hiện thao tác này."
+        return (
+            f"Tài khoản của bạn chưa có vai trò cho thao tác '{target.action}'. "
+            "Hãy nhờ quản trị viên cấp vai trò ở trang /admin."
+        )
 
 
 class FactoryScopeRule(BaseBusinessRule[FactoryScopeCheck]):
@@ -36,75 +43,46 @@ class FactoryScopeRule(BaseBusinessRule[FactoryScopeCheck]):
         return target.in_scope
 
     def describe_violation(self, target: FactoryScopeCheck) -> str:
-        return f"Bạn chỉ được thao tác dữ liệu của xưởng {target.group_factory}."
+        return f"Bạn chỉ được thao tác dữ liệu của xưởng {target.factories_text}."
 
 
-class AccessBusiness(BaseBusiness[ActorCheck]):
-    def rules(self) -> Sequence[BaseBusinessRule[ActorCheck]]:
-        return (ActorRule(),)
+class AccessBusiness(BaseBusiness[PermissionCheck]):
+    def rules(self) -> Sequence[BaseBusinessRule[PermissionCheck]]:
+        return (RolePermissionRule(),)
 
-    def authenticate(
-        self, group_code: str, access_code: str, person_name: str, groups: Sequence[UserGroup]
-    ) -> UserGroup:
-        """BR-46: nhóm đang hoạt động + đúng mã nội bộ + tên thành viên đang hoạt động."""
-        group = next((g for g in groups if g.code == group_code), None)
-        check = ActorCheck(
-            group_found=group is not None,
-            group_active=bool(group and group.active),
-            access_code_ok=bool(group and group.access_code == (access_code or "").strip()),
-            member_ok=bool(group and person_name in group.active_member_names),
-        )
-        self.ensure_valid(check)
-        assert group is not None
-        return group
+    def ensure_allowed(self, user: CurrentUser | None, use_case: str, factory_code: str | None = None) -> None:
+        """BR-47 + BR-48: có ít nhất một vai trò (của chức năng) cho phép thao tác, và vai trò đó đúng xưởng.
 
-    def ensure_permission(self, group: UserGroup, use_case: str) -> None:
-        """BR-47: Sales → UC-15..17; Xưởng → UC-11..14, 18, 20, 21, 23..26, 28, 34; Kế toán → UC-28; SO → mọi UC."""
-        allowed = group.code.value in USE_CASE_PERMISSIONS.get(use_case, ("SO",))
-        GroupPermissionRule().check(
-            PermissionCheck(group_code=group.code.value, group_name=group.name, use_case=use_case, allowed=allowed)
+        Không có người dùng (mã hệ thống, test) và quản trị viên (làm như Phòng SO) luôn được phép.
+        """
+        if user is None or user.is_admin:
+            return
+        permitted = [
+            r for r in user.roles_in(FEATURE_KEY) if r == SO_ROLE or r in USE_CASE_PERMISSIONS.get(use_case, (SO_ROLE,))
+        ]
+        action = USE_CASE_ACTIONS.get(use_case, use_case)
+        RolePermissionRule().check(PermissionCheck(use_case=use_case, action=action, allowed=bool(permitted)))
+        FactoryScopeRule().check(
+            FactoryScopeCheck(role_factories=tuple(ROLE_FACTORY.get(r) for r in permitted), target_factory=factory_code)
         )
 
-    def ensure_initial_import_allowed(self, group: UserGroup) -> None:
-        """BR-45 / BR-47: 'Chuyển dữ liệu ban đầu' chỉ Phòng SO."""
-        allowed = group.code.value == "SO"
-        GroupPermissionRule().check(
-            PermissionCheck(group_code=group.code.value, group_name=group.name, use_case="UC-34", allowed=allowed)
-        )
+    def is_so(self, user: CurrentUser | None) -> bool:
+        """Phòng SO: người dùng có vai trò SO, quản trị viên hoặc mã hệ thống (không có người dùng)."""
+        return user is None or user.is_admin or SO_ROLE in user.roles_in(FEATURE_KEY)
 
-    def ensure_factory_scope(self, group: UserGroup, factory_code: str | None) -> None:
-        """BR-48: nhóm Xưởng S1 / S4 chỉ thao tác dữ liệu của xưởng mình."""
-        group_factory = group.factory_code.value if group.factory_code else None
-        FactoryScopeRule().check(FactoryScopeCheck(group_factory=group_factory, target_factory=factory_code))
-
-    def verify(
-        self,
-        group_code: str,
-        access_code: str,
-        person_name: str,
-        groups: Sequence[UserGroup],
-        use_case: str,
-        factory_code: str | None = None,
-    ) -> UserGroup:
-        """BR-46 + BR-47 + BR-48 in one call (every mutating use case)."""
-        group = self.authenticate(group_code, access_code, person_name, groups)
-        self.ensure_permission(group, use_case)
-        if factory_code is not None:
-            self.ensure_factory_scope(group, factory_code)
-        return group
+    def user_label(self, user: CurrentUser | None) -> str:
+        """Tên hiện trong các cột "người làm" (requested_by, created_by, handled_by...)."""
+        return user.display_name if user else SYSTEM_DISPLAY_NAME
 
     def audit_entry(
-        self, group: UserGroup, person_name: str, use_case: str, object_ref: str, detail: str = "", reason: str = ""
+        self, user: CurrentUser | None, use_case: str, object_ref: str, detail: str = "", reason: str = ""
     ) -> AuditLog:
-        """BR-49: một dòng nhật ký cho mỗi thao tác thay đổi dữ liệu (lúc, nhóm, tên, thao tác, đối tượng, nội dung, lý do)."""
+        """BR-49: một dòng nhật ký cho mỗi thao tác thay đổi dữ liệu (lúc, tài khoản, họ tên, thao tác, đối tượng, nội dung, lý do)."""
         return AuditLog(
-            group_code=group.code.value,
-            person_name=person_name,
+            username=user.username if user else SYSTEM_USERNAME,
+            display_name=self.user_label(user),
             action=USE_CASE_ACTIONS.get(use_case, use_case),
             object_ref=object_ref,
             detail=detail[:4000],
             reason=reason,
         )
-
-    def actor_label(self, group: UserGroup, person_name: str) -> str:
-        return f"{group.name} - {person_name}"

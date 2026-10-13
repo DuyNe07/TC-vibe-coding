@@ -9,8 +9,8 @@ from backend.core.base import BaseEntity, utc_now
 
 class AuditLog(BaseEntity):
     at: datetime = Field(default_factory=utc_now)
-    group_code: str
-    person_name: str
+    username: str
+    display_name: str
     action: str
     object_ref: str = ""
     detail: str = ""

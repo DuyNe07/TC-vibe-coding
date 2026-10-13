@@ -4,7 +4,7 @@ from datetime import date, datetime
 from decimal import Decimal
 
 from backend.core.base import BaseDTO, BaseRequestDTO, BaseResponseDTO
-from backend.features.yarn_costing.dto.common_dto import ActorDTO, YarnComponentDTO
+from backend.features.yarn_costing.dto.common_dto import YarnComponentDTO
 
 __all__ = [
     "CorrectYarnNsmRequest",
@@ -110,7 +110,6 @@ class NsmSuggestionResponse(BaseResponseDTO):
 
 
 class SaveYarnNsmRequest(BaseRequestDTO):
-    actor: ActorDTO
     yarn_code: str
     components: list[YarnComponentDTO] = []
     nsm: dict[str, Decimal] = {}  # stages that are not carding lines only
@@ -125,7 +124,6 @@ class CorrectYarnNsmRequest(SaveYarnNsmRequest):
 
 
 class CreateNsmRevisionRequest(BaseRequestDTO):
-    actor: ActorDTO
     source_yarn_code: str
     adjust_reason: str = ""
     components: list[YarnComponentDTO] = []

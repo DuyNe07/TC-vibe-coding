@@ -14,7 +14,6 @@ from backend.features.yarn_costing.repositories.factory_data_loader import load_
 from backend.features.yarn_costing.repositories.loss_group_repository import LossGroupRepository
 from backend.features.yarn_costing.repositories.price_history_repository import PriceHistoryRepository
 from backend.features.yarn_costing.repositories.recalc_batch_repository import AuditLogRepository
-from backend.features.yarn_costing.repositories.user_group_repository import UserGroupRepository
 from backend.features.yarn_costing.repositories.yarn_repository import YarnRepository
 
 
@@ -27,10 +26,8 @@ class CreateSecondaryLossGroupService(BaseService[CreateSecondaryLossGroupReques
         self.recalc = RecalcBusiness()
 
     def execute(self, request: CreateSecondaryLossGroupRequest) -> LossGroupSaveResponse:
-        a, factory = request.actor, request.factory_code
-        group = self.access.verify(
-            a.group_code, a.access_code, a.person_name, UserGroupRepository().list_all(), "UC-12", factory.value
-        )
+        factory = request.factory_code
+        self.access.ensure_allowed(self.current_user, "UC-12", factory.value)
         key = group_key_of(request.yarn_group_label)
         self.master.require(bool(key), "Vui lòng nhập nhóm sợi.")
         data = load_factory_data(factory)
@@ -40,7 +37,7 @@ class CreateSecondaryLossGroupService(BaseService[CreateSecondaryLossGroupReques
         )
         losses = self.business.secondary_losses(components, data.loss_groups, data.stages)
         self.business.ensure_valid_group(key, factory.value, key in data.loss_groups, losses)
-        label = self.access.actor_label(group, a.person_name)
+        label = self.access.user_label(self.current_user)
         new_group = LossGroup(
             factory_code=factory,
             group_key=key,
@@ -68,7 +65,7 @@ class CreateSecondaryLossGroupService(BaseService[CreateSecondaryLossGroupReques
         PriceHistoryRepository().add_many(outcome.history)
         detail = ", ".join(f"{c.component_group_key} {c.ratio}" for c in components)
         AuditLogRepository().add(
-            self.access.audit_entry(group, a.person_name, "UC-12", f"{factory.value} / {key}", f"Thành phần: {detail}")
+            self.access.audit_entry(self.current_user, "UC-12", f"{factory.value} / {key}", f"Thành phần: {detail}")
         )
         self.logger.info(
             "Secondary loss group %s/%s created; %s waiting yarns recalculated", factory, key, outcome.yarn_count

@@ -19,7 +19,6 @@ from backend.features.yarn_costing.repositories.exchange_rate_repository import 
 from backend.features.yarn_costing.repositories.factory_data_loader import load_factory_data
 from backend.features.yarn_costing.repositories.price_history_repository import PriceHistoryRepository
 from backend.features.yarn_costing.repositories.recalc_batch_repository import AuditLogRepository
-from backend.features.yarn_costing.repositories.user_group_repository import UserGroupRepository
 from backend.features.yarn_costing.repositories.yarn_repository import YarnRepository
 
 SOURCE_STATUSES = (YarnStatus.DA_TINH_GIA, YarnStatus.CO_MA_KE_TOAN, YarnStatus.CHUA_TINH_DUOC)
@@ -35,25 +34,17 @@ class CreateNsmRevisionService(BaseService[CreateNsmRevisionRequest, PricingResu
         self.requests = RequestBusiness()
 
     def execute(self, request: CreateNsmRevisionRequest) -> PricingResultResponse:
-        a = request.actor
         yarns = self.repository.list_all()
         source = next((y for y in yarns if y.yarn_code == request.source_yarn_code), None)
         if source is None:
             raise YarnNotFoundError(f"Không tìm thấy mã {request.source_yarn_code}.")
-        group = self.access.verify(
-            a.group_code,
-            a.access_code,
-            a.person_name,
-            UserGroupRepository().list_all(),
-            "UC-24",
-            source.factory_code.value,
-        )
+        self.access.ensure_allowed(self.current_user, "UC-24", source.factory_code.value)
         if source.status not in SOURCE_STATUSES:
             raise YarnValidationError(
                 f"Mã {source.yarn_code} đang ở trạng thái '{source.status.value}', chưa tạo được bản ĐCNSM."
             )
         code, number = self.requests.next_revision(source.base_code, yarns)
-        label = self.access.actor_label(group, a.person_name)
+        label = self.access.user_label(self.current_user)
         now = utc_now()
         draft = Yarn(
             **source.model_dump(
@@ -109,7 +100,7 @@ class CreateNsmRevisionService(BaseService[CreateNsmRevisionRequest, PricingResu
         PriceHistoryRepository().add_many(history)
         AuditLogRepository().add(
             self.access.audit_entry(
-                group, a.person_name, "UC-24", code, f"Bản ĐCNSM của {source.yarn_code}", request.adjust_reason
+                self.current_user, "UC-24", code, f"Bản ĐCNSM của {source.yarn_code}", request.adjust_reason
             )
         )
         self.logger.info("Revision %s created from %s (status=%s)", code, source.yarn_code, saved.status)

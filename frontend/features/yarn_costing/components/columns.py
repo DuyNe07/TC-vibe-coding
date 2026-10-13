@@ -232,7 +232,7 @@ def history_rows(history: Iterable[PriceHistoryDTO]) -> list[dict[str, Any]]:
         {
             "Mã dòng": h.line_code,
             "Lúc thay đổi": h.changed_at,
-            "Người thao tác": h.changed_by,
+            "Người thực hiện": h.changed_by,
             "Nguyên nhân": h.event.value,
             "Lần tính lại": h.batch_id or "",
             "Ngày hiệu lực": h.effective_date,

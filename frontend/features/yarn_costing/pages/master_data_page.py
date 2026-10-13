@@ -10,7 +10,6 @@ from backend.core.exceptions import AppError
 from backend.core.gateway import gateway
 from backend.features.yarn_costing import YarnCostingController
 from backend.features.yarn_costing.dto.common_dto import (
-    ActorDTO,
     RateCodeSource,
     RecalcResultResponse,
     RecoveryType,
@@ -42,7 +41,6 @@ from backend.features.yarn_costing.dto.reference_dto import (
 from frontend.core.base_page import BasePage
 from frontend.core.components import data_table, editable_table, panel, section_title, show_error
 from frontend.core.formatting import format_datetime, format_number
-from frontend.features.yarn_costing.components.actor_block import render_actor_block
 from frontend.features.yarn_costing.components.columns import (
     BATCH_CONFIG,
     batch_rows,
@@ -165,7 +163,6 @@ class MasterDataPage(BasePage):
         feature = gateway.open(YarnCostingController)
         reference = feature.get_reference_data(GetReferenceDataRequest(factory_code=None))
         show_data_warnings(reference)
-        actor = render_actor_block(feature, self.state, reference)
         show_flash(self.state)
 
         top_left, top_right = st.columns([3, 2], vertical_alignment="bottom")
@@ -178,13 +175,13 @@ class MasterDataPage(BasePage):
         factory_dto = next((f for f in reference.factories if str(f.code) == factory), None)
 
         bodies = {
-            "Công đoạn": lambda: self._stages_tab(feature, actor, factory, ref, factory_dto),
-            "Định mức": lambda: self._rates_tab(feature, actor, factory, ref),
-            "Đóng gói": lambda: self._packaging_tab(feature, actor, factory, ref),
-            "Hồi phế": lambda: self._recovery_tab(feature, actor, factory, ref),
-            "Quy trình": lambda: self._routes_tab(feature, actor, factory, ref),
-            "Tỷ giá & hệ số TN": lambda: self._exchange_tab(feature, actor, reference),
-            "Các lần tính lại": lambda: self._batches_tab(feature, actor, factory),
+            "Công đoạn": lambda: self._stages_tab(feature, factory, ref, factory_dto),
+            "Định mức": lambda: self._rates_tab(feature, factory, ref),
+            "Đóng gói": lambda: self._packaging_tab(feature, factory, ref),
+            "Hồi phế": lambda: self._recovery_tab(feature, factory, ref),
+            "Quy trình": lambda: self._routes_tab(feature, factory, ref),
+            "Tỷ giá & hệ số TN": lambda: self._exchange_tab(feature, reference),
+            "Các lần tính lại": lambda: self._batches_tab(feature, factory),
         }
         # lazy tabs: only the open tab builds its tables on each rerun
         tabs = st.tabs(list(bodies), key=self.key("tabs"), on_change="rerun")
@@ -224,7 +221,7 @@ class MasterDataPage(BasePage):
         call: Callable[[], RecalcResultResponse],
         uc: str,
     ) -> None:
-        disabled, why = action_state(self.state, uc)
+        disabled, why = action_state(uc)
         if st.button(label, type="primary", key=self.key(key), disabled=disabled, help=why):
 
             def action() -> str:
@@ -249,7 +246,6 @@ class MasterDataPage(BasePage):
     def _stages_tab(
         self,
         feature: YarnCostingController,
-        actor: ActorDTO | None,
         factory: str,
         ref: ReferenceDataResponse,
         factory_dto: FactoryDTO | None,
@@ -312,7 +308,6 @@ class MasterDataPage(BasePage):
             effective,
             lambda: feature.save_stage_config(
                 SaveStageConfigRequest(
-                    actor=actor or ActorDTO(),
                     factory_code=factory,
                     rows=stage_rows,
                     effective_date=effective,
@@ -347,9 +342,7 @@ class MasterDataPage(BasePage):
         return StageRowDTO(**values)
 
     # ---- UC-04 ----
-    def _rates_tab(
-        self, feature: YarnCostingController, actor: ActorDTO | None, factory: str, ref: ReferenceDataResponse
-    ) -> None:
+    def _rates_tab(self, feature: YarnCostingController, factory: str, ref: ReferenceDataResponse) -> None:
         current = ref.current_rate
         if current is not None:
             st.caption(
@@ -400,7 +393,6 @@ class MasterDataPage(BasePage):
             effective,
             lambda: feature.apply_rate_version(
                 ApplyRateVersionRequest(
-                    actor=actor or ActorDTO(),
                     factory_code=factory,
                     rows=rate_rows,
                     effective_date=effective,
@@ -444,9 +436,7 @@ class MasterDataPage(BasePage):
                 )
 
     # ---- UC-05 ----
-    def _packaging_tab(
-        self, feature: YarnCostingController, actor: ActorDTO | None, factory: str, ref: ReferenceDataResponse
-    ) -> None:
+    def _packaging_tab(self, feature: YarnCostingController, factory: str, ref: ReferenceDataResponse) -> None:
         rows = [
             {
                 "Mã loại": p.code,
@@ -498,23 +488,21 @@ class MasterDataPage(BasePage):
         st.caption(
             "Ngày hiệu lực và lý do chỉ bắt buộc khi Phút/kg của loại đang có mã sợi dùng thay đổi (app sẽ tính lại)."
         )
-        self._packaging_save_button(feature, actor, factory, packaging_rows, effective, reason)
+        self._packaging_save_button(feature, factory, packaging_rows, effective, reason)
 
     def _packaging_save_button(
         self,
         feature: YarnCostingController,
-        actor: ActorDTO | None,
         factory: str,
         rows: list[PackagingRowDTO],
         effective: date,
         reason: str,
     ) -> None:
         """UC-05 / BR-62: xem trước để hộp xác nhận ghi đúng có tính lại hay "Giá các mã không thay đổi."."""
-        disabled, why = action_state(self.state, "UC-05")
+        disabled, why = action_state("UC-05")
 
         def request(preview: bool) -> SavePackagingTypesRequest:
             return SavePackagingTypesRequest(
-                actor=actor or ActorDTO(),
                 factory_code=factory,
                 rows=rows,
                 effective_date=effective,
@@ -547,9 +535,7 @@ class MasterDataPage(BasePage):
         explain(why)
 
     # ---- UC-06 ----
-    def _recovery_tab(
-        self, feature: YarnCostingController, actor: ActorDTO | None, factory: str, ref: ReferenceDataResponse
-    ) -> None:
+    def _recovery_tab(self, feature: YarnCostingController, factory: str, ref: ReferenceDataResponse) -> None:
         by_type = {r.recovery_type: r.rate for r in ref.recovery}
         edited = editable_table(
             [{"Loại hồi phế": t.value, "Tỷ lệ (%)": pct(by_type.get(t))} for t in RECOVERY_ROWS],
@@ -578,7 +564,6 @@ class MasterDataPage(BasePage):
             effective,
             lambda: feature.save_recovery_rates(
                 SaveRecoveryRatesRequest(
-                    actor=actor or ActorDTO(),
                     factory_code=factory,
                     rows=recovery_rows,
                     effective_date=effective,
@@ -589,9 +574,7 @@ class MasterDataPage(BasePage):
         )
 
     # ---- UC-07 ----
-    def _routes_tab(
-        self, feature: YarnCostingController, actor: ActorDTO | None, factory: str, ref: ReferenceDataResponse
-    ) -> None:
+    def _routes_tab(self, feature: YarnCostingController, factory: str, ref: ReferenceDataResponse) -> None:
         rows = [
             {
                 "Nhóm sợi": r.yarn_group,
@@ -620,11 +603,10 @@ class MasterDataPage(BasePage):
                 "Công đoạn nhận ra": COL.TextColumn("Công đoạn nhận ra"),
             },
         )
-        disabled, why = action_state(self.state, "UC-07")
+        disabled, why = action_state("UC-07")
         if st.button("Lưu quy trình", type="primary", key=self.key("routes_save"), disabled=disabled, help=why):
             result = feature.save_process_routes(
                 SaveProcessRoutesRequest(
-                    actor=actor or ActorDTO(),
                     factory_code=factory,
                     rows=[
                         ProcessRouteRowDTO(
@@ -643,9 +625,7 @@ class MasterDataPage(BasePage):
         explain(why)
 
     # ---- UC-08 / UC-09 ----
-    def _exchange_tab(
-        self, feature: YarnCostingController, actor: ActorDTO | None, reference: ReferenceDataResponse
-    ) -> None:
+    def _exchange_tab(self, feature: YarnCostingController, reference: ReferenceDataResponse) -> None:
         st.caption("Tỷ giá và hệ số thí nghiệm dùng chung cho S1 và S4.")
         current = reference.current_exchange_rate
         with panel("Tỷ giá", icon="💱"):
@@ -674,7 +654,7 @@ class MasterDataPage(BasePage):
                 empty_message="Chưa có tỷ giá nào.",
                 key=self.key("rates_table"),
             )
-            disabled, why = action_state(self.state, "UC-08")
+            disabled, why = action_state("UC-08")
             with st.form(self.key("rate_form")):
                 c1, c2, c3 = st.columns([1, 1, 2])
                 effective = c1.date_input(
@@ -691,9 +671,7 @@ class MasterDataPage(BasePage):
                 note = c3.text_input("Ghi chú", max_chars=200, key=self.key("rate.note"))
                 if st.form_submit_button("Thêm tỷ giá", type="primary", disabled=disabled, help=why):
                     result = feature.add_exchange_rate(
-                        AddExchangeRateRequest(
-                            actor=actor or ActorDTO(), effective_date=effective, rate=to_decimal(rate), note=note
-                        )
+                        AddExchangeRateRequest(effective_date=effective, rate=to_decimal(rate), note=note)
                     )
                     set_flash(self.state, result.message)
                     st.rerun()
@@ -714,10 +692,10 @@ class MasterDataPage(BasePage):
                 "Ngày hiệu lực", value=date.today(), format="DD/MM/YYYY", key=self.key("trial.eff")
             )
             reason = c3.text_input("Lý do", max_chars=500, key=self.key("trial.reason"))
-            disabled, why = action_state(self.state, "UC-09")
+            disabled, why = action_state("UC-09")
             if st.button("Lưu hệ số", type="primary", key=self.key("trial_save"), disabled=disabled, help=why):
                 request = UpdateTrialFactorRequest(
-                    actor=actor or ActorDTO(), trial_factor=to_decimal(factor), effective_date=effective, reason=reason
+                    trial_factor=to_decimal(factor), effective_date=effective, reason=reason
                 )
 
                 def action() -> str:
@@ -740,14 +718,14 @@ class MasterDataPage(BasePage):
 
     # ---- UC-36 / UC-37 ----
     # ---- UC-43 ----
-    def _not_priced_block(self, feature: YarnCostingController, actor: ActorDTO | None, factory: str) -> None:
+    def _not_priced_block(self, feature: YarnCostingController, factory: str) -> None:
         section_title("Tính lại các mã chưa tính được", "🔄")
         st.caption(
             "Tính lại ngay các mã đang 'Chưa tính được' của xưởng (ví dụ sau khi app dùng được tiêu hao của dây chuyền "
             "tương đương C2 ↔ C3 / C1 ↔ C2). Các mã đã có giá không bị tính lại."
         )
         effective, reason = self._effective_inputs("not_priced", factory)
-        disabled, why = action_state(self.state, "UC-43")
+        disabled, why = action_state("UC-43")
         if st.button(
             "Tính lại các mã chưa tính được",
             type="primary",
@@ -758,9 +736,7 @@ class MasterDataPage(BasePage):
 
             def action() -> str:
                 result = feature.recalculate_not_priced(
-                    RecalculateNotPricedRequest(
-                        actor=actor or ActorDTO(), factory_code=factory, effective_date=effective, reason=reason
-                    )
+                    RecalculateNotPricedRequest(factory_code=factory, effective_date=effective, reason=reason)
                 )
                 batch_id = _batch_id(result)
                 if batch_id:
@@ -778,8 +754,8 @@ class MasterDataPage(BasePage):
             )
         explain(why)
 
-    def _batches_tab(self, feature: YarnCostingController, actor: ActorDTO | None, factory: str) -> None:
-        self._not_priced_block(feature, actor, factory)
+    def _batches_tab(self, feature: YarnCostingController, factory: str) -> None:
+        self._not_priced_block(feature, factory)
         batches = feature.list_recalc_batches(ListRecalcBatchesRequest(factory_code=factory))
         picked = data_table(
             batch_rows(batches.items),

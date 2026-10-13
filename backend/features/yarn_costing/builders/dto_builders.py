@@ -16,7 +16,6 @@ from backend.features.yarn_costing.dto.master_dto import (
 from backend.features.yarn_costing.dto.pricing_dto import PriceHistoryDTO, PriceLineDTO, StageCostDTO
 from backend.features.yarn_costing.dto.reference_dto import ExchangeRateDTO, FactoryDTO, RateVersionDTO
 from backend.features.yarn_costing.dto.request_dto import YarnDTO, YarnSummaryDTO
-from backend.features.yarn_costing.dto.user_dto import GroupMemberRowDTO, UserGroupDTO
 from backend.features.yarn_costing.models.enums import FactoryCode, YarnStatus
 from backend.features.yarn_costing.models.exchange_rate import ExchangeRate
 from backend.features.yarn_costing.models.loss_group import LossGroup
@@ -27,24 +26,11 @@ from backend.features.yarn_costing.models.rate_version import RateLine, RateVers
 from backend.features.yarn_costing.models.recalc_batch import RecalcBatch
 from backend.features.yarn_costing.models.recovery_rate import RecoveryRate
 from backend.features.yarn_costing.models.stage import Stage
-from backend.features.yarn_costing.models.user_group import UserGroup
 from backend.features.yarn_costing.models.yarn import PriceLine, StageCostDetail, Yarn, YarnComponent
 
 
 def usd(total: Decimal | None, rate: Decimal | None) -> Decimal | None:
     return total / rate if total is not None and rate else None
-
-
-def group_dto(group: UserGroup) -> UserGroupDTO:
-    return UserGroupDTO(
-        code=group.code.value,
-        name=group.name,
-        factory_code=group.factory_code.value if group.factory_code else None,
-        active=group.active,
-        members=[GroupMemberRowDTO(name=m.name, active=m.active) for m in group.members],
-        active_member_names=group.active_member_names,
-        member_count=len(group.members),
-    )
 
 
 def components_from_rows(rows: list[YarnComponentDTO]) -> list[YarnComponent]:
