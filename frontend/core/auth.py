@@ -9,6 +9,7 @@ import streamlit as st
 from backend.core.access import AccessManager
 from backend.core.config import get_settings
 from backend.core.current_user import CurrentUser, set_current_user
+from frontend.core.warm_up import start_warm_up
 
 COOKIE_NAME = "tc_session"
 _USER_KEY = "_tc_username"
@@ -18,6 +19,7 @@ _COOKIE_JS_KEY = "_tc_cookie_js"  # cookie change to send to the browser on the 
 
 def require_login() -> CurrentUser:
     """Return the logged-in user (rights refreshed on every run); otherwise draw the login form and stop."""
+    start_warm_up()  # fresh server: load the apps and their tables in the background (while the user types)
     access = AccessManager()
     username = st.session_state.get(_USER_KEY)
     user = access.refresh(username) if username else None

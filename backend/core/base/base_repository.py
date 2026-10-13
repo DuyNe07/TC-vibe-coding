@@ -275,6 +275,10 @@ class SqlRepository(BaseRepository[TEntity]):
             db.cache_table(self.table.name, items, version)
         return dict(items)
 
+    def preload(self) -> None:
+        """Read the table into the RAM cache now, without seeding (warm-up while the login form is shown)."""
+        self._rows()
+
     def _save(self, items: dict[str, TEntity]) -> None:
         db.run(self._write(list(items.values())))
 

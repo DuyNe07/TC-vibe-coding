@@ -134,6 +134,19 @@ def test_login_session_survives_reload_until_logout_or_expiry() -> None:
     assert access.resume(expired) is None
 
 
+def test_warm_up_reads_every_repository_into_ram() -> None:
+    from backend.core import db
+    from frontend.core.warm_up import _preload, _repository_classes
+
+    repo = NoteRepository()
+    repo.add(Note(text="a"))
+    db.table_changed(repo.table.name)  # as on a fresh server: nothing in RAM
+    assert NoteRepository in _repository_classes()
+    _preload(NoteRepository)
+    cached = db.cached_table(repo.table.name)
+    assert cached is not None and [n.text for n in cached.values()] == ["a"]
+
+
 def test_reads_come_from_ram_until_this_process_writes() -> None:
     from backend.core import db
     from backend.core.base import BaseController, BaseRequestDTO, BaseResponseDTO, BaseService, cached_query
