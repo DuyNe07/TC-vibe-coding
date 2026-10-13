@@ -166,7 +166,8 @@ and use that port in the health check and stop commands.
    `symptom -> cause -> fix -> verification` in the plan's `## Fix log`. Same failure 3 times: change approach; after 5
    attempts: implement the simplest supported behaviour that keeps the business rule, record
    `Giả định (triển khai): ...` and report it. Never hide a failure and never stop with a broken app.
-8. **Logging.** Never `print()`. Services log main steps with `self.logger.info(...)`. Pages keep the log panel.
+8. **Logging.** Never `print()`. Services log main steps with `self.logger.info(...)` (file `logs/app.log`; there is no log panel).
+   Every read-only use case is `@cached_query` on the controller (pages rerun on every click).
 9. **Language.** Code, identifiers, comments, docstrings, logs: English. Everything the user sees: Vietnamese, from the
    document.
 10. **No conflict with existing work.** Write ONLY in `backend/features/<key>/`, `frontend/features/<key>/`,
@@ -287,7 +288,8 @@ Read first: `CLAUDE.md`, `docs/rules/00`-`03`, `06`, `07`, `09`, the business do
    steps (inputs, counts, decisions, results). Write service tests now: happy path + each error flow, repository injected
    as `XRepository()` (conftest gives each test an empty database), input files built in memory (openpyxl / python-docx).
 8. **controllers/<key>_controller.py** - `class <Pascal>Controller(BaseController)`, one method per UC named as in the
-   contract, body exactly `return XService().handle(request)`. KEEP the scaffold `ping` (the scaffold page still uses
+   contract, body exactly `return XService().handle(request)`; put `@cached_query` on every READ-ONLY use case (lists,
+   lookups, exports, templates; never on writes, uploads or current-user dependent ones). KEEP the scaffold `ping` (the scaffold page still uses
    it; the lead removes it later). Keep the export in `backend/features/<key>/__init__.py`.
 9. Done = `scripts/check.py --fix`, then `scripts/check.py` prints `ALL CHECKS PASSED`.
 
@@ -397,7 +399,7 @@ Read first: `CLAUDE.md`, `docs/rules/00`-`03`, `06`, `07`, `09`, the business do
    missing.
 3. App check: start the app (section 3), wait for the health check to return `ok`, confirm with a browser tool if you
    have one that `/home` shows the new card and the previous features and that the sidebar shows the feature with its
-   pages, open each new page, walk through the ACs, confirm the log panel shows service steps; then stop the app.
+   pages, open each new page, walk through the ACs, confirm `logs/app.log` has no ERROR; then stop the app.
    Without a browser tool, rely on the tests and the health check. On any error read `logs/app.log`, fix, re-run the
    quality gate.
 

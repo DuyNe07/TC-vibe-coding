@@ -56,7 +56,7 @@ TC-vibe-coding/
 │   ├── core/                   # FRAMEWORK: AppShell, Router, BasePage, FeatureManifest, theme, branding,
 │   │                           # auth.py (login), admin_page.py (users & permissions, /admin)
 │   ├── public/                 # static assets: logo.png (browser tab icon), Logo_TC.png (UI logo)
-│   │   └── components/         # shared UI: header, panel, sidebar menu, footer, table, files, log panel
+│   │   └── components/         # shared UI: header, panel, sidebar menu, footer, table, files
 │   ├── home/home_page.py       # /home: feature cards (generated)
 │   └── features/
 │       └── <feature_key>/

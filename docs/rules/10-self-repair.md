@@ -8,7 +8,7 @@ The running app never rewrites its own code: repairs happen while an AI session 
 
 ## The loop
 1. **Collect evidence.** The exact command and its full output; the last `ERROR` / `WARNING` lines of `logs/app.log`
-   (or the page's log panel); what the user clicked. Never guess from the symptom's name.
+   ; what the user clicked. Never guess from the symptom's name.
 2. **Reproduce it** with the cheapest tool that shows the failure: a unit test in
    `backend/features/<key>/tests/` (keep it - it becomes the regression test), `scripts/check.py`, or
    `scripts/doctor.py`.
@@ -56,7 +56,7 @@ own: say it to the user in one Vietnamese sentence, ask permission, and only wit
 | `test_pages_render` fails | the page calls a use case that raises when there is no data, or an input has no default: use `empty_state`, put actions inside `if st.button(...)` |
 | the app does not start | the tail printed by `doctor.py`: import error, missing package (`pip install -r requirements.txt`), port busy |
 | "chức năng đang lỗi" on Home | the feature's `manifest.py` (import error, a page not inheriting `BasePage`, duplicate `slug`) |
-| an error box in the UI | the page's log panel or `logs/app.log`: find the `AppError` / traceback, then reproduce it in a unit test |
+| an error box in the UI | `logs/app.log`: find the `AppError` / traceback, then reproduce it in a unit test |
 | wrong numbers | the calculation must be in `business/` with `Decimal`; check units and rounding against the `BR-xx` |
 | old saved data now fails | models use `extra="forbid"`: new fields need defaults, removed/renamed fields need a conversion in the repository. Never delete `data/` |
 | `DuplicateWidgetID` | every widget needs `key=self.key("...")` |

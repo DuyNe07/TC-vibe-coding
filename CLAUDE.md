@@ -58,7 +58,8 @@ Rules of the gate:
   only). The shared database prefixes every table of a feature with its `DEVELOPER`.
 - Every class inherits its layer's base class from `backend.core.base`; one use case = one controller
   method = one service.
-- Never `print()`: use `self.logger`; logs go to `logs/app.log` and the on-screen log panel.
+- Never `print()`: use `self.logger`; logs go to `logs/app.log` (no on-screen log panel). Mark read-only use cases
+  `@cached_query` on the controller so page reruns are served from RAM.
 - Finish every task with `python scripts/check.py` -> `ALL CHECKS PASSED` and `python scripts/doctor.py` ->
   `APP IS HEALTHY` (never weaken tests). A failure is YOUR job to fix: follow
   [docs/rules/10-self-repair.md](docs/rules/10-self-repair.md), never hand a broken app back to the user.

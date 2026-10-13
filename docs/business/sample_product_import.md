@@ -121,5 +121,5 @@ trước khi lưu, cho biết tồn kho hiện tại và xuất báo cáo Excel.
 | BR-10 (format/columns) | `builders/import_rows_builder.py::ImportRowsBuilder` |
 | Screen 1 | `frontend/features/sample_product_import/pages/import_page.py` |
 | Screen 2 | `frontend/features/sample_product_import/pages/product_list_page.py` |
-| Logs | every service logs its steps; log panel at the bottom of both pages |
+| Logs | every service logs its steps to `logs/app.log` |
 | Tests | `backend/features/sample_product_import/tests/` |

@@ -15,13 +15,17 @@ with ``gateway.use(...)`` in the framework - features and pages do not change.
 """
 
 import functools
+import threading
 import time
 from abc import ABC, abstractmethod
+from collections import OrderedDict
 from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any, TypeVar, cast
 
+from backend.core import db
 from backend.core.base.base_controller import BaseController
+from backend.core.config import get_settings
 from backend.core.current_user import get_current_user
 from backend.core.exceptions import AppError, ConfigurationError, PermissionDeniedError
 from backend.core.logger import get_logger
@@ -80,8 +84,12 @@ class Gateway:
     All calls are routed through Gateway.call() and can be intercepted by middlewares.
     """
 
+    RESULT_CACHE_SIZE = 256  # results of @cached_query use cases kept in RAM (least recently used dropped first)
+
     def __init__(self) -> None:
         self._middlewares: list[GatewayMiddleware] = []
+        self._results: OrderedDict[tuple[Any, ...], Any] = OrderedDict()
+        self._results_lock = threading.Lock()
 
     def use(self, middleware: GatewayMiddleware) -> None:
         self._middlewares.append(middleware)
@@ -104,14 +112,43 @@ class Gateway:
         except Exception:
             logger.exception("%s crashed", call.name)
             raise
-        logger.info("%s done in %.0f ms", call.name, (time.perf_counter() - started) * 1000)
+        logger.debug("%s done in %.0f ms", call.name, (time.perf_counter() - started) * 1000)
         return result
 
     def _chain(self, index: int) -> Callable[[GatewayCall], Any]:
         if index == len(self._middlewares):
-            return lambda call: getattr(call.controller, call.action)(call.request)
+            return self._execute
         middleware, proceed = self._middlewares[index], self._chain(index + 1)
         return lambda call: middleware.handle(call, proceed)
+
+    def _execute(self, call: GatewayCall) -> Any:
+        """Run the controller method; a @cached_query result is reused until data changes (or db_cache_seconds)."""
+        method = getattr(call.controller, call.action)
+        if not getattr(method, "cached_query", False):
+            return method(call.request)
+        bucket = int(time.monotonic() // max(get_settings().db_cache_seconds, 1))
+        key = (
+            db.database_url(),
+            type(call.controller),
+            call.action,
+            _request_key(call.request),
+            db.data_version(),
+            bucket,
+        )
+        with self._results_lock:
+            if key in self._results:
+                self._results.move_to_end(key)
+                return self._results[key]
+        result = method(call.request)
+        with self._results_lock:
+            self._results[key] = result
+            while len(self._results) > self.RESULT_CACHE_SIZE:
+                self._results.popitem(last=False)
+        return result
+
+
+def _request_key(request: Any) -> str:
+    return request.model_dump_json() if hasattr(request, "model_dump_json") else repr(request)
 
 
 class _ControllerProxy:

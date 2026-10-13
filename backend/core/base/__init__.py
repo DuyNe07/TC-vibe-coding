@@ -2,7 +2,7 @@
 
 from backend.core.base.base_builder import BaseBuilder
 from backend.core.base.base_business import BaseBusiness, BaseBusinessRule, RuleViolation
-from backend.core.base.base_controller import BaseController
+from backend.core.base.base_controller import BaseController, cached_query
 from backend.core.base.base_dto import (
     BaseDTO,
     BaseRequestDTO,
@@ -41,5 +41,6 @@ __all__ = [
     "RuleViolation",
     "SqlRepository",
     "UploadedFileDTO",
+    "cached_query",
     "utc_now",
 ]

@@ -78,7 +78,7 @@ from backend.features.${key}.dto.ping_dto import PingRequest, PingResponse
 
 class PingService(BaseService[PingRequest, PingResponse]):
     def execute(self, request: PingRequest) -> PingResponse:
-        self.logger.info("Ping from %s", request.name or "anonymous")  # shown in the page log panel
+        self.logger.info("Ping from %s", request.name or "anonymous")  # written to logs/app.log
         greeting = f"Xin chào {request.name}! " if request.name else ""
         return PingResponse(message=f"{greeting}Backend của chức năng '${title}' đã sẵn sàng.")
 ''',

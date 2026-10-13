@@ -3,7 +3,7 @@
 One method = one use case = one service.
 """
 
-from backend.core.base import BaseController, EmptyRequest, FileDownloadDTO
+from backend.core.base import BaseController, EmptyRequest, FileDownloadDTO, cached_query
 from backend.features.sample_product_import.dto.import_dto import (
     CommitImportRequest,
     CommitImportResponse,
@@ -23,6 +23,7 @@ from backend.features.sample_product_import.services.preview_import_service impo
 
 
 class SampleProductImportController(BaseController):
+    @cached_query
     def download_template(self, request: EmptyRequest) -> FileDownloadDTO:
         """UC-01 Tải file Excel mẫu."""
         return DownloadTemplateService().handle(request)
@@ -35,10 +36,12 @@ class SampleProductImportController(BaseController):
         """UC-03 Lưu các dòng hợp lệ."""
         return CommitImportService().handle(request)
 
+    @cached_query
     def list_products(self, request: ListProductsRequest) -> ProductListResponse:
         """UC-04 Tra cứu sản phẩm + tồn kho."""
         return ListProductsService().handle(request)
 
+    @cached_query
     def export_products(self, request: ExportProductsRequest) -> FileDownloadDTO:
         """UC-05 Xuất Excel tồn kho."""
         return ExportProductsService().handle(request)

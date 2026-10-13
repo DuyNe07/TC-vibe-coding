@@ -103,3 +103,38 @@ def test_login_session_survives_reload_until_logout_or_expiry() -> None:
     session.expires_at = utc_now() - timedelta(minutes=1)
     access.sessions.update(session)
     assert access.resume(expired) is None
+
+
+def test_reads_come_from_ram_until_this_process_writes() -> None:
+    from backend.core import db
+    from backend.core.base import BaseController, BaseRequestDTO, BaseResponseDTO, BaseService, cached_query
+    from backend.core.gateway import gateway
+
+    repo = NoteRepository()
+    repo.add(Note(text="a"))
+    assert [n.text for n in repo.list_all()] == ["a"]
+    assert db.cached_table(repo.table.name) is not None  # second read: no database round trip
+
+    class CountRequest(BaseRequestDTO):
+        pass
+
+    class CountResponse(BaseResponseDTO):
+        count: int
+
+    calls: list[int] = []
+
+    class CountService(BaseService[CountRequest, CountResponse]):
+        def execute(self, request: CountRequest) -> CountResponse:
+            calls.append(1)
+            return CountResponse(count=NoteRepository().count())
+
+    class NotesController(BaseController):
+        @cached_query
+        def count_notes(self, request: CountRequest) -> CountResponse:
+            return CountService().handle(request)
+
+    notes = gateway.open(NotesController)
+    assert notes.count_notes(CountRequest()).count == 1
+    assert notes.count_notes(CountRequest()).count == 1 and len(calls) == 1  # served from RAM
+    repo.add(Note(text="b"))  # any write invalidates
+    assert notes.count_notes(CountRequest()).count == 2 and len(calls) == 2

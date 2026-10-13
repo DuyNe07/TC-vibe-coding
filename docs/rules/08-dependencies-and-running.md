@@ -34,6 +34,11 @@ Rules:
    `docs/capabilities.md`.
 3. After adding one, run `run.ps1` again (it auto-installs) or `.venv/Scripts/python.exe -m pip install -r requirements.txt`.
 
+## Server deployment (Docker)
+`./build.sh -v <version>` builds image `tc-vibe-coding:<version>` from `Dockerfile` (Python 3.13, `requirements.txt`),
+removes the old container and starts the new one (`--env-file .env`, volumes for `data/` and `logs/`). `.dockerignore`
+keeps `.env`, `.venv`, `data/`, `logs/` and `.git` out of the image. `run.ps1` stays the launcher on a developer PC.
+
 ## Configuration
 - `.env` (created from `.env.example`, git-ignored): `APP_NAME`, `APP_ENV`, `APP_LOG_LEVEL`, `APP_DATA_DIR`, `APP_PORT`,
   and the database: `POSTGRES_IP`, `POSTGRES_PORT`, `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD` (empty = local

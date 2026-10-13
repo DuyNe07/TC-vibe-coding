@@ -1,0 +1,14 @@
+# Never in the image: secrets, local data, environments, caches, tooling
+.env
+.env.*
+.git
+.venv
+venv
+data
+logs
+**/__pycache__
+.pytest_cache
+.ruff_cache
+.playwright-mcp
+.claude
+.gate-unlock

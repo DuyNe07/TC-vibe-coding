@@ -27,7 +27,6 @@ from backend.core.exceptions import AppError, InvalidInputError
 from backend.core.logger import get_logger
 from frontend.core.components.feedback import show_error, show_unexpected_error
 from frontend.core.components.header import page_header
-from frontend.core.components.log_panel import log_panel
 from frontend.core.session_state import SessionState
 
 
@@ -36,7 +35,6 @@ class BasePage(ABC):
     icon: ClassVar[str] = "📄"
     slug: ClassVar[str] = ""
     description: ClassVar[str] = ""
-    show_log_panel: ClassVar[bool] = True  # log panel at the bottom of the page (keep True for features)
     menu_group: ClassVar[str] = ""  # sub-group label in the sidebar menu (e.g. "Sales", "Phòng SO"); "" = none
 
     def __init_subclass__(cls, **kwargs: object) -> None:
@@ -50,7 +48,7 @@ class BasePage(ABC):
         self.logger = get_logger(type(self).__module__)
 
     def run(self) -> None:
-        """Called by the router: header -> render() inside an error boundary -> log panel."""
+        """Called by the router: header -> render() inside an error boundary."""
         self.render_header()
         try:
             self.render()
@@ -61,8 +59,6 @@ class BasePage(ABC):
         except Exception as exc:  # Streamlit control flow (rerun/switch_page) is BaseException: not caught
             self.logger.exception("Page %s crashed", type(self).__name__)
             show_unexpected_error(exc)
-        if self.show_log_panel:
-            log_panel(self.feature_key, key=self.key("log_panel"))
 
     def render_header(self) -> None:
         """Shared header with breadcrumb. Override only for special pages (e.g. Home)."""

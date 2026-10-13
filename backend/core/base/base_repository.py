@@ -212,7 +212,10 @@ class SqlRepository(BaseRepository[TEntity]):
     One database is shared by every developer: a feature's tables start with the GitHub username declared in
     ``backend/features/<key>/__init__.py`` as ``DEVELOPER = "<github username>"``.
 
-    Same API as ``JsonFileRepository``; each call is one async SQLAlchemy transaction run through ``db.run``.
+    Same API as ``JsonFileRepository``. Reads come from a RAM cache of the whole table (``db.cached_table``), so a
+    page rerun costs no database round trip; every write is one async SQLAlchemy transaction (``db.run``) and clears
+    the table's cache. Entities read are SHARED by every caller: never change one in place without saving it,
+    use ``entity.model_copy(update={...})``.
     """
 
     table_name: ClassVar[str] = ""
@@ -235,42 +238,45 @@ class SqlRepository(BaseRepository[TEntity]):
         return full
 
     # ---- async primitives ----
-    async def _fetch(self, ids: list[str] | None = None) -> dict[str, TEntity]:
+    async def _fetch(self) -> dict[str, TEntity]:
         await db.ensure_table(self.table)
-        statements = (
-            [select(self.table)]
-            if ids is None
-            else [select(self.table).where(self.table.c.id.in_(chunk)) for chunk in _chunks(ids)]
-        )
         async with db.engine().connect() as connection:
-            rows = [row for statement in statements for row in (await connection.execute(statement)).all()]
+            rows = (await connection.execute(select(self.table))).all()
         return {row.id: self.entity_type.model_validate(row.data) for row in rows}  # type: ignore[misc]
 
     async def _write(self, entities: list[TEntity], delete_ids: list[str] | None = None) -> int:
         """Delete ``delete_ids`` (all rows when None), then insert ``entities``; one transaction. Returns rows deleted."""
         await db.ensure_table(self.table)
         deleted = 0
-        async with db.engine().begin() as connection:
-            if delete_ids is None:
-                deleted = (await connection.execute(delete(self.table))).rowcount
-            for chunk in _chunks(delete_ids or []):
-                deleted += (await connection.execute(delete(self.table).where(self.table.c.id.in_(chunk)))).rowcount
-            if entities:
-                rows = [{"id": e.id, "data": e.model_dump(mode="json")} for e in entities]
-                await connection.execute(insert(self.table), rows)
+        try:
+            async with db.engine().begin() as connection:
+                if delete_ids is None:
+                    deleted = (await connection.execute(delete(self.table))).rowcount
+                for chunk in _chunks(delete_ids or []):
+                    deleted += (await connection.execute(delete(self.table).where(self.table.c.id.in_(chunk)))).rowcount
+                if entities:
+                    rows = [{"id": e.id, "data": e.model_dump(mode="json")} for e in entities]
+                    await connection.execute(insert(self.table), rows)
+        finally:
+            db.table_changed(self.table.name)
         return deleted
 
     # ---- storage primitives (whole table; used by list_all / find / find_one) ----
-    # ponytail: queries load the whole table and filter in Python; add SQL filters on `data` past ~100k rows
+    # ponytail: whole tables live in RAM and are filtered in Python; add SQL filters on `data` past ~100k rows
     def _load(self) -> dict[str, TEntity]:
-        return db.run(self._fetch())
+        items = db.cached_table(self.table.name)
+        if items is None:
+            version = db.data_version()
+            items = db.run(self._fetch())
+            db.cache_table(self.table.name, items, version)
+        return dict(items)
 
     def _save(self, items: dict[str, TEntity]) -> None:
         db.run(self._write(list(items.values())))
 
     # ---- row-level API (no full-table rewrite) ----
     def get(self, entity_id: str) -> TEntity | None:
-        return db.run(self._fetch([entity_id])).get(entity_id)
+        return self._load().get(entity_id)
 
     def exists(self, entity_id: str) -> bool:
         return self.get(entity_id) is not None
@@ -297,7 +303,7 @@ class SqlRepository(BaseRepository[TEntity]):
         saved = list(entities)
         ids = [entity.id for entity in saved]
         with self._lock:
-            existing = db.run(self._fetch(ids))
+            existing = self._load()
             for entity in saved:
                 if entity.id in existing:
                     entity.touch()

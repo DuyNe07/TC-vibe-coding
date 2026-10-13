@@ -12,10 +12,10 @@ The user is not a programmer: do not ask them to debug and do not ask technical 
 Vietnamese question (Step 0) and STOP. After that, work until it is fixed and send ONE final report in Vietnamese.
 
 ## 1. Step 0 - Do you know the symptom?
-Evidence you may already have: the user's message, the text they copied from the page's log panel, a screenshot, a
+Evidence you may already have: the user's message, a screenshot, the end of `logs/app.log`, a
 failing command output. If you have none, ask ONE question and **STOP**:
-"Lỗi xảy ra ở chức năng nào, bạn bấm gì thì bị lỗi, và màn hình hiện câu gì? Nếu được, mở khung "📜 Nhật ký chạy (log)"
-ở cuối trang, bấm biểu tượng copy rồi dán vào đây."
+"Lỗi xảy ra ở chức năng nào, bạn bấm gì thì bị lỗi, và màn hình hiện câu gì? Nếu được, chụp màn hình gửi vào đây."
+(The log is in `logs/app.log`: read it yourself, never ask the user for it.)
 Anything the user answers is enough: never ask a second time.
 
 ## 2. Step 1 - Preflight (in this order)
@@ -57,7 +57,7 @@ framework; only with their "yes" change it and add a test in `tests/core/`.
 ## 5. Step 4 - Verify
 1. `scripts/check.py` -> `ALL CHECKS PASSED` (never weaken a test to get there).
 2. `scripts/doctor.py` -> `APP IS HEALTHY`.
-3. With a browser tool: open the feature, redo exactly what the user did, confirm the error is gone and the log panel
+3. With a browser tool: open the feature, redo exactly what the user did, confirm the error is gone and `logs/app.log`
    shows the normal steps.
 4. Check you broke nothing else: the other features still load (`doctor.py` lists them) and their tests pass.
 

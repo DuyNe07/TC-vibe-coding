@@ -17,7 +17,6 @@ CARDS_PER_ROW = 3
 class HomePage(BasePage):
     title = "Trang chủ"
     icon = "🏠"
-    show_log_panel = False  # logs are shown only on feature pages
 
     def __init__(self) -> None:
         super().__init__("home")

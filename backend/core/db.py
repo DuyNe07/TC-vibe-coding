@@ -10,6 +10,7 @@ Features never use this module directly: they subclass ``SqlRepository`` (``back
 
 import asyncio
 import threading
+import time
 from collections.abc import Coroutine
 from functools import cache
 from typing import Any, TypeVar
@@ -27,6 +28,10 @@ _loop: asyncio.AbstractEventLoop | None = None
 _engines: dict[str, AsyncEngine] = {}
 _created_tables: set[tuple[str, str]] = set()
 _guard = threading.Lock()
+# RAM cache of whole tables: (database url, table) -> (loaded at, {id: entity}). This process's writes clear it at
+# once; writes by another process (another app instance on the same database) show after db_cache_seconds.
+_tables: dict[tuple[str, str], tuple[float, dict[str, Any]]] = {}
+_version = 0  # +1 on every write: read-only use cases cached by the gateway are keyed by it
 
 
 def _background_loop() -> asyncio.AbstractEventLoop:
@@ -69,12 +74,33 @@ def engine() -> AsyncEngine:
         return _engines[url]
 
 
+def data_version() -> int:
+    return _version
+
+
+def cached_table(name: str) -> dict[str, Any] | None:
+    hit = _tables.get((database_url(), name))
+    return hit[1] if hit and time.monotonic() - hit[0] < get_settings().db_cache_seconds else None
+
+
+def cache_table(name: str, items: dict[str, Any], version_before: int) -> None:
+    if version_before == _version:  # no write happened while loading: the rows are current
+        _tables[(database_url(), name)] = (time.monotonic(), items)
+
+
+def table_changed(name: str) -> None:
+    global _version
+    _tables.pop((database_url(), name), None)
+    _version += 1
+
+
 def dispose_all() -> None:
-    """Close every connection pool (tests switch databases between runs)."""
+    """Close every connection pool and forget cached rows (tests switch databases between runs)."""
     with _guard:
         engines = list(_engines.values())
         _engines.clear()
         _created_tables.clear()
+        _tables.clear()
     for item in engines:
         run(item.dispose())
 

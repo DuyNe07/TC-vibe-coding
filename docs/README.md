@@ -22,7 +22,7 @@ backend/features/<key>/services/        (orchestrates one use case)
         ├── business/      business rules BR-xx + calculations (pure)
         └── repositories/  save / load data (database: SqlRepository -> PostgreSQL)
 
-logs/app.log  <── the gateway logs every call ──> "📜 Nhật ký chạy" panel at the bottom of each page
+logs/app.log  <── failed calls, crashes and the services' log lines (no log panel on screen)
 ```
 
 ## The workflow gate (before anything else)
@@ -53,7 +53,7 @@ rule A.0 of [rules/00-golden-rules.md](rules/00-golden-rules.md).
 | 6 | [rules/06-coding-standards.md](rules/06-coding-standards.md) | Style, typing, language of texts |
 | 7 | [rules/07-testing-and-verification.md](rules/07-testing-and-verification.md) | Tests and `scripts/check.py` |
 | 8 | [rules/08-dependencies-and-running.md](rules/08-dependencies-and-running.md) | `requirements.txt`, `run.ps1`, config, folders |
-| 9 | [rules/09-logging.md](rules/09-logging.md) | Logs to file + log panel on screen |
+| 9 | [rules/09-logging.md](rules/09-logging.md) | Logs to `logs/app.log` (no panel on screen) |
 | 10 | [rules/10-self-repair.md](rules/10-self-repair.md) | How you repair failures yourself, and what is forbidden |
 | - | [capabilities.md](capabilities.md) | What the app can and cannot do - never promise more |
 | - | [business/README.md](business/README.md) | How to read and update business documents |
@@ -76,7 +76,8 @@ rule A.0 of [rules/00-golden-rules.md](rules/00-golden-rules.md).
 | Build the UI | `frontend/core/components` (panel, stat_row, data_table, file_upload, download_button, ...) |
 | Restrict who sees a feature / page | Nothing to code: the admin grants it on `/admin` (rules 02 "Users and permissions") |
 | Group pages in the menu | `menu_group = "..."` on the page class (rules 04 #9) |
-| Log something | `self.logger.info(...)` in services/pages; it appears in the page's log panel |
+| Log something | `self.logger.info(...)` in services/pages; it goes to `logs/app.log` |
+| Make a page fast | `@cached_query` on read-only controller methods (rules 02, Persistence) |
 | Add a library | Pinned line in `requirements.txt` |
 | Verify your work | `python scripts/check.py` -> `ALL CHECKS PASSED`, then `python scripts/doctor.py` -> `APP IS HEALTHY` |
 | Something fails / the app errors | Follow [rules/10-self-repair.md](rules/10-self-repair.md) (for a user-reported error: [prompt/03-fix-error.md](prompt/03-fix-error.md)) |

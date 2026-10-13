@@ -22,10 +22,25 @@ import inspect
 import logging
 from abc import ABC
 from collections.abc import Callable
-from typing import Any
+from typing import Any, TypeVar
 
 from backend.core.logger import get_logger
 from backend.core.naming import feature_key_from_module
+
+TMethod = TypeVar("TMethod", bound=Callable[..., Any])
+
+
+def cached_query(method: TMethod) -> TMethod:
+    """Mark a READ-ONLY use case: the gateway keeps its result in RAM (LRU) until any data is written, so page reruns
+    do not recompute it. Never use it on a use case that writes data, reads uploaded files, or depends on the
+    logged-in user. Callers must not change the returned DTO in place (it is shared)::
+
+        @cached_query
+        def list_orders(self, request: ListOrdersRequest) -> OrderListResponse:
+            return ListOrdersService().handle(request)
+    """
+    method.cached_query = True  # type: ignore[attr-defined]
+    return method
 
 
 class BaseController(ABC):

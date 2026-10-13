@@ -38,8 +38,7 @@ class ProductListPage(BasePage):
         stat_row([("Sản phẩm", data.summary.product_count)])
         data_table([item.model_dump() for item in data.items])
 ```
-`BasePage.run()` (fixed) renders: shared header with breadcrumb -> `render()` inside an error boundary ->
-**log panel**. An `AppError` raised by the backend is shown as a friendly message automatically.
+`BasePage.run()` (fixed) renders: shared header with breadcrumb -> `render()` inside an error boundary. An `AppError` raised by the backend is shown as a friendly message automatically.
 To keep rendering after an error, catch it locally:
 ```python
 try:
@@ -63,7 +62,6 @@ else:
 | `download_button(file_dto, label=, key=)` | download a `FileDownloadDTO` |
 | `empty_state(msg, hint)`, `section_title(text)` | helpers |
 | `show_error(exc)`, `show_success(msg)` | feedback |
-| `log_panel(feature_key, key=)` | log viewer (already added by BasePage) |
 | `render_sidebar_nav`, `render_footer` | used by AppShell only |
 Formatting helpers: `frontend.core.formatting` (`format_number`, `format_currency`, `format_datetime`).
 
@@ -98,7 +96,9 @@ of the business document (agreed with the user at the start of Prompt 2) decides
    to a rule, no file reading/writing, no openpyxl/docx/pypdf in the frontend.
 2. Widget keys: always `key=self.key("name")`. Session data: `self.state.get/set(...)` (namespaced per feature).
 3. Never call `st.set_page_config`, never inject global CSS, never edit `frontend/core` for one feature.
-4. Keep the log panel (`show_log_panel = True`). Only feature pages show logs; Home does not.
+4. Every widget interaction reruns the page: call only `@cached_query` use cases on render (they come from RAM);
+   anything that writes or builds a file for an action goes inside `if st.button(...)`. Never change a response DTO
+   in place (cached results are shared).
 5. Navigation between pages of the feature: `self.link_to(OtherPage)` or `self.go_to(OtherPage)`.
 6. Every page listed in `FEATURE.pages`; every class in `pages/` inherits `BasePage`.
 7. Every page MUST render on first load with NO data and without any error box (checked by

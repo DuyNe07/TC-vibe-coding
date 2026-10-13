@@ -21,6 +21,7 @@ class Settings(BaseSettings):
     log_dir: Path = PROJECT_ROOT / "logs"
 
     session_hours: int = 12  # a login survives page reloads (F5) for this long
+    db_cache_seconds: int = 30  # RAM cache of tables / read-only use cases; changes by OTHER processes show after this
 
     # Database (backend/core/db.py). APP_DATABASE_URL wins; else PostgreSQL from POSTGRES_*; else data/app.db (SQLite)
     database_url: str = ""

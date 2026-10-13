@@ -43,6 +43,14 @@ Dừng ứng dụng: bấm `Ctrl + C` trong cửa sổ PowerShell.
 
 Tuỳ chọn thêm vào cuối lệnh: `-Port 8600` (đổi cổng), `-NoBrowser` (không mở trình duyệt), `-Reinstall` (cài lại thư viện).
 
+### Chạy trên máy chủ bằng Docker
+
+```bash
+./build.sh -v 1.2.0          # build image tc-vibe-coding:1.2.0, gỡ container cũ, chạy container mới ở cổng 8501
+PORT=8600 ./build.sh -v 1.3.0
+```
+Cần file `.env` (như trên) cạnh `build.sh`; `.env` không bao giờ được đóng vào image. Xem log: `docker logs -f tc-vibe-coding`.
+
 ## 2. Thêm một chức năng mới (ra lệnh cho AI, 3 lượt)
 
 Làm theo hướng dẫn trong [docs/prompt/README.md](docs/prompt/README.md). AI **không được phép viết code** cho đến
@@ -67,9 +75,9 @@ Chức năng mẫu **"Nhập sản phẩm từ Excel (mẫu)"** cho thấy một
 
 ## 3. Khi có lỗi
 
-Cuối mỗi trang có khung **📜 Nhật ký chạy (log)**: mở ra, bấm biểu tượng copy (hoặc *Tải log*), rồi dán vào chat
-cùng toàn bộ [docs/prompt/03-fix-error.md](docs/prompt/03-fix-error.md). AI sẽ tự tìm nguyên nhân, sửa trong phạm vi
-chức năng đó, chạy lại toàn bộ kiểm tra rồi báo lại bằng tiếng Việt. Toàn bộ log cũng nằm trong file `logs/app.log`.
+Dán toàn bộ [docs/prompt/03-fix-error.md](docs/prompt/03-fix-error.md) vào chat, kèm mô tả lỗi (bấm gì, màn hình hiện gì)
+hoặc ảnh chụp màn hình. AI sẽ tự đọc file log `logs/app.log`, tìm nguyên nhân, sửa trong phạm vi chức năng đó, chạy lại
+toàn bộ kiểm tra rồi báo lại bằng tiếng Việt.
 
 Muốn tự kiểm tra xem app có khoẻ không: `.venv\Scripts\python.exe scripts\doctor.py` — lệnh này chạy toàn bộ kiểm
 tra, nạp thử mọi chức năng và khởi động app; kết quả cuối phải là `APP IS HEALTHY`.
@@ -82,7 +90,7 @@ backend/            Xử lý nghiệp vụ (Python thuần)
   shared/           Đọc/ghi Excel, Word, PDF dùng chung
   features/<tên>/   Mỗi chức năng: models, dto, business, builders, repositories, services, controllers
 frontend/           Giao diện Streamlit
-  core/             Khung giao diện: header, menu, panel, footer, khung log  (không sửa)
+  core/             Khung giao diện: header, menu, panel, footer  (không sửa)
   home/             Trang chủ /home
   features/<tên>/   Các trang của từng chức năng
 docs/               Quy tắc bắt buộc cho AI (rules/) + tài liệu nghiệp vụ (business/)

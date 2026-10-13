@@ -51,7 +51,8 @@ Claude Code Stop hook (`.claude/settings.json` -> `scripts/hooks/stop_guard.sh`)
 
 ## C. Logging (see 09)
 18. Never `print()`. Use `self.logger` (services, controllers, pages) or `get_logger(__name__)`.
-19. Every feature page MUST keep the log panel (`show_log_panel = True`, the default). Home has no log panel.
+19. There is no log panel on screen (it slowed every page): logs go to `logs/app.log` only. Read-only use cases are
+    marked `@cached_query` on the controller (see 02) so page reruns stay fast.
 20. Every service MUST log its important steps (what was received, counts, decisions) with `self.logger.info`.
 
 ## D. Code
@@ -69,7 +70,7 @@ Claude Code Stop hook (`.claude/settings.json` -> `scripts/hooks/stop_guard.sh`)
 - [ ] `docs/business/<key>.md` is complete and section 11 "Implementation map" is filled.
 - [ ] Every BR-xx is implemented in `business/` and has at least one unit test.
 - [ ] Every UC-xx is one method of the feature's controller + one service; pages call it via `gateway.open`.
-- [ ] Services log their main steps; the page shows the log panel.
+- [ ] Services log their main steps (`logs/app.log`); read-only use cases are `@cached_query`.
 - [ ] `python scripts/check.py` prints `ALL CHECKS PASSED`.
 - [ ] `run.ps1` starts the app; the feature card is on `/home` and its pages open without errors.
 - [ ] You told the user, in Vietnamese and without jargon, what was built, how to use it, and open questions.

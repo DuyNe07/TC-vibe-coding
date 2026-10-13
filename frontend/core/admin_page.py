@@ -21,7 +21,6 @@ class AdminPage(BasePage):
     title = "Người dùng & phân quyền"
     icon = "🛡️"
     description = "Tạo tài khoản, nhóm người dùng và chọn chức năng / màn hình mỗi người được mở."
-    show_log_panel = False
 
     def __init__(self) -> None:
         super().__init__("admin")

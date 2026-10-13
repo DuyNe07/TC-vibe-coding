@@ -21,7 +21,7 @@ English for identifiers, comments, docstrings and log messages. See the table in
 - **Framework code** (`backend/core`, `backend/shared`): English messages - they are technical fallbacks
   ("File type '.pdf' is not supported. Supported types: .xlsx, .xls"). A feature that wants a Vietnamese wording
   catches the error and raises its own.
-- **Shared UI chrome** (`frontend/core`, Home: sidebar, breadcrumb, log panel, empty states): stays Vietnamese,
+- **Shared UI chrome** (`frontend/core`, Home: sidebar, breadcrumb, empty states): stays Vietnamese,
   the end users are Vietnamese. Never translate it while working on a feature.
 
 ## Errors

@@ -83,10 +83,12 @@ example: branch `origin/vibe/tinh-gia-soi-1210`, commit "refactor(yarn_costing):
    that is a documented business rule (BR-xx: e.g. access codes, per-factory scope, audit names), do NOT delete it:
    keep it working and add to section 10 of its business document an open question "nối tài khoản đăng nhập với ...",
    to be decided with Prompt 1 / Prompt 5.
-4. **Any other framework API change** shown by the baseline failures (renamed helper, new base-class argument...): fix
+4. **Speed.** Put `@cached_query` on every read-only controller method (lists, details, dashboards, exports) and remove
+   any `show_log_panel` / log panel code (the framework has none any more).
+5. **Any other framework API change** shown by the baseline failures (renamed helper, new base-class argument...): fix
    the feature side, following `docs/rules/`.
-5. The sample feature `sample_product_import` hides itself once the branch has a real feature: never delete or edit it.
-6. Update section 11 "Implementation map" (and the plan, if it names files) of each touched feature document.
+6. The sample feature `sample_product_import` hides itself once the branch has a real feature: never delete or edit it.
+7. Update section 11 "Implementation map" (and the plan, if it names files) of each touched feature document.
 Self-repair loop of `docs/rules/10-self-repair.md` until both commands pass:
 `.venv/Scripts/python.exe scripts/check.py` -> `ALL CHECKS PASSED` and `.venv/Scripts/python.exe scripts/doctor.py` ->
 `APP IS HEALTHY`. Never weaken tests, never edit framework code to make the feature pass.

@@ -17,7 +17,7 @@ from backend.core.base import (
 )
 from backend.core.exceptions import BusinessRuleViolation, ConfigurationError, ConflictError, NotFoundError
 from backend.core.gateway import Gateway, GatewayMiddleware
-from backend.core.logger import get_logger, log_file_path, read_log_entries
+from backend.core.logger import get_logger, log_file_path
 
 
 class Item(BaseEntity):
@@ -136,15 +136,11 @@ def test_gateway_middlewares_wrap_every_call() -> None:
     assert seen == ["EchoController.echo"]
 
 
-def test_log_entries_are_written_and_filtered(tmp_path, monkeypatch) -> None:
+def test_log_entries_are_written_to_the_log_file(tmp_path, monkeypatch) -> None:
     get_logger("backend.features.demo.services.x").warning("demo warning")
-    get_logger("backend.features.other.services.y").info("other info")
     for handler in get_logger("x").parent.handlers:
         handler.flush()
-    assert log_file_path().exists()
-    demo = read_log_entries("demo", min_level="INFO")
-    assert demo and demo[-1].message == "demo warning"
-    assert all("other" not in e.source for e in demo)
+    assert "demo warning" in log_file_path().read_text(encoding="utf-8")
 
 
 def test_page_render_harness_detects_a_crashing_page() -> None:

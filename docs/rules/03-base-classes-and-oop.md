@@ -98,6 +98,7 @@ You implement `execute()` only; overriding `handle()` raises an error.
 ```python
 # backend/features/sample_product_import/controllers/sample_product_import_controller.py
 class SampleProductImportController(BaseController):
+    @cached_query  # read-only: the gateway serves page reruns from RAM until data changes
     def list_products(self, request: ListProductsRequest) -> ProductListResponse:
         """UC-04 Tra cứu sản phẩm + tồn kho."""
         return ListProductsService().handle(request)

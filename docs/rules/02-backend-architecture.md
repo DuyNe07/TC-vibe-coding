@@ -124,6 +124,12 @@ JSON document in table `<developer>__<feature_key>__item` (created automatically
 - `backend/core/db.py` runs SQLAlchemy 2 **async** (asyncpg / aiosqlite) on one background event loop; repositories
   keep a plain sync API (`get`, `list_all`, `find`, `add`, `update`, `save`, `save_many`, `delete`, `clear`), so
   services stay synchronous. Features never import `sqlalchemy` or `backend.core.db` directly.
+- **RAM cache (automatic).** A repository keeps its whole table in RAM after the first read; this process's writes
+  clear it at once, other processes' writes show after `APP_DB_CACHE_SECONDS` (default 30). Entities read are
+  shared: change them with `entity.model_copy(update={...})` and save, never in place.
+- **Read-only use cases:** decorate the controller method with `@cached_query` (from `backend.core.base`). The gateway
+  keeps the result in RAM (LRU, 256 results) until any data is written, so page reruns do not recompute lists, price
+  tables or generated files. Never on a use case that writes, reads an uploaded file, or depends on the current user.
 - `JsonFileRepository` (files in `data/<key>/`) remains for file-shaped data only; `InMemoryRepository` for tests.
 
 ## Users and permissions (framework: `backend/core/access.py`, `backend/core/current_user.py`)
