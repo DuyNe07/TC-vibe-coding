@@ -1,6 +1,6 @@
 """Top layer of feature "Tính giá sợi". Pages call it through gateway.open(...)."""
 
-from backend.core.base import BaseController, FileDownloadDTO
+from backend.core.base import BaseController, FileDownloadDTO, cached_query
 from backend.features.yarn_costing.dto.audit_dto import AuditLogListResponse, ListAuditLogRequest
 from backend.features.yarn_costing.dto.common_dto import RecalcResultResponse, SaveCountResponse
 from backend.features.yarn_costing.dto.dashboard_dto import (
@@ -139,6 +139,7 @@ class YarnCostingController(BaseController):
         """UC-01 Khai báo nhóm người dùng và thành viên."""
         return SaveUserGroupService().handle(request)
 
+    @cached_query
     def list_audit_log(self, request: ListAuditLogRequest) -> AuditLogListResponse:
         """UC-02 Xem nhật ký thay đổi."""
         return ListAuditLogService().handle(request)
@@ -171,6 +172,7 @@ class YarnCostingController(BaseController):
         """UC-09 Cập nhật hệ số thí nghiệm."""
         return UpdateTrialFactorService().handle(request)
 
+    @cached_query
     def list_loss_groups(self, request: ListLossGroupsRequest) -> LossGroupListResponse:
         """UC-10 Tra cứu tiêu hao."""
         return ListLossGroupsService().handle(request)
@@ -207,10 +209,12 @@ class YarnCostingController(BaseController):
         """UC-18 Từ chối yêu cầu."""
         return RejectYarnRequestService().handle(request)
 
+    @cached_query
     def list_yarns(self, request: ListYarnsRequest) -> YarnListResponse:
         """UC-19 Xem danh sách yêu cầu."""
         return ListYarnsService().handle(request)
 
+    @cached_query
     def suggest_nsm(self, request: SuggestNsmRequest) -> NsmSuggestionResponse:
         """UC-20 Lấy NSM gợi ý (tự điền)."""
         return SuggestNsmService().handle(request)
@@ -219,6 +223,7 @@ class YarnCostingController(BaseController):
         """UC-21 Nhập NSM, kiểm tra và lưu giá."""
         return SaveYarnNsmService().handle(request)
 
+    @cached_query
     def get_yarn_detail(self, request: GetYarnDetailRequest) -> YarnDetailResponse:
         """UC-22 Xem chi tiết tính giá và lịch sử."""
         return GetYarnDetailService().handle(request)
@@ -239,6 +244,7 @@ class YarnCostingController(BaseController):
         """UC-26 Xoá dòng chiết khấu / phụ phí."""
         return DeleteAdjustmentLineService().handle(request)
 
+    @cached_query
     def list_price_lines(self, request: ListPriceLinesRequest) -> PriceLineListResponse:
         """UC-27 Tra cứu bảng giá."""
         return ListPriceLinesService().handle(request)
@@ -247,22 +253,27 @@ class YarnCostingController(BaseController):
         """UC-28 Nhập / sửa / xoá mã kế toán."""
         return SetAccountingCodeService().handle(request)
 
+    @cached_query
     def export_price_lines(self, request: ExportPriceLinesRequest) -> FileDownloadDTO:
         """UC-29 Xuất Excel bảng giá."""
         return ExportPriceLinesService().handle(request)
 
+    @cached_query
     def check_price_anomalies(self, request: CheckPriceAnomaliesRequest) -> PriceAnomalyResponse:
         """UC-30 Kiểm tra giá bất thường."""
         return CheckPriceAnomaliesService().handle(request)
 
+    @cached_query
     def check_nsm_anomalies(self, request: CheckNsmAnomaliesRequest) -> NsmAnomalyResponse:
         """UC-31 Kiểm tra NSM bất thường."""
         return CheckNsmAnomaliesService().handle(request)
 
+    @cached_query
     def get_dashboard(self, request: GetDashboardRequest) -> DashboardResponse:
         """UC-32 Xem dashboard."""
         return GetDashboardService().handle(request)
 
+    @cached_query
     def download_template(self, request: DownloadTemplateRequest) -> FileDownloadDTO:
         """UC-33 Tải file mẫu."""
         return DownloadTemplateService().handle(request)
@@ -271,18 +282,22 @@ class YarnCostingController(BaseController):
         """UC-34 Kiểm tra và lưu dữ liệu từ file."""
         return ImportWorkbookService().handle(request)
 
+    @cached_query
     def get_legacy_comparison(self, request: GetLegacyComparisonRequest) -> LegacyComparisonResponse:
         """UC-35 Đối chiếu giá cũ với giá app."""
         return GetLegacyComparisonService().handle(request)
 
+    @cached_query
     def list_recalc_batches(self, request: ListRecalcBatchesRequest) -> RecalcBatchListResponse:
         """UC-36 Xem danh sách lần tính lại toàn bộ."""
         return ListRecalcBatchesService().handle(request)
 
+    @cached_query
     def get_recalc_diff(self, request: GetRecalcDiffRequest) -> RecalcDiffResponse:
         """UC-37 Xem chênh lệch của một lần tính lại."""
         return GetRecalcDiffService().handle(request)
 
+    @cached_query
     def get_reference_data(self, request: GetReferenceDataRequest) -> ReferenceDataResponse:
         """UC-38 Lấy dữ liệu tham chiếu."""
         return GetReferenceDataService().handle(request)
@@ -291,14 +306,17 @@ class YarnCostingController(BaseController):
         """UC-39 Xác thực người thao tác."""
         return VerifyActorService().handle(request)
 
+    @cached_query
     def analyze_yarn_name(self, request: AnalyzeYarnNameRequest) -> YarnNameAnalysisResponse:
         """UC-40 Nhận diện tên sợi."""
         return AnalyzeYarnNameService().handle(request)
 
+    @cached_query
     def list_import_batches(self, request: ListImportBatchesRequest) -> ImportBatchListResponse:
         """UC-41 Xem danh sách lần nhập file."""
         return ListImportBatchesService().handle(request)
 
+    @cached_query
     def check_request_submit(self, request: CheckRequestSubmitRequest) -> RequestSubmitCheckResponse:
         """UC-42 Kiểm tra điều kiện gửi yêu cầu."""
         return CheckRequestSubmitService().handle(request)
@@ -307,6 +325,7 @@ class YarnCostingController(BaseController):
         """UC-43 Tính lại các mã chưa tính được."""
         return RecalculateNotPricedService().handle(request)
 
+    @cached_query
     def download_component_template(self, request: DownloadComponentTemplateRequest) -> FileDownloadDTO:
         """UC-44 Tải file mẫu khai báo thành phần sợi pha."""
         return DownloadComponentTemplateService().handle(request)

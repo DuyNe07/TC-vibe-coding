@@ -485,7 +485,7 @@ xưởng đó (để người dùng sửa rồi tải lên lại). Sheet "4. Ban
 - **Số liệu tham khảo ngày 2026-09-29** (để kiểm tra sau khi chép): 3.435 mã sợi / bản NSM, 1.463 nhóm tiêu hao, 10 loại đóng
   gói, 80 quy trình, 5 nhóm người dùng, 3.258 dòng giá cũ đối chiếu, 4.066 dòng lịch sử giá, 2 lần nhập file, 2 lần tính lại,
   7 dòng nhật ký.
-- **Chép lỗi:** nếu một file bị thiếu hoặc hỏng, màn hình không bị dừng; khung nhật ký chạy ghi rõ tên file không đọc được
+- **Chép lỗi:** nếu một file bị thiếu hoặc hỏng, màn hình không bị dừng; màn hình hiện cảnh báo ghi rõ tên file không đọc được
   và Phòng SO chép lại file đó từ app cũ.
 - **Lưu trong cơ sở dữ liệu (từ 2026-10-13):** app lưu dữ liệu trong cơ sở dữ liệu PostgreSQL của công ty (mỗi loại dữ liệu một
   bảng `xuan2894__yarn_costing__<tên>`). Cách chép ở trên vẫn dùng được: lần đầu mở app, khi bảng còn trống, app tự nhập file đã chép vào
@@ -1535,6 +1535,7 @@ ký chạy ở cuối trang. Nút mà nhóm đang xác thực không có quyền
 ## 11. Implementation map (filled by the AI)
 | Spec item | Code |
 |---|---|
+| Tốc độ (2026-10-13) | 19 thao tác chỉ đọc mang `@cached_query` trong `controllers/yarn_costing_controller.py` (kết quả giữ trong RAM tới khi dữ liệu đổi); bảng dữ liệu được cache trong RAM bởi `SqlRepository` |
 | Section 4 | `backend/features/yarn_costing/models/` (user_group, stage, rate_version, packaging_type, recovery_rate, process_route, exchange_rate + settings, loss_group, yarn + PriceLine + StageCostDetail, price_history, recalc_batch, legacy_price + ImportBatch, audit_log, enums); seed: `constants.py`, `repositories/*_repository.py` |
 | Section 5 | `builders/workbook_reader_builder.py` (5.1, 5.2), `builders/template_file_builder.py` (5.3), `builders/file_builders.py` (5.4, 5.5), `builders/price_rows_builder.py` |
 | 5.6 / BR-61 | `repositories/yarn_sql_repository.py::YarnSqlRepository` (mọi repository: bảng PostgreSQL, nhập file app cũ một lần), `repositories/legacy_conversion.py`, `exceptions.py::DataFileError`, `constants.py::DATA_FILE_UNREADABLE_MESSAGE`, `services/get_reference_data_service.py` (`data_warnings`) |
@@ -1569,5 +1570,5 @@ ký chạy ở cuối trang. Nút mà nhóm đang xác thực không có quyền
 | Screen 8 | `pages/user_audit_page.py::UserAuditPage` |
 | Menu theo nhóm người dùng | `manifest.py` (thứ tự) + `menu_group` của mỗi trang (menu bên trái gấp / mở của khung sườn); cảnh báo BR-61: `components/data_warnings.py` |
 | Xác thực, quyền, hộp thoại | `frontend/features/yarn_costing/components/` (actor_block, permissions, dialogs, flash, display, labels, columns, recalc_diff, factory_picker) |
-| Logs | mọi service ghi log các bước; khung nhật ký ở cuối mỗi trang |
+| Logs | mọi service ghi log các bước vào `logs/app.log` (không còn khung nhật ký trên màn hình) |
 | Tests | `backend/features/yarn_costing/tests/` (test_calculation: khớp S4-2017 và S1-1310; test_rules; test_pricing_services; test_master_services; test_import_services; test_carding_services; test_new_app: BR-61..BR-65, UC-42, UC-43, AC-62..AC-77; test_component_import: BR-66..BR-69, UC-44, UC-45, AC-78..AC-85) |
