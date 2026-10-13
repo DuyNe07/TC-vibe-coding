@@ -8,6 +8,27 @@ Bạn không cần biết lập trình: AI đọc bộ quy tắc trong `docs/` v
 Yêu cầu: **Python 3.13** ([tải tại đây](https://www.python.org/downloads/), khi cài nhớ tick *Add python.exe to PATH*).
 Nếu máy đang có môi trường `.venv` của phiên bản Python khác, `run.ps1` sẽ tự tạo lại và cài lại thư viện.
 
+**Lần đầu: tạo file cấu hình `.env`** (mọi người dùng chung một cơ sở dữ liệu PostgreSQL của công ty):
+
+```powershell
+Copy-Item .env.example .env
+notepad .env
+```
+
+Trong `.env`, điền 5 dòng kết nối cơ sở dữ liệu. Giá trị thật xin người phụ trách khung sườn (gửi riêng, không ghi
+vào repo vì repo công khai):
+
+```
+POSTGRES_IP=<địa chỉ máy chủ>
+POSTGRES_PORT=<cổng>
+POSTGRES_DB=<tên cơ sở dữ liệu>
+POSTGRES_USER=<tài khoản>
+POSTGRES_PASSWORD=<mật khẩu>
+```
+
+`.env` chỉ nằm trên máy bạn và không bao giờ được đưa lên GitHub. Nếu để trống `POSTGRES_IP`, app sẽ chạy với cơ sở dữ
+liệu tạm trên máy (`data/app.db`), dữ liệu không dùng chung với ai.
+
 Mở **PowerShell** trong thư mục dự án và chạy:
 
 ```powershell
@@ -16,6 +37,8 @@ powershell -ExecutionPolicy Bypass -File .\run.ps1
 
 Script sẽ tự: kiểm tra/tạo môi trường `.venv` → cài thư viện (chỉ khi còn thiếu) → chạy app → mở trình duyệt
 tại `http://localhost:8501/home`. Lần đầu mất vài phút để cài thư viện.
+Đăng nhập lần đầu bằng `u-admin` / `u-admin` rồi đổi mật khẩu ngay. Trang tạo tài khoản và phân quyền không có trên menu:
+gõ địa chỉ `http://localhost:8501/admin`.
 Dừng ứng dụng: bấm `Ctrl + C` trong cửa sổ PowerShell.
 
 Tuỳ chọn thêm vào cuối lệnh: `-Port 8600` (đổi cổng), `-NoBrowser` (không mở trình duyệt), `-Reinstall` (cài lại thư viện).

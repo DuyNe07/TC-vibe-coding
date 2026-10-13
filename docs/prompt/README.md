@@ -5,6 +5,7 @@ Không cần sửa gì trong prompt.
 
 | Bước | Bạn làm gì | Kết quả |
 |---|---|---|
+| Lần đầu cài app | Trong PowerShell ở thư mục dự án: `Copy-Item .env.example .env`, mở `.env` điền 5 dòng `POSTGRES_*` (giá trị xin người phụ trách khung sườn), rồi chạy `powershell -ExecutionPolicy Bypass -File .un.ps1`. Đăng nhập `u-admin` / `u-admin` và đổi mật khẩu | App chạy, dùng chung cơ sở dữ liệu của công ty (xem [README](../../README.md) mục 1) |
 | 0 | Mở phiên chat mới với AI (Claude Code, Cursor...) trong thư mục dự án | AI tự đọc dự án và cho biết đang có những chức năng nào |
 | 0.5 | Dán toàn bộ [00-discovery.md](00-discovery.md). AI giới thiệu app làm được gì, rồi hỏi - đáp với bạn về công việc hiện tại và mong muốn; bạn đính kèm file mẫu (Excel, Word, PDF) hoặc đặt vào `docs/business/_sources/`. Cuối cùng AI tóm tắt lại, bạn trả lời "đúng rồi" | Ghi chép tìm hiểu `docs/business/_sources/<chủ_đề>-discovery.md`, đã chốt là hiểu đúng |
 | 1 | Dán toàn bộ [01-business-analysis.md](01-business-analysis.md). Trả lời câu hỏi của AI (chỉ hỏi về cách ứng dụng hoạt động, không hỏi về code). Đọc bản tóm tắt cuối và trả lời "đồng ý" để chốt | Tài liệu `docs/business/<tên_chức_năng>.md` (tiếng Việt), trạng thái `Ready for implementation` |
