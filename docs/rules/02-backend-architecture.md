@@ -148,3 +148,10 @@ JSON document in table `<developer>__<feature_key>__item` (created automatically
 - `self.current_user` (services and pages) is the logged-in `CurrentUser` (`None` in tests): use it to record
   "who did it", never to re-implement access checks. Finer rules (e.g. "Sales only edits its own requests") are
   business rules BR-xx in `business/`, written in the business document.
+- **Roles inside an app.** When the business document gives actors different rights inside one app ("only Phòng SO
+  edits master data", "Xưởng S1 only changes S1 data"), declare the actors as roles in the manifest:
+  `roles=(("SO", "Phòng SO"), ("XS1", "Xưởng S1"), ...)`. The administrator ticks them per user / group on `/admin`
+  (key `"<key>/@<CODE>"`). The business rule reads `self.current_user.roles_in("<key>")` (a set of codes); a `None`
+  user is system code / tests (allowed); administrators get no role automatically, the rule decides (usually "admin =
+  every role"). NEVER build a login, an access code, a "who are you" picker or a user list inside a feature: who acted
+  is `self.current_user` (record `username` + `display_name`).

@@ -26,8 +26,9 @@ then apply it. You never change application code here.
 
 ## 3. Step 1 - Look first (no questions yet)
 1. List the features and their screens: for each `frontend/features/<key>/manifest.py` read `FEATURE.title`,
-   `FEATURE.pages` and, for each page class, `title`, `slug` and `menu_group`. Build the catalogue
-   `key -> "Tên chức năng › [Nhóm con] Tên màn hình"` (landing page key = `<key>/<slug or "main">`).
+   `FEATURE.pages` and, for each page class, `title`, `slug` and `menu_group`, plus `FEATURE.roles`. Build the catalogue
+   `key -> "Tên chức năng › [Nhóm con] Tên màn hình"` (landing page key = `<key>/<slug or "main">`) and
+   `<key>/@<CODE> -> "Tên chức năng › vai trò <nhãn>"` (what each role may do: the business document, section 7).
 2. Read each `docs/business/<key>.md` section 2 "Actors" and section 8 "Screens" to know which user groups use which
    screen.
 3. Read the current accounts (read only):
@@ -41,7 +42,9 @@ In simple Vietnamese, numbered, each with the proposed default marked `(đề xu
 business documents. Show the catalogue of features / screens as a short list first. Ask:
 1. **Nhóm người dùng** cần tạo (ví dụ "Sales", "Xưởng S1", "Phòng SO", "Kế toán") - đề xuất từ tài liệu nghiệp vụ.
 2. **Mỗi nhóm được mở chức năng / màn hình nào** - đề xuất dạng bảng: nhóm | được mở. Nhắc: chọn cả chức năng thì thấy mọi
-   màn hình, kể cả màn hình thêm sau này; chọn từng màn hình thì chỉ thấy đúng các màn đó.
+   màn hình, kể cả màn hình thêm sau này; chọn từng màn hình thì chỉ thấy đúng các màn đó. Với ứng dụng có **vai trò**
+   (ví dụ Tính giá sợi: Sales, Xưởng S1, Xưởng S4, Kế toán, Phòng SO), hỏi thêm mỗi nhóm giữ vai trò nào; vai trò quyết
+   định được làm thao tác gì, "Toàn bộ" màn hình không tự cho vai trò.
 3. **Danh sách người dùng**: tên đăng nhập (không dấu, không khoảng trắng), họ tên, thuộc nhóm nào, có cần thêm quyền riêng
    ngoài nhóm không, ai là quản trị viên (toàn quyền).
 4. **Mật khẩu ban đầu**: một mật khẩu chung tạm thời cho tất cả (đề xuất) hoặc từng người; nhắc đổi sau lần đầu.

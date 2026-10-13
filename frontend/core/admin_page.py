@@ -12,7 +12,7 @@ import streamlit as st
 from pydantic import ValidationError as PydanticValidationError
 
 from backend.core.access import ADMIN_USERNAME, AccessManager, User, UserGroup
-from backend.core.current_user import CurrentUser, in_app, page_permission
+from backend.core.current_user import CurrentUser, in_app, page_permission, role_permission
 from backend.core.exceptions import AppError, InvalidInputError
 from frontend.core.base_page import BasePage
 from frontend.core.components import editable_table, empty_state, section_title, show_error
@@ -62,10 +62,12 @@ class AdminPage(BasePage):
             )  # fmt: skip
         ]
         pages = {page_permission(app.key, p.slug): p for p in app.pages}
+        roles = {role_permission(app.key, code): label for code, label in app.roles}
         admins = [u.username for u in users if u.is_admin]
         st.caption(
-            f"Tick ô để cho mở màn hình. **{WHOLE_APP}** = mọi màn hình của {app.title}, kể cả màn hình thêm sau này. "
-            f"Quyền của nhóm được cộng cho mọi thành viên. Quản trị viên ({', '.join(admins)}) luôn mở được tất cả."
+            f"Tick ô để cho mở màn hình. **{WHOLE_APP}** = mọi màn hình của {app.title}, kể cả màn hình thêm sau này"
+            + (" (không gồm vai trò; cột **Vai trò** do ứng dụng quyết định được làm gì). " if roles else ". ")
+            + f"Quyền của nhóm được cộng cho mọi thành viên. Quản trị viên ({', '.join(admins)}) luôn mở được tất cả."
         )
         version = self.state.get("rights_version", 0)  # new grids after a save
         columns: dict[str, Any] = {
@@ -75,6 +77,8 @@ class AdminPage(BasePage):
             WHOLE_APP: st.column_config.CheckboxColumn(WHOLE_APP, help="Mọi màn hình của ứng dụng"),
         }
         columns |= {k: st.column_config.CheckboxColumn(p.title, help=p.menu_group or None) for k, p in pages.items()}
+        columns |= {k: st.column_config.CheckboxColumn(f"Vai trò {label}", help="Vai trò trong ứng dụng") for k, label in roles.items()}  # fmt: skip
+        ticks = [*pages, *roles]
 
         user_rows: list[dict[str, Any]] = []
         group_rows: list[dict[str, Any]] = []
@@ -90,16 +94,16 @@ class AdminPage(BasePage):
                         "Tên đăng nhập": u.username,
                         "Họ tên": u.full_name,
                         "Có từ nhóm": self._summary(
-                            app, pages, set().union(*(group_rights.get(g, set()) for g in u.group_ids))
+                            app, pages, roles, set().union(*(group_rights.get(g, set()) for g in u.group_ids))
                         ),
-                        **self._ticks(app.key, pages, u.permissions),
+                        **self._ticks(app.key, pages, roles, u.permissions),
                     }
                     for u in people
                     if self._found(keyword, u.username, u.full_name)
                 ],
                 key=self.key(f"rights.{app.key}.{version}.users.{keyword}"),
-                columns=["id", "Tên đăng nhập", "Họ tên", "Có từ nhóm", WHOLE_APP, *pages],
-                column_order=["Tên đăng nhập", "Họ tên", "Có từ nhóm", WHOLE_APP, *pages],
+                columns=["id", "Tên đăng nhập", "Họ tên", "Có từ nhóm", WHOLE_APP, *ticks],
+                column_order=["Tên đăng nhập", "Họ tên", "Có từ nhóm", WHOLE_APP, *ticks],
                 column_config=columns,
                 disabled=["Tên đăng nhập", "Họ tên", "Có từ nhóm"],
             )
@@ -108,10 +112,10 @@ class AdminPage(BasePage):
         section_title("Nhóm")
         if groups:
             group_rows = editable_table(
-                [{"id": g.id, "Nhóm": g.name, **self._ticks(app.key, pages, g.permissions)} for g in groups],
+                [{"id": g.id, "Nhóm": g.name, **self._ticks(app.key, pages, roles, g.permissions)} for g in groups],
                 key=self.key(f"rights.{app.key}.{version}.groups"),
-                columns=["id", "Nhóm", WHOLE_APP, *pages],
-                column_order=["Nhóm", WHOLE_APP, *pages],
+                columns=["id", "Nhóm", WHOLE_APP, *ticks],
+                column_order=["Nhóm", WHOLE_APP, *ticks],
                 column_config=columns,
                 disabled=["Nhóm"],
             )
@@ -121,7 +125,9 @@ class AdminPage(BasePage):
 
             def save() -> None:
                 count = access.set_rights_in_app(
-                    app.key, self._wanted(app.key, pages, user_rows), self._wanted(app.key, pages, group_rows)
+                    app.key,
+                    self._wanted(app.key, pages, roles, user_rows),
+                    self._wanted(app.key, pages, roles, group_rows),
                 )
                 self.state.set("rights_version", version + 1)
                 self.state.set("flash", f"Đã lưu quyền {app.title}: {count} người / nhóm thay đổi.")
@@ -129,20 +135,30 @@ class AdminPage(BasePage):
             self._run(save, None)
 
     @staticmethod
-    def _ticks(app_key: str, pages: dict[str, Any], permissions: Sequence[str]) -> dict[str, bool]:
+    def _ticks(
+        app_key: str, pages: dict[str, Any], roles: dict[str, str], permissions: Sequence[str]
+    ) -> dict[str, bool]:
         whole = app_key in permissions
-        return {WHOLE_APP: whole, **{k: whole or k in permissions for k in pages}}
+        return {
+            WHOLE_APP: whole,
+            **{k: whole or k in permissions for k in pages},
+            **{k: k in permissions for k in roles},
+        }
 
     @staticmethod
-    def _wanted(app_key: str, pages: dict[str, Any], rows: list[dict[str, Any]]) -> dict[str, set[str]]:
-        """Grid rows -> rights in the app: the whole app when ticked, otherwise the ticked screens."""
-        return {r["id"]: {app_key} if r[WHOLE_APP] else {k for k in pages if r[k]} for r in rows}
+    def _wanted(
+        app_key: str, pages: dict[str, Any], roles: dict[str, str], rows: list[dict[str, Any]]
+    ) -> dict[str, set[str]]:
+        """Grid rows -> rights in the app: the whole app when ticked, otherwise the ticked screens; plus ticked roles."""
+        return {
+            r["id"]: ({app_key} if r[WHOLE_APP] else {k for k in pages if r[k]}) | {k for k in roles if r[k]}
+            for r in rows
+        }
 
     @staticmethod
-    def _summary(app: FeatureManifest, pages: dict[str, Any], rights: set[str]) -> str:
-        if app.key in rights:
-            return WHOLE_APP
-        return ", ".join(p.title for k, p in pages.items() if k in rights)
+    def _summary(app: FeatureManifest, pages: dict[str, Any], roles: dict[str, str], rights: set[str]) -> str:
+        screens = [WHOLE_APP] if app.key in rights else [p.title for k, p in pages.items() if k in rights]
+        return ", ".join([*screens, *(f"vai trò {label}" for k, label in roles.items() if k in rights)])
 
     # ---- accounts ----
     def _users_tab(self, access: AccessManager, users: list[User], groups: list[UserGroup]) -> None:
@@ -351,11 +367,12 @@ class AdminPage(BasePage):
             return "Được mở: mọi ứng dụng (quản trị)."
         rights = {*user.permissions, *(p for g in groups if g.id in user.group_ids for p in g.permissions)}
         who = CurrentUser(user.username, permissions=frozenset(rights))
-        opened = [
-            f"{m.icon} {m.title} ({sum(who.can_open_page(m.key, p.slug) for p in m.pages)}/{len(m.pages)} màn hình)"
-            for m in get_router().registry.visible_features()
-            if who.can_open_feature(m.key)
-        ]
+        opened = []
+        for m in get_router().registry.visible_features():
+            if who.can_open_feature(m.key):
+                roles = ", ".join(label for code, label in m.roles if code in who.roles_in(m.key))
+                screens = f"{sum(who.can_open_page(m.key, p.slug) for p in m.pages)}/{len(m.pages)} màn hình"
+                opened.append(f"{m.icon} {m.title} ({screens}{', vai trò ' + roles if roles else ''})")
         return "Được mở: " + (", ".join(opened) if opened else "chưa có ứng dụng nào.")
 
     def _run(self, action: Callable[[], Any], message: str | None) -> None:

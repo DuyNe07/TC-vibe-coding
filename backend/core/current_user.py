@@ -1,8 +1,10 @@
 """Who is using the app right now, and what they may open. Set by the UI on every run (``frontend/core/auth.py``).
 
 Permission keys (stored on users and groups):
-    "<feature_key>"              the whole feature (every page)
+    "<feature_key>"              the whole feature (every page; NOT its roles)
     "<feature_key>/<page_slug>"  one page of a feature (landing page without slug: "<feature_key>/main")
+    "<feature_key>/@<ROLE>"      a role the feature declares in its manifest (e.g. "yarn_costing/@SO"); the feature's
+                                 own business rules decide what a role may do (``CurrentUser.roles_in``)
 
 ``None`` (no user set) means system code: tests, scripts. The UI never runs a page without a logged-in user.
 """
@@ -17,8 +19,12 @@ def page_permission(feature_key: str, page_slug: str) -> str:
     return f"{feature_key}/{page_slug or LANDING_PAGE_SLUG}"
 
 
+def role_permission(feature_key: str, role: str) -> str:
+    return f"{feature_key}/@{role}"
+
+
 def in_app(permission: str, feature_key: str) -> bool:
-    """True when the key is about this app (the whole app or one of its pages)."""
+    """True when the key is about this app (the whole app, one of its pages or one of its roles)."""
     return permission == feature_key or permission.startswith(f"{feature_key}/")
 
 
@@ -36,6 +42,11 @@ class CurrentUser:
     def can_open_feature(self, feature_key: str) -> bool:
         """True when the user may open at least one page of the feature (gateway check)."""
         return self.is_admin or any(in_app(p, feature_key) for p in self.permissions)
+
+    def roles_in(self, feature_key: str) -> frozenset[str]:
+        """Role codes granted in one app (personal + groups). Administrators get none automatically: the app decides."""
+        prefix = role_permission(feature_key, "")
+        return frozenset(p.removeprefix(prefix) for p in self.permissions if p.startswith(prefix))
 
     def can_open_page(self, feature_key: str, page_slug: str) -> bool:
         return (

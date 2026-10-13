@@ -113,6 +113,18 @@ def test_user_only_sees_granted_pages() -> None:
     assert links == ["Tất cả ứng dụng", granted.title], "inside the app: only the granted page"
 
 
+def test_manifest_roles_need_unique_upper_case_codes() -> None:
+    import pytest
+
+    sample = FeatureRegistry.discover().get("sample_product_import")
+    assert sample is not None
+    ok = sample.__class__(**{**sample.__dict__, "roles": (("SO", "Phòng SO"), ("XS1", "Xưởng S1"))})
+    assert [code for code, _ in ok.roles] == ["SO", "XS1"]
+    for bad in ((("so", "x"),), (("SO", "a"), ("SO", "b"))):
+        with pytest.raises(ValueError):
+            sample.__class__(**{**sample.__dict__, "roles": bad})
+
+
 def test_sample_feature_is_hidden_once_a_real_feature_exists() -> None:
     sample = FeatureRegistry.discover().get("sample_product_import")
     assert sample is not None and sample.sample

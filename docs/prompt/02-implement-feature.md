@@ -275,6 +275,8 @@ Read first: `CLAUDE.md`, `docs/rules/00`-`03`, `06`, `07`, `09`, the business do
    decisions, state transitions. Pure. Write the BR unit tests now (a passing and a failing case each).
 3. **constants.py / exceptions.py** - UPPER_CASE constants only (column specs, limits); errors inherit `AppError` /
    `FileProcessingError` with Vietnamese messages.
+   Actors with different rights inside the app = manifest `roles` + a BR that reads `self.current_user.roles_in(key)`
+   (rules/02 "Roles inside an app"); never an in-app login, access code or user list.
 4. **repositories/** - `class XRepository(SqlRepository[X])` (table `<developer>__<key>__x`, created automatically) + simple queries.
 5. **builders/** - `BaseBuilder[T]` (inputs in `__init__`, `build()` returns output): file -> models (`ExcelReader`,
    `WordReader`, `PdfTextReader` from `backend.shared.file_io`; `normalize_key`, `parse_decimal` from

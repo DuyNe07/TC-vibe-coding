@@ -4,7 +4,7 @@ import pytest
 
 from backend.core.access import ADMIN_USERNAME, AccessManager, User, UserGroup
 from backend.core.base import BaseEntity, SqlRepository
-from backend.core.current_user import CurrentUser, set_current_user
+from backend.core.current_user import CurrentUser, role_permission, set_current_user
 from backend.core.exceptions import ConflictError, InvalidInputError, NotFoundError, PermissionDeniedError
 from backend.core.gateway import GatewayCall, PermissionMiddleware
 
@@ -58,12 +58,16 @@ def test_rights_are_replaced_one_app_at_a_time() -> None:
     an = access.save_user(User(username="an", permissions=["yarn_costing", "sample_product_import/main", old]), "pw")
     binh = access.save_user(User(username="binh", permissions=["yarn_costing/requests"]), "pw")
     sales = access.save_group(UserGroup(name="Sales", permissions=["yarn_costing"]))
+    an_rights = {"yarn_costing/requests", role_permission("yarn_costing", "SO")}
     changed = access.set_rights_in_app(
-        "yarn_costing", {an.id: {"yarn_costing/requests"}, binh.id: {"yarn_costing/requests"}}, {sales.id: set()}
+        "yarn_costing", {an.id: an_rights, binh.id: {"yarn_costing/requests"}}, {sales.id: set()}
     )
     assert changed == 2, "binh did not change, so only an + Sales are written"
     users = {u.username: u for u in access.list_users()}
-    assert set(users["an"].permissions) == {"yarn_costing/requests", "sample_product_import/main", old}
+    assert set(users["an"].permissions) == {*an_rights, "sample_product_import/main", old}
+    logged_in = access.authenticate("an", "pw")
+    assert logged_in is not None and logged_in.roles_in("yarn_costing") == {"SO"}
+    assert logged_in.roles_in("sample_product_import") == set()
     assert access.list_groups()[0].permissions == []
     with pytest.raises(InvalidInputError):
         access.set_rights_in_app("yarn_costing", {an.id: {"sample_product_import"}}, {})

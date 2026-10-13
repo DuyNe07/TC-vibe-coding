@@ -132,5 +132,8 @@ Pick the newest native element below before writing anything by hand.
 9. A feature's navigation = its manifest: the feature is an app with a card on Home, and the pages listed in
    `FEATURE.pages` are the app's sidebar menu once the user opens it (first page = landing page, `/<feature-key>`).
    Set `menu_group = "Sales"` on a page class to list it under the label "Sales" in that menu (pages of a group must be
-   consecutive in `FEATURE.pages`). Only the pages the user may open are shown. The sample feature (`sample=True` in its manifest) is hidden automatically as soon as one real feature
+   consecutive in `FEATURE.pages`). Only the pages the user may open are shown. Actors with different rights inside
+   the app are `roles=((CODE, "Nhãn"), ...)` in the manifest (rules 02 "Roles inside an app"): `/admin` shows one
+   column per role; a page may read `self.current_user.roles_in(self.feature_key)` only to disable buttons, the
+   backend rule decides. The sample feature (`sample=True` in its manifest) is hidden automatically as soon as one real feature
    exists; never delete or disable it by hand. Never edit the sidebar, Home or router to add a feature.

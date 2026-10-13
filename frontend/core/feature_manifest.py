@@ -3,10 +3,13 @@
 Every ``frontend/features/<key>/manifest.py`` defines exactly one ``FEATURE = FeatureManifest(...)``.
 """
 
+import re
 from dataclasses import dataclass
 
 from backend.core.naming import PAGE_SLUG_PATTERN, is_valid_feature_key
 from frontend.core.base_page import BasePage
+
+ROLE_CODE = re.compile(r"^[A-Z][A-Z0-9_]{0,29}$")
 
 
 @dataclass(frozen=True)
@@ -21,6 +24,8 @@ class FeatureManifest:
     order: int = 100  # smaller = shown first inside the group
     enabled: bool = True  # False hides the feature everywhere
     sample: bool = False  # framework demo: hidden from the app as soon as one real feature exists
+    # roles the app's business rules check, ticked per user / group on /admin: (("SALES", "Sales"), ("SO", "Phòng SO"))
+    roles: tuple[tuple[str, str], ...] = ()
 
     def __post_init__(self) -> None:
         if not is_valid_feature_key(self.key):
@@ -29,6 +34,9 @@ class FeatureManifest:
             raise ValueError(f"Feature {self.key!r}: title and description are required")
         if not self.pages:
             raise ValueError(f"Feature {self.key!r}: at least one page is required")
+        codes = [code for code, _ in self.roles]
+        if any(not ROLE_CODE.match(c) for c in codes) or len(set(codes)) != len(codes):
+            raise ValueError(f"Feature {self.key!r}: role codes must be unique UPPER_CASE (e.g. 'SO', 'XS1'): {codes}")
         slugs: set[str] = set()
         for index, page in enumerate(self.pages):
             if not (isinstance(page, type) and issubclass(page, BasePage)):
