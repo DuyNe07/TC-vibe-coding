@@ -24,11 +24,11 @@ from frontend.core.formatting import format_number
 from frontend.features.yarn_costing.components.actor_block import actor_factory, actor_is_so, render_actor_block
 from frontend.features.yarn_costing.components.columns import count_col, date_col, datetime_col, money, percent
 from frontend.features.yarn_costing.components.component_import import render_component_import
+from frontend.features.yarn_costing.components.data_warnings import show_data_warnings
 from frontend.features.yarn_costing.components.dialogs import confirm_dialog
 from frontend.features.yarn_costing.components.display import fmt_date, percent_value, vnd
 from frontend.features.yarn_costing.components.factory_picker import factory_segment
 from frontend.features.yarn_costing.components.flash import show_flash
-from frontend.features.yarn_costing.components.group_menu import render_group_menu
 from frontend.features.yarn_costing.components.labels import IMPORT_MODE_LABELS, label_of
 from frontend.features.yarn_costing.components.permissions import action_state, explain
 
@@ -65,7 +65,8 @@ def _sheet_rows(result: ImportResultResponse) -> list[dict[str, Any]]:
 
 
 class ExcelImportPage(BasePage):
-    title = "[SO] Nhập dữ liệu từ Excel"
+    title = "Nhập dữ liệu từ Excel"
+    menu_group = "Phòng SO"
     icon = "📥"
     slug = "nhap-du-lieu-excel"
     description = "Tải file mẫu, chuyển dữ liệu cũ từ file Excel, cập nhật hàng loạt NSM và tiêu hao, đối chiếu giá cũ với giá app."
@@ -73,7 +74,7 @@ class ExcelImportPage(BasePage):
     def render(self) -> None:
         feature = gateway.open(YarnCostingController)
         reference = feature.get_reference_data(GetReferenceDataRequest(factory_code=None))
-        render_group_menu(self, reference)
+        show_data_warnings(reference)
         actor = render_actor_block(feature, self.state, reference)
         show_flash(self.state)
 

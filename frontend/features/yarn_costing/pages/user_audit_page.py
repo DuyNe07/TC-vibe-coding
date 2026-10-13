@@ -14,9 +14,9 @@ from frontend.core.base_page import BasePage
 from frontend.core.components import data_table, editable_table, panel
 from frontend.features.yarn_costing.components.actor_block import clear_actor, current_actor, render_actor_block
 from frontend.features.yarn_costing.components.columns import count_col, datetime_col
+from frontend.features.yarn_costing.components.data_warnings import show_data_warnings
 from frontend.features.yarn_costing.components.display import yes_no
 from frontend.features.yarn_costing.components.flash import set_flash, show_flash
-from frontend.features.yarn_costing.components.group_menu import render_group_menu
 from frontend.features.yarn_costing.components.labels import ALL, all_or
 from frontend.features.yarn_costing.components.permissions import action_state, explain
 
@@ -25,7 +25,8 @@ ACTIVE_COL = "Còn hoạt động"
 
 
 class UserAuditPage(BasePage):
-    title = "[SO] Người dùng & nhật ký"
+    title = "Người dùng & nhật ký"
+    menu_group = "Phòng SO"
     icon = "👥"
     slug = "nguoi-dung-nhat-ky"
     description = "Phòng SO khai báo nhóm người dùng, mã nội bộ và thành viên; mọi người xem nhật ký thay đổi."
@@ -33,7 +34,7 @@ class UserAuditPage(BasePage):
     def render(self) -> None:
         feature = gateway.open(YarnCostingController)
         reference = feature.get_reference_data(GetReferenceDataRequest(factory_code=None))
-        render_group_menu(self, reference)
+        show_data_warnings(reference)
         actor = render_actor_block(feature, self.state, reference)
         show_flash(self.state)
         groups = reference.groups

@@ -227,22 +227,22 @@ rộng / thu gọn); menu trái sắp theo nhóm người dùng, nhãn [Chung] /
 | `SavePackagingTypesRequest` | add `preview: bool = False`; `effective_date: date \| None`, `reason: str = ""` (chỉ bắt buộc khi có tính lại) |
 | `RecalcResultResponse` | add `will_recalculate: bool = False`, `confirm_text: str = ""` (preview của UC-05) |
 | UC-42 `check_request_submit` (new) | `CheckRequestSubmitRequest{authenticated: bool, group_code: str\|None, factory_code: FactoryCode\|None}` (request_dto.py) → `RequestSubmitCheckResponse{allowed: bool, reasons: list[str]}` |
-| BR-61 | `repositories/safe_json_repository.py::SafeJsonRepository` (mọi repository kế thừa) → `DataFileError` với thông báo BR-61 (`business/master_business.py::MasterBusiness.data_file_message`) |
+| BR-61 | `repositories/yarn_sql_repository.py::YarnSqlRepository` (mọi repository kế thừa; nhập file app cũ một lần) → `DataFileError` với thông báo BR-61 (`business/master_business.py::MasterBusiness.data_file_message`) |
 | BR-62 | `business/master_business.py::MasterBusiness.packaging_recalc_codes`, `packaging_confirm_text` |
 | BR-63 | `business/request_business.py::RequestBusiness.submit_block_reasons` |
 | Manifest | group "Tính Giá Sợi"; thứ tự trang theo nhóm người dùng; tiêu đề có nhãn nhóm |
-| Menu theo nhóm | `frontend/features/yarn_costing/components/group_menu.py::render_group_menu` (gọi đầu mỗi trang) |
+| Menu theo nhóm | `menu_group` của mỗi trang (menu bên trái gấp / mở của khung sườn, 2026-10-13) |
 
 ### 7.2 Traceability (mới)
 | Spec item | Description (VI) | Code element | Test | Status |
 |---|---|---|---|---|
-| 5.6 / BR-61 | Đọc dữ liệu chép từ app cũ, file hỏng báo rõ | repositories/safe_json_repository.py, repositories/legacy_conversion.py | tests/test_migration.py | ✅ |
+| 5.6 / BR-61 | Đọc dữ liệu chép từ app cũ, file hỏng báo rõ | repositories/yarn_sql_repository.py, repositories/legacy_conversion.py | tests/test_migration.py | ✅ |
 | BR-62 | Tính lại khi lưu đóng gói + nội dung hộp xác nhận | business/master_business.py, services/save_packaging_types_service.py | tests/test_rules.py, tests/test_master_services.py | ✅ |
 | BR-63 / UC-42 | Lý do khoá nút Gửi yêu cầu | business/request_business.py, services/check_request_submit_service.py | tests/test_rules.py, tests/test_request_submit.py | ✅ |
 | AC-62..AC-64 | Dữ liệu chép sang giữ nguyên, C3.x chuyển đúng, file hỏng | như trên | tests/test_migration.py + kiểm tra với bản chép dữ liệu thật | ✅ |
 | AC-65..AC-67 | Hộp xác nhận đóng gói | như BR-62 | tests/test_master_services.py | ✅ |
 | AC-68, AC-69 | Lý do khoá nút | như BR-63 | tests/test_request_submit.py | ✅ |
-| Menu theo nhóm | Khối mở rộng / thu gọn + menu trái theo nhóm | components/group_menu.py, manifest.py | page render test | ✅ |
+| Menu theo nhóm | Khối mở rộng / thu gọn + menu trái theo nhóm | menu_group của trang, manifest.py | page render test | ✅ |
 
 ### 7.3 Checkboxes
 - [x] Step 0 UI concept recorded

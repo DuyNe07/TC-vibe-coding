@@ -1,21 +1,17 @@
-"""Stored in data/yarn_costing/loss_groups.json (starts empty). Old S4 losses C3.1..C3.3 are read as C3 (BR-59)."""
+"""Table yarn_costing__loss_group (starts empty). Old S4 losses C3.1..C3.3 are imported as C3 (BR-59)."""
 
-import json
+from typing import Any
 
 from backend.features.yarn_costing.models.loss_group import LossGroup
 from backend.features.yarn_costing.repositories.legacy_conversion import convert_loss_group
-from backend.features.yarn_costing.repositories.safe_json_repository import SafeJsonRepository
+from backend.features.yarn_costing.repositories.yarn_sql_repository import YarnSqlRepository
 
 
-class LossGroupRepository(SafeJsonRepository[LossGroup]):
-    storage_file = "loss_groups.json"
+class LossGroupRepository(YarnSqlRepository[LossGroup]):
+    legacy_file = "loss_groups.json"
 
-    def _read(self) -> dict[str, LossGroup]:
-        if not self.file_path.exists():
-            return {}
-        raw = json.loads(self.file_path.read_text(encoding="utf-8") or "[]")
-        groups = [LossGroup.model_validate(convert_loss_group(item)) for item in raw]
-        return {g.id: g for g in groups}
+    def _convert(self, raw: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        return [convert_loss_group(item) for item in raw]
 
     def for_factory(self, factory_code: str) -> list[LossGroup]:
         return sorted(self.find(lambda g: g.factory_code.value == factory_code), key=lambda g: g.group_key)

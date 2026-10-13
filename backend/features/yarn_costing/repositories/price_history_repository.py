@@ -1,11 +1,11 @@
-"""Stored in data/yarn_costing/price_history.json (only changed lines are recorded)."""
+"""Table yarn_costing__price_history (only changed lines are recorded)."""
 
 from backend.features.yarn_costing.models.price_history import PriceHistory
-from backend.features.yarn_costing.repositories.compact_json_repository import CompactJsonRepository
+from backend.features.yarn_costing.repositories.yarn_sql_repository import YarnSqlRepository
 
 
-class PriceHistoryRepository(CompactJsonRepository[PriceHistory]):
-    storage_file = "price_history.json"
+class PriceHistoryRepository(YarnSqlRepository[PriceHistory]):
+    legacy_file = "price_history.json"
 
     def add_many(self, entries: list[PriceHistory]) -> None:
         if entries:

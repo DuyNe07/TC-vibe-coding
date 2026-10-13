@@ -1,21 +1,17 @@
-"""Stored in data/yarn_costing/rate_versions.json (starts empty: versions come from UC-04 / UC-34)."""
+"""Table yarn_costing__rate_version (starts empty: versions come from UC-04 / UC-34)."""
 
-import json
+from typing import Any
 
 from backend.features.yarn_costing.models.rate_version import RateVersion
 from backend.features.yarn_costing.repositories.legacy_conversion import convert_rate_version
-from backend.features.yarn_costing.repositories.safe_json_repository import SafeJsonRepository
+from backend.features.yarn_costing.repositories.yarn_sql_repository import YarnSqlRepository
 
 
-class RateVersionRepository(SafeJsonRepository[RateVersion]):
-    storage_file = "rate_versions.json"
+class RateVersionRepository(YarnSqlRepository[RateVersion]):
+    legacy_file = "rate_versions.json"
 
-    def _read(self) -> dict[str, RateVersion]:
-        if not self.file_path.exists():
-            return {}
-        raw = json.loads(self.file_path.read_text(encoding="utf-8") or "[]")
-        versions = [RateVersion.model_validate(convert_rate_version(item)) for item in raw]
-        return {v.id: v for v in versions}
+    def _convert(self, raw: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        return [convert_rate_version(item) for item in raw]
 
     def for_factory(self, factory_code: str) -> list[RateVersion]:
         """Newest first."""
