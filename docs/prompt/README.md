@@ -11,6 +11,8 @@ Không cần sửa gì trong prompt.
 | 2 | Dán toàn bộ [02-implement-feature.md](02-implement-feature.md). AI đưa ra đề xuất giao diện (có hình phác) và hỏi **một lượt**: bảng như Excel chỉ xem hay sửa trực tiếp, nhập bằng form / bảng / file Excel, bộ lọc, số liệu tổng hợp, biểu đồ... Trả lời theo số hoặc gõ "ok" | AI tự lập kế hoạch (`docs/plans/`), chia việc cho AI phụ (backend và giao diện, chạy song song), chạy toàn bộ kiểm tra, rồi hướng dẫn cách dùng |
 | 3 | Chạy `powershell -ExecutionPolicy Bypass -File .\run.ps1` và thử theo hướng dẫn | Chức năng xuất hiện ở Trang chủ |
 | Khi gặp lỗi | Mở khung "📜 Nhật ký chạy (log)" ở cuối trang, bấm copy, dán vào chat kèm toàn bộ [03-fix-error.md](03-fix-error.md) | AI tự tìm nguyên nhân, sửa, chạy lại kiểm tra và báo lại bằng tiếng Việt |
+| Cấp quyền cho người dùng | Dán toàn bộ [05-permission-interview.md](05-permission-interview.md). AI liệt kê các chức năng / màn hình, hỏi một lượt: có những nhóm người dùng nào, mỗi nhóm được mở gì, danh sách người dùng. Bạn trả lời "đồng ý" ở bản tóm tắt | Tài khoản, nhóm và quyền được tạo trong app (xem lại ở trang "Người dùng & phân quyền"; quản trị viên mặc định `u-admin`) |
+| Cập nhật nhánh của bạn theo khung sườn mới nhất | Dán toàn bộ [06-sync-branch-with-main.md](06-sync-branch-with-main.md), chọn nhánh và cách đẩy lên | AI lấy code mới nhất, gộp nhánh của bạn lên trên (rebase), sửa chức năng cho hợp khung sườn mới (lưu cơ sở dữ liệu, menu, đăng nhập), chạy kiểm tra rồi đẩy lại |
 | Gửi code cho người kiểm tra | Dán toàn bộ [04-push-to-github.md](04-push-to-github.md), trả lời một lượt câu hỏi (repo, tên nhánh, tên/email, tài khoản GitHub + mã truy cập) | AI tạo nhánh mới, commit, lấy code mới nhất trên GitHub về gộp vào (tự xử lý xung đột), rồi đẩy lên, kèm link để mở Pull Request |
 
 **Nếu không dán được vì prompt quá dài** (một số công cụ giới hạn độ dài): gõ một dòng thay thế:
@@ -18,6 +20,8 @@ Không cần sửa gì trong prompt.
 - Bước 1: `Đọc file docs/prompt/01-business-analysis.md và làm đúng từng bước trong đó.`
 - Bước 2: `Đọc file docs/prompt/02-implement-feature.md và làm đúng từng bước trong đó.`
 - Khi lỗi: `Đọc file docs/prompt/03-fix-error.md và làm đúng từng bước trong đó.`
+- Cấp quyền: `Đọc file docs/prompt/05-permission-interview.md và làm đúng từng bước trong đó.`
+- Cập nhật nhánh: `Đọc file docs/prompt/06-sync-branch-with-main.md và làm đúng từng bước trong đó.`
 
 Lưu ý:
 - **AI tự sửa khi gặp lỗi.** Trong lúc làm, nếu kiểm tra không đạt hoặc app không chạy, AI phải tự tìm nguyên nhân và

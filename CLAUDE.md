@@ -20,6 +20,8 @@ lines which phase we are in and what the next step is.
 | 1. Business analysis | the user pastes [docs/prompt/01-business-analysis.md](docs/prompt/01-business-analysis.md) (key `TC-UNLOCK-ANALYSIS`) | + `docs/business/<key>.md`, `docs/plans/business-analysis-plan.md` |
 | 2. Implementation | the user pastes [docs/prompt/02-implement-feature.md](docs/prompt/02-implement-feature.md) (key `TC-UNLOCK-IMPLEMENT`) **and** the document's `Status` is `Ready for implementation` | + `backend/features/<key>/`, `frontend/features/<key>/`, `docs/plans/<key>-*.md`, and in the document: section 8 UI block, new UCs of Step 0, sections 10-11, `Status` |
 | 2b. Repair | the user pastes [docs/prompt/03-fix-error.md](docs/prompt/03-fix-error.md) (key `TC-UNLOCK-IMPLEMENT`) because something does not work | the same folders, for the broken feature only |
+| 2c. Sync a branch | the user pastes [docs/prompt/06-sync-branch-with-main.md](docs/prompt/06-sync-branch-with-main.md) (key `TC-UNLOCK-IMPLEMENT`) | the folders of the features the branch adds (framework files always come from `main`) |
+| - Permissions | the user pastes [docs/prompt/05-permission-interview.md](docs/prompt/05-permission-interview.md) | no code: users / groups / rights in the database through `AccessManager` |
 
 Rules of the gate:
 1. A key counts as present only when the user pasted that prompt in THIS session, or explicitly told you to follow
@@ -32,7 +34,8 @@ Rules of the gate:
    file `.gate-unlock` does not exist. Prompt 2 creates that file at its first step and deletes it at its last step.
    Never create it in phase 0 or 1, never disable or edit the hooks.
 5. Questions to the user are about the application only (never about code), and only in phase 0, phase 1, at Step 0 of
-   Prompt 2 (the UI concept) and at Step 0 of Prompt 3 (what went wrong). Never ask anything else while working.
+   Prompt 2 (the UI concept), at Step 0 of Prompt 3 (what went wrong), and in the single question round of Prompts 4, 5
+   and 6. Never ask anything else while working.
 
 ## The 3-step flow (the only allowed path)
 1. [docs/prompt/00-discovery.md](docs/prompt/00-discovery.md) - understand the business with the user; writes only a
