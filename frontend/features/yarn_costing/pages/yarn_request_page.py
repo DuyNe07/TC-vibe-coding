@@ -21,10 +21,10 @@ from frontend.core.base_page import BasePage
 from frontend.core.components import data_table, panel
 from frontend.features.yarn_costing.components.actor_block import render_actor_block
 from frontend.features.yarn_costing.components.columns import YARN_SUMMARY_CONFIG, yarn_summary_rows
+from frontend.features.yarn_costing.components.data_warnings import show_data_warnings
 from frontend.features.yarn_costing.components.dialogs import confirm_dialog
 from frontend.features.yarn_costing.components.display import count_text, yes_no
 from frontend.features.yarn_costing.components.flash import set_flash, show_flash
-from frontend.features.yarn_costing.components.group_menu import render_group_menu
 from frontend.features.yarn_costing.components.labels import (
     ALL,
     SALES_ORIGIN,
@@ -55,7 +55,8 @@ def default_packaging(reference: ReferenceDataResponse, factory: str | None) -> 
 
 
 class YarnRequestPage(BasePage):
-    title = "[Sales] Yêu cầu tính giá"
+    title = "Yêu cầu tính giá"
+    menu_group = "Sales"
     icon = "📝"
     slug = "yeu-cau-tinh-gia"
     description = "Sales tạo, sửa, huỷ yêu cầu tính giá sợi mới và theo dõi trạng thái."
@@ -63,7 +64,7 @@ class YarnRequestPage(BasePage):
     def render(self) -> None:
         feature = gateway.open(YarnCostingController)
         reference = feature.get_reference_data(GetReferenceDataRequest(factory_code=None))
-        render_group_menu(self, reference)
+        show_data_warnings(reference)
         actor = render_actor_block(feature, self.state, reference)
         show_flash(self.state)
 

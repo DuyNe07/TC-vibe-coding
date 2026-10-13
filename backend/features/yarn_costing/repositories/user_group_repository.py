@@ -1,9 +1,9 @@
-"""Stored in data/yarn_costing/user_groups.json. Seeds the 5 fixed groups on first read (section 10)."""
+"""Table yarn_costing__user_group. Seeds the 5 fixed groups on first read (section 10)."""
 
 from backend.features.yarn_costing.constants import SEED_GROUPS
 from backend.features.yarn_costing.models.enums import FactoryCode, GroupCode
 from backend.features.yarn_costing.models.user_group import GroupMember, UserGroup
-from backend.features.yarn_costing.repositories.safe_json_repository import SafeJsonRepository
+from backend.features.yarn_costing.repositories.yarn_sql_repository import YarnSqlRepository
 
 
 def _seed() -> list[UserGroup]:
@@ -19,15 +19,11 @@ def _seed() -> list[UserGroup]:
     ]
 
 
-class UserGroupRepository(SafeJsonRepository[UserGroup]):
-    storage_file = "user_groups.json"
+class UserGroupRepository(YarnSqlRepository[UserGroup]):
+    legacy_file = "user_groups.json"
 
-    def _read(self) -> dict[str, UserGroup]:
-        if not self.file_path.exists():
-            with self._lock:
-                if not self.file_path.exists():
-                    self._save({g.id: g for g in _seed()})
-        return super()._read()
+    def _seed(self) -> list[UserGroup]:
+        return _seed()
 
     def get_by_code(self, code: str) -> UserGroup | None:
         return self.find_one(lambda g: g.code.value == code)

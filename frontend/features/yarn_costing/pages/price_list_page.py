@@ -35,6 +35,7 @@ from frontend.features.yarn_costing.components.columns import (
     stage_cost_rows,
     yarn_summary_rows,
 )
+from frontend.features.yarn_costing.components.data_warnings import show_data_warnings
 from frontend.features.yarn_costing.components.dialogs import confirm_dialog
 from frontend.features.yarn_costing.components.display import (
     components_text,
@@ -45,7 +46,6 @@ from frontend.features.yarn_costing.components.display import (
     yes_no,
 )
 from frontend.features.yarn_costing.components.flash import set_flash, show_flash
-from frontend.features.yarn_costing.components.group_menu import render_group_menu
 from frontend.features.yarn_costing.components.labels import (
     ADJUSTMENT_TYPES,
     ALL,
@@ -65,14 +65,15 @@ ACCOUNTING_FILTER = {"Có": True, "Chưa có": False}
 
 
 class PriceListPage(BasePage):
-    title = "[Chung] Bảng giá đã tính"
+    title = "Bảng giá đã tính"
+    menu_group = "Dùng chung"
     icon = "💰"
     description = "Xem, lọc, xuất bảng giá sợi; nhập mã kế toán, tạo / xoá dòng chiết khấu - phụ phí và xem chi tiết, lịch sử giá."
 
     def render(self) -> None:
         feature = gateway.open(YarnCostingController)
         reference = feature.get_reference_data(GetReferenceDataRequest(factory_code=None))
-        render_group_menu(self, reference)
+        show_data_warnings(reference)
         actor = render_actor_block(feature, self.state, reference)
         show_flash(self.state)
 

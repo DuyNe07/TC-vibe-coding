@@ -17,8 +17,8 @@ from frontend.core.base_page import BasePage
 from frontend.core.components import data_table, empty_state, panel, section_title, stat_row
 from frontend.core.formatting import format_datetime, format_number
 from frontend.features.yarn_costing.components.columns import ANOMALY_CONFIG, count_col, price_anomaly_rows
+from frontend.features.yarn_costing.components.data_warnings import show_data_warnings
 from frontend.features.yarn_costing.components.display import fmt_date, percent_text, percent_value, plain
-from frontend.features.yarn_costing.components.group_menu import render_group_menu
 from frontend.features.yarn_costing.components.labels import (
     FINAL_STATUSES,
     STATUS_LABELS,
@@ -34,7 +34,8 @@ NO_DATA = "Không có dữ liệu trong khoảng ngày đã chọn."
 
 
 class DashboardPage(BasePage):
-    title = "[Chung] Dashboard kiểm soát"
+    title = "Dashboard kiểm soát"
+    menu_group = "Dùng chung"
     icon = "📊"
     slug = "dashboard"
     description = (
@@ -44,7 +45,7 @@ class DashboardPage(BasePage):
     def render(self) -> None:
         feature = gateway.open(YarnCostingController)
         reference = feature.get_reference_data(GetReferenceDataRequest(factory_code=None))
-        render_group_menu(self, reference)
+        show_data_warnings(reference)
         today = date.today()
         with panel("Bộ lọc", icon="🔎"):
             c1, c2, c3 = st.columns([2, 1, 1], vertical_alignment="bottom")

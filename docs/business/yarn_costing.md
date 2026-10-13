@@ -487,6 +487,9 @@ xưởng đó (để người dùng sửa rồi tải lên lại). Sheet "4. Ban
   7 dòng nhật ký.
 - **Chép lỗi:** nếu một file bị thiếu hoặc hỏng, màn hình không bị dừng; khung nhật ký chạy ghi rõ tên file không đọc được
   và Phòng SO chép lại file đó từ app cũ.
+- **Lưu trong cơ sở dữ liệu (từ 2026-10-13):** app lưu dữ liệu trong cơ sở dữ liệu PostgreSQL của công ty (mỗi loại dữ liệu một
+  bảng `yarn_costing__<tên>`). Cách chép ở trên vẫn dùng được: lần đầu mở app, khi bảng còn trống, app tự nhập file đã chép vào
+  `data\yarn_costing\` (kèm chuyển cách lưu cũ như trên) rồi đổi tên file thành `<tên>.json.imported` để không nhập lại lần hai.
 
 ### 5.7 File khai báo thành phần sợi pha (UC-44 out, UC-45 in)
 - **Tên file mẫu:** `mau-khai-bao-thanh-phan-<S1|S4>.xlsx`. Định dạng tải lên: .xlsx / .xlsm / .xls, tối đa 60 MB, 10.000 dòng
@@ -1027,15 +1030,11 @@ tắt và hiện thông báo BR-32, kèm nút "Tạo bản ĐCNSM" (UC-24).
 > có nút mở rộng / thu gọn**.
 
 - **Menu (chốt 2026-09-29):**
-  - Menu bên trái (phần khung dùng chung, không gấp / mở được): 8 mục dưới tên chức năng "Tính giá sợi", **sắp theo nhóm người
-    dùng** và ghi nhãn nhóm trước tên: [Chung] Bảng giá đã tính (trang chính) → [Chung] Dashboard kiểm soát → [Sales] Yêu cầu
-    tính giá → [Xưởng] Nhập NSM & tính giá → [Xưởng] Tiêu hao → [SO] Dữ liệu nền & định mức → [SO] Nhập dữ liệu từ Excel →
-    [SO] Người dùng & nhật ký.
-  - **Menu theo nhóm người dùng** ở đầu mỗi màn hình của chức năng: một khối "📂 Menu theo nhóm người dùng" bấm để mở rộng /
-    thu gọn; bên trong 5 nhóm, mỗi nhóm cũng bấm để mở rộng / thu gọn: Dùng chung (Bảng giá đã tính, Dashboard kiểm soát);
-    Sales (Yêu cầu tính giá); Xưởng sợi (Nhập NSM & tính giá, Tiêu hao); Phòng SO (Dữ liệu nền & định mức, Nhập dữ liệu từ Excel,
-    Người dùng & nhật ký); Kế toán (Bảng giá đã tính - nhập mã kế toán). Mỗi dòng là một liên kết mở màn hình; màn đang mở được
-    đánh dấu "(đang mở)". Mặc định khối đang thu gọn; nhóm chứa màn đang mở được mở sẵn khi mở rộng khối.
+  - Menu bên trái (khung sườn, cập nhật 2026-10-13 theo YC-01): khối "🧵 Tính giá sợi" bấm mũi tên để mở / thu gọn; bên trong
+    8 màn hình chia theo nhóm người dùng: **Dùng chung** (Bảng giá đã tính - trang chính, Dashboard kiểm soát) → **Sales** (Yêu cầu
+    tính giá) → **Xưởng sợi** (Nhập NSM & tính giá, Tiêu hao) → **Phòng SO** (Dữ liệu nền & định mức, Nhập dữ liệu từ Excel,
+    Người dùng & nhật ký). Kế toán dùng Bảng giá đã tính (nhập mã kế toán). Người dùng chỉ thấy những màn hình được cấp quyền.
+  - Khối "📂 Menu theo nhóm người dùng" ở đầu mỗi màn hình (2026-09-29) đã bỏ vì menu bên trái đã gấp / mở theo nhóm.
 - **Xác thực:** một khối (chọn nhóm, nhập mã nội bộ, chọn tên) ở đầu mỗi trang có thao tác thay đổi dữ liệu (Screen 1-6,
   8); nhập một lần, app nhớ trong phiên làm việc, không hỏi lại mỗi lần bấm nút; có nút "Đổi người thao tác".
 - **Bảng danh sách** (bảng giá, yêu cầu, mã cần xử lý, nhóm tiêu hao, lần nhập file, lần tính lại, nhật ký): chỉ xem (lọc,
@@ -1527,12 +1526,18 @@ ký chạy ở cuối trang. Nút mà nhóm đang xác thực không có quyền
 - Giả định (triển khai, 2026-09-29, 5.7): tỷ lệ ghi "48%" hoặc "48,5" cũng đọc được (bỏ dấu %, dấu phẩy thập phân); ô chữ không phải
   số → loại dòng theo BR-66.
 
+- Câu hỏi mở (2026-10-13, nâng cấp khung sườn): app đã có **đăng nhập và phân quyền theo chức năng / màn hình** (trang
+  "Người dùng & phân quyền" của quản trị viên). Khối "Người thao tác" của chức năng này (chọn nhóm, mã nội bộ, chọn tên - BR-46,
+  BR-47, BR-48) vẫn giữ nguyên vì quy định quyền theo thao tác, phạm vi xưởng và tên trong nhật ký (BR-49). Đề xuất bước sau: nối
+  tài khoản đăng nhập với nhóm / thành viên của chức năng để không phải xác thực hai lần (hỏi Phòng SO bằng
+  `docs/prompt/05-permission-interview.md`). Tạm thời: quản trị viên cấp quyền màn hình theo nhóm 8 màn ở trên; `u-admin` thấy tất cả.
+
 ## 11. Implementation map (filled by the AI)
 | Spec item | Code |
 |---|---|
 | Section 4 | `backend/features/yarn_costing/models/` (user_group, stage, rate_version, packaging_type, recovery_rate, process_route, exchange_rate + settings, loss_group, yarn + PriceLine + StageCostDetail, price_history, recalc_batch, legacy_price + ImportBatch, audit_log, enums); seed: `constants.py`, `repositories/*_repository.py` |
 | Section 5 | `builders/workbook_reader_builder.py` (5.1, 5.2), `builders/template_file_builder.py` (5.3), `builders/file_builders.py` (5.4, 5.5), `builders/price_rows_builder.py` |
-| 5.6 / BR-61 | `repositories/safe_json_repository.py::SafeJsonRepository` (mọi repository), `repositories/legacy_conversion.py`, `exceptions.py::DataFileError`, `constants.py::DATA_FILE_UNREADABLE_MESSAGE`, `services/get_reference_data_service.py` (`data_warnings`) |
+| 5.6 / BR-61 | `repositories/yarn_sql_repository.py::YarnSqlRepository` (mọi repository: bảng PostgreSQL, nhập file app cũ một lần), `repositories/legacy_conversion.py`, `exceptions.py::DataFileError`, `constants.py::DATA_FILE_UNREADABLE_MESSAGE`, `services/get_reference_data_service.py` (`data_warnings`) |
 | UC-01..UC-42 | `YarnCostingController.<method>()` (bảng 2 và mục 7.1 của `docs/plans/yarn_costing-implementation-plan.md`) -> `services/<method>_service.py`; UC-42 `check_request_submit` |
 | BR-01..BR-04 | `business/name_business.py` |
 | BR-05..BR-08, BR-63 | `business/request_business.py` (BR-63: `RequestBusiness.submit_block_reasons`) |
@@ -1562,7 +1567,7 @@ ký chạy ở cuối trang. Nút mà nhóm đang xác thực không có quyền
 | BR-66..BR-69 | `business/component_import_business.py::ComponentImportBusiness` (`check_row` BR-66, `declared_group` BR-67, `relabel_yarn` BR-68, `plan` BR-69) |
 | Screen 7 | `pages/dashboard_page.py::DashboardPage` |
 | Screen 8 | `pages/user_audit_page.py::UserAuditPage` |
-| Menu theo nhóm người dùng | `frontend/features/yarn_costing/components/group_menu.py::render_group_menu`, `manifest.py` (thứ tự + nhãn) |
+| Menu theo nhóm người dùng | `manifest.py` (thứ tự) + `menu_group` của mỗi trang (menu bên trái gấp / mở của khung sườn); cảnh báo BR-61: `components/data_warnings.py` |
 | Xác thực, quyền, hộp thoại | `frontend/features/yarn_costing/components/` (actor_block, permissions, dialogs, flash, display, labels, columns, recalc_diff, factory_picker) |
 | Logs | mọi service ghi log các bước; khung nhật ký ở cuối mỗi trang |
 | Tests | `backend/features/yarn_costing/tests/` (test_calculation: khớp S4-2017 và S1-1310; test_rules; test_pricing_services; test_master_services; test_import_services; test_carding_services; test_new_app: BR-61..BR-65, UC-42, UC-43, AC-62..AC-77; test_component_import: BR-66..BR-69, UC-44, UC-45, AC-78..AC-85) |

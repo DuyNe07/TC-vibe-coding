@@ -23,11 +23,11 @@ from frontend.core.base_page import BasePage
 from frontend.core.components import data_table, editable_table, panel, section_title
 from frontend.core.formatting import format_number
 from frontend.features.yarn_costing.components.actor_block import actor_factory, actor_is_so, render_actor_block
+from frontend.features.yarn_costing.components.data_warnings import show_data_warnings
 from frontend.features.yarn_costing.components.dialogs import confirm_dialog
 from frontend.features.yarn_costing.components.display import from_percent, pct, pct_exact, yes_no
 from frontend.features.yarn_costing.components.factory_picker import factory_segment
 from frontend.features.yarn_costing.components.flash import set_flash, show_flash
-from frontend.features.yarn_costing.components.group_menu import render_group_menu
 from frontend.features.yarn_costing.components.labels import (
     ALL,
     LEVEL_LABELS,
@@ -76,7 +76,8 @@ def _derived_losses_table(group: LossGroupDTO, stage_codes: list[str], key: str)
 
 
 class LossGroupPage(BasePage):
-    title = "[Xưởng] Tiêu hao"
+    title = "Tiêu hao"
+    menu_group = "Xưởng sợi"
     icon = "📉"
     slug = "tieu-hao"
     description = "Tra cứu, khai báo, sửa và xoá nhóm tiêu hao sơ cấp, sợi pha của từng xưởng."
@@ -84,7 +85,7 @@ class LossGroupPage(BasePage):
     def render(self) -> None:
         feature = gateway.open(YarnCostingController)
         reference = feature.get_reference_data(GetReferenceDataRequest(factory_code=None))
-        render_group_menu(self, reference)
+        show_data_warnings(reference)
         prefill = self.state.pop(LOSS_PREFILL_KEY)
         if prefill:
             st.session_state[self.key("factory")] = prefill["factory_code"]

@@ -1,32 +1,25 @@
-"""Stored in data/yarn_costing/yarns.json: yarns with their price lines and stage cost details (compact JSON).
+"""Table yarn_costing__yarn: yarns with their price lines and stage cost details.
 
-Yarns stored by the previous version (blend_ratios + carding NSM) are converted to components when read (BR-58)."""
+Yarns stored by the previous version (blend_ratios + carding NSM) are converted to components when imported (BR-58)."""
 
-import json
+from typing import Any
 
 from backend.features.yarn_costing.models.yarn import Yarn
-from backend.features.yarn_costing.repositories.compact_json_repository import CompactJsonRepository
 from backend.features.yarn_costing.repositories.legacy_conversion import convert_yarn, needs_yarn_conversion
 from backend.features.yarn_costing.repositories.loss_group_repository import LossGroupRepository
+from backend.features.yarn_costing.repositories.yarn_sql_repository import YarnSqlRepository
 
 
-class YarnRepository(CompactJsonRepository[Yarn]):
-    storage_file = "yarns.json"
+class YarnRepository(YarnSqlRepository[Yarn]):
+    legacy_file = "yarns.json"
 
-    def _read(self) -> dict[str, Yarn]:
-        if not self.file_path.exists():
-            return {}
-        raw = json.loads(self.file_path.read_text(encoding="utf-8") or "[]")
-        if any(needs_yarn_conversion(item) for item in raw):
-            groups_repo = LossGroupRepository(self.file_path.parent / LossGroupRepository.storage_file)
-            groups = {}
-            for group in groups_repo.list_all():
-                groups.setdefault(group.factory_code.value, {})[group.group_key] = group
-            raw = [
-                convert_yarn(item, groups.get(item.get("factory_code", ""), {}))
-                if needs_yarn_conversion(item)
-                else item
-                for item in raw
-            ]
-        yarns = [Yarn.model_validate(item) for item in raw]
-        return {y.id: y for y in yarns}
+    def _convert(self, raw: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        if not any(needs_yarn_conversion(item) for item in raw):
+            return raw
+        groups: dict[str, dict] = {}
+        for group in LossGroupRepository().list_all():
+            groups.setdefault(group.factory_code.value, {})[group.group_key] = group
+        return [
+            convert_yarn(item, groups.get(item.get("factory_code", ""), {})) if needs_yarn_conversion(item) else item
+            for item in raw
+        ]

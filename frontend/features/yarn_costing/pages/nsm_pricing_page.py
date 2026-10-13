@@ -36,6 +36,7 @@ from frontend.features.yarn_costing.components.columns import (
     stage_cost_rows,
     yarn_summary_rows,
 )
+from frontend.features.yarn_costing.components.data_warnings import show_data_warnings
 from frontend.features.yarn_costing.components.dialogs import confirm_dialog
 from frontend.features.yarn_costing.components.display import (
     count_text,
@@ -51,7 +52,6 @@ from frontend.features.yarn_costing.components.display import (
 )
 from frontend.features.yarn_costing.components.factory_picker import factory_segment
 from frontend.features.yarn_costing.components.flash import set_flash, show_flash
-from frontend.features.yarn_costing.components.group_menu import render_group_menu
 from frontend.features.yarn_costing.components.labels import (
     FINAL_STATUSES,
     NSM_MODE_LABELS,
@@ -89,7 +89,8 @@ EDITABLE_STATUSES = (YarnStatus.CHO_XUONG_XEM, YarnStatus.CHUA_TINH_DUOC)
 
 
 class NsmPricingPage(BasePage):
-    title = "[Xưởng] Nhập NSM & tính giá"
+    title = "Nhập NSM & tính giá"
+    menu_group = "Xưởng sợi"
     icon = "🧮"
     slug = "nhap-nsm-tinh-gia"
     description = (
@@ -99,7 +100,7 @@ class NsmPricingPage(BasePage):
     def render(self) -> None:
         feature = gateway.open(YarnCostingController)
         reference = feature.get_reference_data(GetReferenceDataRequest(factory_code=None))
-        render_group_menu(self, reference)
+        show_data_warnings(reference)
         codes = factory_codes(reference.factories)
         pending = self.state.pop(OPEN_YARN_KEY)
         if pending and pending.get("factory_code") in codes:

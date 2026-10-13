@@ -51,6 +51,7 @@ from frontend.features.yarn_costing.components.columns import (
     datetime_col,
     money,
 )
+from frontend.features.yarn_costing.components.data_warnings import show_data_warnings
 from frontend.features.yarn_costing.components.dialogs import confirm_dialog
 from frontend.features.yarn_costing.components.display import (
     fmt_date,
@@ -62,7 +63,6 @@ from frontend.features.yarn_costing.components.display import (
 )
 from frontend.features.yarn_costing.components.factory_picker import factory_segment
 from frontend.features.yarn_costing.components.flash import set_flash, show_flash
-from frontend.features.yarn_costing.components.group_menu import render_group_menu
 from frontend.features.yarn_costing.components.labels import (
     RATE_SOURCE_LABELS,
     RECOVERY_LABELS,
@@ -152,7 +152,8 @@ RATE_CONFIG = {
 
 
 class MasterDataPage(BasePage):
-    title = "[SO] Dữ liệu nền & định mức"
+    title = "Dữ liệu nền & định mức"
+    menu_group = "Phòng SO"
     icon = "⚙️"
     slug = "du-lieu-nen"
     description = (
@@ -163,7 +164,7 @@ class MasterDataPage(BasePage):
     def render(self) -> None:
         feature = gateway.open(YarnCostingController)
         reference = feature.get_reference_data(GetReferenceDataRequest(factory_code=None))
-        render_group_menu(self, reference)
+        show_data_warnings(reference)
         actor = render_actor_block(feature, self.state, reference)
         show_flash(self.state)
 
