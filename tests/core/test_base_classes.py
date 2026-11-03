@@ -200,3 +200,20 @@ def test_excel_like_tables_render() -> None:
     assert "picked=0" in app.markdown[0].value
     assert "{'code': 'B', 'qty': None}" in app.markdown[0].value
     assert "empty=0" in app.markdown[0].value
+
+
+def test_big_tables_render_with_and_without_selection() -> None:
+    from streamlit.testing.v1 import AppTest
+
+    def script() -> None:
+        from frontend.core.components import data_table
+        from frontend.core.components.data_table import LAZY_ROWS
+
+        rows = [{"code": f"C{i}", "qty": i} for i in range(LAZY_ROWS + 500)]
+        data_table(rows, key="view")
+        data_table(rows, selection="single", key="pick")
+        data_table(rows, selection="multi", key="picks")
+
+    app = AppTest.from_function(script, default_timeout=60)
+    app.run()
+    assert not app.exception and not app.error

@@ -61,7 +61,7 @@ def data_table(
         empty_state(empty_message)
         return []
     options: dict[str, Any] = {
-        "lazy": len(frame) > LAZY_ROWS,
+        "lazy": selection is None and len(frame) > LAZY_ROWS,  # Streamlit 1.64: lazy cannot be combined with on_select
         "hide_index": True,
         "column_config": column_config,
         "column_order": column_order,
