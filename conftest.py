@@ -17,6 +17,7 @@ def pytest_configure(config: pytest.Config) -> None:
 @pytest.fixture(autouse=True)
 def _isolated_data_dir(tmp_path, monkeypatch):
     monkeypatch.setattr(get_settings(), "data_dir", tmp_path / "data")
+    monkeypatch.setattr(get_settings(), "master_password", "")  # the developer's .env never shapes a test
     # one throw-away SQLite database per test (SqlRepository), never the shared PostgreSQL
     monkeypatch.setattr(get_settings(), "database_url", f"sqlite+aiosqlite:///{(tmp_path / 'test.db').as_posix()}")
     yield

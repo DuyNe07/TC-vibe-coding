@@ -9,6 +9,7 @@ Example:
 """
 
 import argparse
+import re
 import sys
 from pathlib import Path
 from string import Template
@@ -16,6 +17,7 @@ from string import Template
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
+from backend.core.apps import PREFIX_PATTERN  # noqa: E402
 from backend.core.naming import DEVELOPER_PATTERN, feature_url_slug, is_valid_feature_key, to_pascal_case  # noqa: E402
 
 BACKEND_FILES: dict[str, str] = {
@@ -97,6 +99,13 @@ class ${pascal}Controller(BaseController):
         return PingService().handle(request)
 ''',
     "tests/__init__.py": "",
+    "migrations/__init__.py": '''"""Database migrations of feature "${title}" (Alembic chain, own version table).
+
+Create a table or change stored data: python scripts/migrate.py new ${key} "what changes"
+then fill upgrade() / downgrade() with backend.core.migration_ops (create_document_table, update_documents...).
+python scripts/migrate.py applies them; run.ps1 and the Docker image run it before the app starts.
+"""
+''',
     "tests/test_ping_service.py": """from backend.features.${key}.dto.ping_dto import PingRequest
 from backend.features.${key}.services.ping_service import PingService
 
@@ -168,6 +177,17 @@ def write_tree(base: Path, files: dict[str, str], values: dict[str, str]) -> lis
     return created
 
 
+def register_app(prefix: str, key: str) -> Path:
+    """Add ``("<prefix>", "<key>")`` as the last line of APPS in backend/app_registry.py (one line per app)."""
+    path = ROOT / "backend" / "app_registry.py"
+    text = path.read_text(encoding="utf-8")
+    if f'"{key}")' not in text:
+        end = text.rindex(")")  # closing parenthesis of APPS (last one in the file)
+        text = text[:end] + f'    ("{prefix}", "{key}"),\n' + text[end:]
+        path.write_text(text, encoding="utf-8", newline="\n")
+    return path
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Scaffold a new feature (backend + frontend + docs).")
     parser.add_argument("key", help="snake_case feature key, e.g. leave_request")
@@ -177,6 +197,9 @@ def main() -> int:
     parser.add_argument("--icon", default="🧩")
     parser.add_argument("--group", default="Chức năng")
     parser.add_argument("--owner", default="")
+    parser.add_argument(
+        "--prefix", default="", help="URL prefix of the builder's apps in backend/app_registry.py (default: developer)"
+    )
     args = parser.parse_args()
 
     key = args.key.strip()
@@ -185,6 +208,10 @@ def main() -> int:
         return 1
     if not DEVELOPER_PATTERN.match(args.developer.strip()):
         print(f"ERROR: --developer {args.developer!r} must be a GitHub username (letters, digits and dashes).")
+        return 1
+    prefix = (args.prefix or re.sub(r"[^a-z0-9]", "", args.developer.lower())).strip()
+    if not PREFIX_PATTERN.match(prefix):
+        print(f"ERROR: --prefix {prefix!r} must be lower-case letters and digits (e.g. anhthy).")
         return 1
     backend_dir = ROOT / "backend" / "features" / key
     frontend_dir = ROOT / "frontend" / "features" / key
@@ -210,6 +237,7 @@ def main() -> int:
     }
     created = write_tree(backend_dir, BACKEND_FILES, values)
     created += write_tree(frontend_dir, FRONTEND_FILES, values)
+    created.append(register_app(prefix, key))
 
     doc_path = ROOT / "docs" / "business" / f"{key}.md"
     if not doc_path.exists():
@@ -220,7 +248,7 @@ def main() -> int:
         doc_path.write_text(doc.replace("<Owner>", args.owner.strip() or "TBD"), encoding="utf-8", newline="\n")
         created.append(doc_path)
 
-    print(f"Created feature '{key}' ({len(created)} files):")
+    print(f"Created feature '{key}' ({len(created)} files), URL /{prefix}-{feature_url_slug(key)}:")
     for path in created:
         print(f"  + {path.relative_to(ROOT).as_posix()}")
     print("\nNext steps (docs/rules/05-feature-workflow.md):")

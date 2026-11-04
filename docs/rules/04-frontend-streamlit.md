@@ -5,9 +5,19 @@
 - Login + permissions are framework features (`frontend/core/auth.py`, `frontend/core/admin_page.py`): a user only
   sees the features/pages granted to them; pages never check permissions themselves. The admin page is reached only
   by URL `/admin` (administrators); it is not in the menu.
-- `Router` builds URLs from the manifests found in `frontend/features/*/manifest.py`:
-  `/` -> `/home`; `/home` = Home (one card per app); `/<feature-key-with-dashes>` = feature landing page;
-  `/<feature>-<slug>` = other pages.
+- `Router` builds URLs from the manifests found in `frontend/features/*/manifest.py` and the app registry:
+  `/` -> `/home`; `/home` = Home (one card per app); `/<prefix>-<feature-key-with-dashes>` = app landing page;
+  `/<prefix>-<feature>-<slug>` = other pages.
+
+### App registry (`backend/app_registry.py`) - REQUIRED for every app
+Every app is ONE line `("<prefix>", "<feature_key>")` in `APPS`, where `<prefix>` is the builder's short name
+(lower-case letters and digits, e.g. `anhthy`): all of that person's apps live under `/anhthy-...`
+(Streamlit 1.64 refuses nested paths such as `/anhthy/app`, so the prefix is joined with `-`).
+- `scripts/new_feature.py ... --prefix anhthy` adds the line (default prefix: the developer name, lower-case).
+- The router (URLs, Home card, menu) and the gateway (backend calls) both read it: an app that is not registered is
+  reported on Home as not registered, has no URL, and its controller refuses every call.
+- `tests/architecture/test_structure.py` fails while an app is missing, listed twice, or listed but deleted.
+- Never edit or remove another person's line; never change a prefix once users have bookmarks.
 - One feature = one **app**. Home lists the apps as cards (its sidebar shows only who is logged in); opening an app
   shows that app's own menu in the sidebar: "Tất cả ứng dụng" (back to Home), the app name, then its pages under
   their `menu_group` labels. Both are generated from manifests: a new app appears automatically.
@@ -57,8 +67,9 @@ else:
 | `page_header(...)` | page title with breadcrumb and the brand stripe (BasePage/Home already call it) |
 | `panel(title, icon=, description=)` | bordered block: `with panel("Bộ lọc"):` - use for every logical block |
 | `stat_row([(label, value), ...])` | KPI tiles |
-| `data_table(rows, column_config=, selection="single"/"multi", key=)` | read-only Excel-like table (sort, search, fullscreen) with empty state; with `selection` returns the ticked rows (list of dicts) |
-| `editable_table(rows, key=, columns=, column_config=, disabled=, allow_add_delete=)` | grid edited like an Excel sheet; returns the edited rows (empty cells = `None`, ready for DTOs) |
+| `data_table(rows, column_config=, selection="single"/"multi", key=)` | read-only Excel-like table (sort, search, fullscreen) with empty state; with `selection` returns the ticked rows (list of dicts). Shows at most `APP_TABLE_MAX_ROWS` rows (200 000; with `selection`: `APP_SELECT_MAX_ROWS`, 10 000) and says so |
+| `editable_table(rows, key=, columns=, column_config=, disabled=, allow_add_delete=)` | grid edited like an Excel sheet; returns the edited rows (empty cells = `None`, ready for DTOs). Over `APP_EDIT_MAX_ROWS` (5 000) rows it is shown read-only with a warning and returns the rows unchanged |
+| `bar_chart(rows, x=, y=, key=, color=, horizontal=, stacked=)`, `line_chart(rows, x=, y=, key=, color=, area=)`, `pie_chart(rows, names=, values=, key=)` | the ONLY way to draw charts (see Charts below) |
 | `frame_to_records(df)` | DataFrame -> list of dicts without NaN/numpy values (always use it before building DTOs) |
 | `file_upload(label, types=, key=)` | returns `UploadedFileDTO` (bytes) or None |
 | `download_button(file_dto, label=, key=)` | download a `FileDownloadDTO` already built |
@@ -83,7 +94,7 @@ of the business document (agreed with the user at the start of Prompt 2) decides
 | Form with one submit | `with st.form(self.key("form")): ...; st.form_submit_button("Lưu")` |
 | Confirmation / details popup | `@st.dialog("Xác nhận xoá")` function called inside `if st.button(...)` |
 | Quick choices / filters | `st.segmented_control`, `st.pills`, `st.selectbox`, `st.multiselect`, `st.date_input`, `st.toggle` |
-| Charts | `st.bar_chart` / `st.line_chart` (simple), `st.plotly_chart(fig)` (plotly is installed) |
+| Charts | `bar_chart` / `line_chart` / `pie_chart` (`frontend.core.components`) |
 | Files | `file_upload(...)` / `download_button(...)` (shared components) |
 
 ### Look & feel: native Streamlit 1.64 only (less code, faster, matches the theme)
@@ -113,6 +124,19 @@ Pick the newest native element below before writing anything by hand.
   `.venv/Scripts/python.exe -X utf8 -c "import inspect, streamlit as st; print(inspect.signature(st.data_editor))"`.
 - Never add UI libraries (AgGrid, custom components, JS): `requirements.txt` is frozen for features.
 - Tables send data to the backend only inside `if st.button(...)`; validation stays in the backend (BR-xx).
+
+### Charts (`frontend/core/components/charts.py`)
+One call per chart: rows (list of dicts or DataFrame) in, a themed Plotly chart out. Never `st.plotly_chart`,
+`st.bar_chart`, `px.*` directly in a feature: the shared component keeps big data fast and every chart consistent.
+- Data: let a `@cached_query` use case return the rows already grouped (e.g. one row per month); the component only
+  prepares for display: bars / pie are summed per category, the biggest `APP_CHART_MAX_CATEGORIES` (30) are kept and
+  the rest become "Khác"; lines keep at most `APP_CHART_MAX_POINTS` (5 000) points per series (WebGL past 1 000);
+  at most 6 series (fixed colour order `SERIES_COLORS`, checked for colour-blind separation). A caption says what
+  was trimmed.
+- Look: one y-axis only (two measures of different scale = two charts), legend only with 2+ series, Vietnamese number
+  format (`1.234.567,5`), hover tooltips, empty state when there is no data. Show the same numbers in a
+  `data_table` when users need exact values.
+- Chart design changes (colours, margins, new chart kinds) go into `charts.py` only - one place for every app.
 
 ## Rules
 1. A page calls ONLY the controller of its own feature, through `gateway.open(...)`. No business logic, no calculations that belong

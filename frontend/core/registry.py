@@ -1,6 +1,7 @@
 """Auto-discovers frontend features: every ``frontend/features/<key>/manifest.py`` exposing ``FEATURE``.
 
-A feature that fails to import is reported (Home page shows the error) without breaking the others.
+A feature that fails to import, or is not registered in ``backend/app_registry.py``, is reported (Home page shows
+the error) without breaking the others.
 """
 
 import importlib
@@ -8,6 +9,7 @@ import pkgutil
 import traceback
 from dataclasses import dataclass, field
 
+from backend.core.apps import ensure_registered
 from backend.core.logger import get_logger
 from frontend.core.feature_manifest import FeatureManifest
 
@@ -40,6 +42,7 @@ class FeatureRegistry:
                     raise TypeError("FEATURE must be a FeatureManifest instance")
                 if manifest.key != info.name:
                     raise ValueError(f"FEATURE.key {manifest.key!r} must equal folder name {info.name!r}")
+                ensure_registered(manifest.key)
                 if manifest.enabled:
                     registry.features.append(manifest)
             except Exception as exc:

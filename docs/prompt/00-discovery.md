@@ -21,6 +21,9 @@ write NO code and NO business document here: the business document is Prompt 1, 
 7. If your tool is in a read-only / plan mode and cannot write files, say it in one Vietnamese sentence (the user
    should allow editing), then continue.
 8. If `docs/business/_sources/*-discovery.md` already exists for this topic, continue from it instead of starting over.
+9. If the wish is to ADD something to a feature that is already `Implemented`, this is not a new feature: tell the user
+   in one Vietnamese sentence to paste `docs/prompt/05-extend-feature.md` instead (it reads the existing feature first),
+   and stop.
 
 ## 2. Step 1 - Scan the repository (always, before your first answer)
 Read: `CLAUDE.md`, `docs/README.md`, `docs/capabilities.md`, `docs/rules/00-golden-rules.md`,

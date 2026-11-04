@@ -20,11 +20,23 @@ class Settings(BaseSettings):
     data_dir: Path = PROJECT_ROOT / "data"
     log_dir: Path = PROJECT_ROOT / "logs"
 
+    # Built-in master account "u-master" (above every administrator): created at start-up when this is set, with this
+    # first password (change it on /admin). Empty: no master, administrators open everything as before.
+    master_password: str = ""
     session_hours: int = 12  # a login survives page reloads (F5) for this long
     db_cache_seconds: int = 30  # RAM cache of tables / read-only use cases; changes by OTHER processes show after this
     # true until the schema is frozen ("chốt"): repositories create missing tables on first use.
     # false afterwards: only migrations (python scripts/migrate.py, backend/core/migrate.py) create or change tables.
     db_auto_create: bool = True
+
+    # Volume guards (SUPREME-RULES.md): big data must never freeze the app or the browser.
+    db_warn_rows: int = 200_000  # a table read with more rows logs a WARNING (it lives in RAM, filtered in Python)
+    excel_max_rows: int = 200_000  # ExcelReader refuses bigger sheets with a clear message
+    table_max_rows: int = 200_000  # data_table shows at most this many rows (the rest: filter or export)
+    select_max_rows: int = 10_000  # data_table(selection=...) cannot be lazy: every row goes to the browser
+    edit_max_rows: int = 5_000  # editable_table: bigger tables are shown read-only, rows returned unchanged
+    chart_max_points: int = 5_000  # line / area / scatter charts are thinned to this many points per series
+    chart_max_categories: int = 30  # bar / pie charts keep the biggest categories and group the rest as "Khác"
 
     # Database (backend/core/db.py). APP_DATABASE_URL wins; else PostgreSQL from POSTGRES_*; else data/app.db (SQLite)
     database_url: str = ""

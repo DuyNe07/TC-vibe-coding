@@ -11,8 +11,9 @@ Features never use this module directly: they subclass ``SqlRepository`` (``back
 import asyncio
 import threading
 import time
-from collections.abc import Coroutine
-from functools import cache
+from collections.abc import Callable, Coroutine, Hashable
+from functools import cache, lru_cache
+from pathlib import Path
 from typing import Any, TypeVar
 
 from sqlalchemy import JSON, URL, Column, MetaData, String, Table, inspect
@@ -29,9 +30,10 @@ _loop: asyncio.AbstractEventLoop | None = None
 _engines: dict[str, AsyncEngine] = {}
 _created_tables: set[tuple[str, str]] = set()
 _guard = threading.Lock()
-# RAM cache of whole tables: (database url, table) -> (loaded at, {id: entity}). This process's writes clear it at
-# once; writes by another process (another app instance on the same database) show after db_cache_seconds.
-_tables: dict[tuple[str, str], tuple[float, dict[str, Any]]] = {}
+# RAM cache of whole tables: (database url, table) -> (loaded at, {id: entity}, {index key: index}). This process's
+# writes clear it at once; writes by another process (another app instance on the same database) show after
+# db_cache_seconds. Indexes (SqlRepository.find_by) live inside the entry, so they are dropped with it.
+_tables: dict[tuple[str, str], tuple[float, dict[str, Any], dict[Hashable, Any]]] = {}
 _version = 0  # +1 on every write: read-only use cases cached by the gateway are keyed by it
 
 
@@ -52,21 +54,26 @@ def run(coro: Coroutine[Any, Any, T]) -> T:
 
 
 def database_url() -> str:
-    """APP_DATABASE_URL, else PostgreSQL from POSTGRES_* (.env), else SQLite file data/app.db."""
-    settings = get_settings()
-    if settings.database_url:
-        return settings.database_url
-    if settings.postgres_ip:
+    """APP_DATABASE_URL, else PostgreSQL from POSTGRES_* (.env), else SQLite file data/app.db.
+
+    Called on every cached read: the URL is built once per distinct settings (lru_cache keyed on their values).
+    """
+    s = get_settings()
+    return _url(s.database_url, s.postgres_ip, s.postgres_port, s.postgres_db, s.postgres_user, s.postgres_password,
+                str(s.data_dir))  # fmt: skip
+
+
+@lru_cache(maxsize=8)
+def _url(explicit: str, host: str, port: int, name: str, user: str, password: str, data_dir: str) -> str:
+    if explicit:
+        return explicit
+    if host:
         return URL.create(
-            "postgresql+asyncpg",
-            username=settings.postgres_user,
-            password=settings.postgres_password,
-            host=settings.postgres_ip,
-            port=settings.postgres_port,
-            database=settings.postgres_db,
+            "postgresql+asyncpg", username=user, password=password, host=host, port=port, database=name
         ).render_as_string(hide_password=False)
-    settings.data_dir.mkdir(parents=True, exist_ok=True)
-    return f"sqlite+aiosqlite:///{(settings.data_dir / 'app.db').as_posix()}"
+    folder = Path(data_dir)
+    folder.mkdir(parents=True, exist_ok=True)
+    return f"sqlite+aiosqlite:///{(folder / 'app.db').as_posix()}"
 
 
 def engine() -> AsyncEngine:
@@ -82,14 +89,31 @@ def data_version() -> int:
     return _version
 
 
-def cached_table(name: str) -> dict[str, Any] | None:
+def _entry(name: str) -> tuple[float, dict[str, Any], dict[Hashable, Any]] | None:
     hit = _tables.get((database_url(), name))
-    return hit[1] if hit and time.monotonic() - hit[0] < get_settings().db_cache_seconds else None
+    return hit if hit and time.monotonic() - hit[0] < get_settings().db_cache_seconds else None
+
+
+def cached_table(name: str) -> dict[str, Any] | None:
+    """The rows of a table kept in RAM (shared: never change the dict), or None when not loaded / expired."""
+    hit = _entry(name)
+    return hit[1] if hit else None
 
 
 def cache_table(name: str, items: dict[str, Any], version_before: int) -> None:
     if version_before == _version:  # no write happened while loading: the rows are current
-        _tables[(database_url(), name)] = (time.monotonic(), items)
+        _tables[(database_url(), name)] = (time.monotonic(), items, {})
+
+
+def table_index(name: str, key: Hashable, build: Callable[[], T]) -> T:
+    """An index over a cached table (e.g. rows grouped by field values), built once per loaded table."""
+    hit = _entry(name)
+    if hit is None:
+        return build()
+    indexes = hit[2]
+    if key not in indexes:
+        indexes[key] = build()
+    return indexes[key]  # type: ignore[no-any-return]
 
 
 def table_changed(name: str) -> None:
@@ -105,13 +129,17 @@ def dispose_all() -> None:
         _engines.clear()
         _created_tables.clear()
         _tables.clear()
+    _url.cache_clear()
     for item in engines:
         run(item.dispose())
 
 
 @cache
 def document_table(name: str) -> Table:
-    """A table holding one JSON document per entity: ``id`` (primary key) + ``data``."""
+    """A table holding one JSON document per entity: ``id`` (primary key) + ``data``.
+
+    The delete flag lives in the document (``is_deleted``, ``deleted_at``, ``deleted_by``: ``BaseEntity``), so no
+    table ever needs a schema change for soft delete."""
     return Table(
         name,
         MetaData(),

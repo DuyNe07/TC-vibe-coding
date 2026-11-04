@@ -33,7 +33,8 @@ headingFontWeights = [700, 700, 600, 600, 600, 600]
 baseRadius = "medium"
 showSidebarBorder = true
 dataframeHeaderBackgroundColor = "#EAF0F8"
-chartCategoricalColors = ["#224086", "#25AAE1", "#119C4A", "#F79521", "#7C8DBE", "#8FD3EF", "#7CC69B", "#FBC27F"]
+# same fixed order as frontend/core/components/charts.py SERIES_COLORS (checked for colour-blind separation)
+chartCategoricalColors = ["#2E5AAC", "#E8850F", "#1E9BD7", "#8A5CC2", "#169C4B", "#C2408C"]
 
 [theme.sidebar]
 backgroundColor = "#F2F5FA"

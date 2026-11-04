@@ -1,43 +1,37 @@
-# Prompt mẫu: từ nghiệp vụ đến chức năng chạy trên UI (2 lượt)
+# Các prompt: từ nghiệp vụ đến chức năng chạy trên server
 
-Mỗi file prompt là **toàn bộ nội dung cần dán**: mở file → `Ctrl + A` → `Ctrl + C` → dán vào ô chat của AI.
-Không cần sửa gì trong prompt.
+Mỗi file prompt là **toàn bộ nội dung cần dán**: mở file → `Ctrl + A` → `Ctrl + C` → dán vào ô chat của AI (Claude Code,
+Cursor...). Không cần sửa gì trong prompt. Nếu công cụ không cho dán dài, gõ một dòng:
+`Đọc file docs/prompt/<tên file> và làm đúng từng bước trong đó.`
 
-| Bước | Bạn làm gì | Kết quả |
-|---|---|---|
-| Lần đầu cài app | Trong PowerShell ở thư mục dự án: `Copy-Item .env.example .env`, mở `.env` điền 5 dòng `POSTGRES_*` (giá trị xin người phụ trách khung sườn), rồi chạy `powershell -ExecutionPolicy Bypass -File .
-un.ps1`. Đăng nhập `u-admin` / `u-admin` và đổi mật khẩu | App chạy, dùng chung cơ sở dữ liệu của công ty (xem [README](../../README.md) mục 1) |
-| 0 | Mở phiên chat mới với AI (Claude Code, Cursor...) trong thư mục dự án | AI tự đọc dự án và cho biết đang có những chức năng nào |
-| 0.5 | Dán toàn bộ [00-discovery.md](00-discovery.md). AI giới thiệu app làm được gì, rồi hỏi - đáp với bạn về công việc hiện tại và mong muốn; bạn đính kèm file mẫu (Excel, Word, PDF) hoặc đặt vào `docs/business/_sources/`. Cuối cùng AI tóm tắt lại, bạn trả lời "đúng rồi" | Ghi chép tìm hiểu `docs/business/_sources/<chủ_đề>-discovery.md`, đã chốt là hiểu đúng |
-| 1 | Dán toàn bộ [01-business-analysis.md](01-business-analysis.md). Trả lời câu hỏi của AI (chỉ hỏi về cách ứng dụng hoạt động, không hỏi về code). Đọc bản tóm tắt cuối và trả lời "đồng ý" để chốt | Tài liệu `docs/business/<tên_chức_năng>.md` (tiếng Việt), trạng thái `Ready for implementation` |
-| 2 | Dán toàn bộ [02-implement-feature.md](02-implement-feature.md). AI đưa ra đề xuất giao diện (có hình phác) và hỏi **một lượt**: bảng như Excel chỉ xem hay sửa trực tiếp, nhập bằng form / bảng / file Excel, bộ lọc, số liệu tổng hợp, biểu đồ... Trả lời theo số hoặc gõ "ok" | AI tự lập kế hoạch (`docs/plans/`), chia việc cho AI phụ (backend và giao diện, chạy song song), chạy toàn bộ kiểm tra, rồi hướng dẫn cách dùng |
-| 3 | Chạy `powershell -ExecutionPolicy Bypass -File .\run.ps1` và thử theo hướng dẫn | Chức năng xuất hiện ở Trang chủ |
-| Khi gặp lỗi | Dán toàn bộ [03-fix-error.md](03-fix-error.md) vào chat, kèm mô tả lỗi (bấm gì, màn hình hiện gì) hoặc ảnh chụp màn hình. AI tự đọc file log | AI tự tìm nguyên nhân, sửa, chạy lại kiểm tra và báo lại bằng tiếng Việt |
-| Cấp quyền cho người dùng | Dán toàn bộ [05-permission-interview.md](05-permission-interview.md). AI liệt kê các chức năng / màn hình, hỏi một lượt: có những nhóm người dùng nào, mỗi nhóm được mở gì, danh sách người dùng. Bạn trả lời "đồng ý" ở bản tóm tắt | Tài khoản, nhóm và quyền được tạo trong app (xem lại ở trang "Người dùng & phân quyền"; quản trị viên mặc định `u-admin`) |
-| Cập nhật nhánh của bạn theo khung sườn mới nhất | Dán toàn bộ [06-sync-branch-with-main.md](06-sync-branch-with-main.md), chọn nhánh và cách đẩy lên | AI lấy code mới nhất, gộp nhánh của bạn lên trên (rebase), sửa chức năng cho hợp khung sườn mới (lưu cơ sở dữ liệu, menu, đăng nhập), chạy kiểm tra rồi đẩy lại |
-| Gửi code cho người kiểm tra | Dán toàn bộ [04-push-to-github.md](04-push-to-github.md), trả lời một lượt câu hỏi (repo, tên nhánh, tên/email, tài khoản GitHub + mã truy cập) | AI tạo nhánh mới, commit, lấy code mới nhất trên GitHub về gộp vào (tự xử lý xung đột), rồi đẩy lên, kèm link để mở Pull Request |
+## Làm chức năng mới (3 bước)
+| Bước | Prompt | Bạn làm gì | Kết quả |
+|---|---|---|---|
+| 0.5 | [00-discovery.md](00-discovery.md) | Kể công việc hiện tại và mong muốn, đính kèm file mẫu (Excel, Word, PDF). Trả lời "đúng rồi" ở bản tóm tắt | Ghi chép `docs/business/_sources/<chủ đề>-discovery.md` |
+| 1 | [01-business-analysis.md](01-business-analysis.md) | Trả lời câu hỏi về cách ứng dụng hoạt động (không hỏi code). Trả lời "đồng ý" để chốt | Tài liệu nghiệp vụ `docs/business/<chức năng>.md`, trạng thái `Ready for implementation` |
+| 2 | [02-implement-feature.md](02-implement-feature.md) | Trả lời **một lượt** về giao diện (hoặc gõ "ok") | AI tự làm backend + giao diện, tự kiểm tra, rồi hướng dẫn cách dùng |
 
-**Nếu không dán được vì prompt quá dài** (một số công cụ giới hạn độ dài): gõ một dòng thay thế:
-- Bước 0.5: `Đọc file docs/prompt/00-discovery.md và làm đúng từng bước trong đó.`
-- Bước 1: `Đọc file docs/prompt/01-business-analysis.md và làm đúng từng bước trong đó.`
-- Bước 2: `Đọc file docs/prompt/02-implement-feature.md và làm đúng từng bước trong đó.`
-- Khi lỗi: `Đọc file docs/prompt/03-fix-error.md và làm đúng từng bước trong đó.`
-- Cấp quyền: `Đọc file docs/prompt/05-permission-interview.md và làm đúng từng bước trong đó.`
-- Cập nhật nhánh: `Đọc file docs/prompt/06-sync-branch-with-main.md và làm đúng từng bước trong đó.`
+## Khi đã có chức năng
+| Khi nào | Prompt | Bạn làm gì | Kết quả |
+|---|---|---|---|
+| Có lỗi (màn hình báo lỗi, kết quả sai, app không chạy, không đăng nhập được) | [03-fix-error.md](03-fix-error.md) | Dán prompt kèm mô tả: bấm gì, màn hình hiện gì, hoặc ảnh chụp | AI tự tìm nguyên nhân thật (thư viện trên máy, file `.env`, cơ sở dữ liệu, hay lỗi trong chức năng), sửa phần được phép sửa, kiểm tra lại, và nói rõ ai cần làm gì nếu không phải lỗi của chức năng |
+| Gửi công việc lên server | [04-sync-to-server.md](04-sync-to-server.md) | Trả lời **một lượt**: tên nhánh, mô tả ngắn, cách đăng nhập GitHub | AI lưu công việc, lấy khung sườn mới nhất (`main`), đặt công việc của bạn lên trên, sửa chức năng cho hợp khung sườn mới, kiểm tra, đẩy lên và đưa link Pull Request |
+| Muốn thêm vào một chức năng đã xong | [05-extend-feature.md](05-extend-feature.md) | AI đọc chức năng cũ, kể lại nó đang làm gì, rồi hỏi bạn muốn thêm gì. Trả lời câu hỏi, "đồng ý" ở bản tóm tắt, một lượt về giao diện | Tài liệu được cập nhật, phần mới được làm ngay trong chức năng cũ; phần cũ và dữ liệu cũ giữ nguyên |
+| Chỉ muốn đổi giao diện | [02-implement-feature.md](02-implement-feature.md) | Gõ `Đổi giao diện chức năng <tên>` rồi dán prompt 2 trong cùng tin nhắn | Chỉ giao diện thay đổi, nghiệp vụ giữ nguyên |
 
-Lưu ý:
-- **AI tự sửa khi gặp lỗi.** Trong lúc làm, nếu kiểm tra không đạt hoặc app không chạy, AI phải tự tìm nguyên nhân và
-  sửa (trong phạm vi chức năng của nó) đến khi cả hai lệnh kiểm tra đều đạt; AI không được sửa test hay giấu lỗi để báo
-  "xong". Quy tắc: [docs/rules/10-self-repair.md](../rules/10-self-repair.md).
-- **AI bị chặn viết code cho đến bước 2.** Trước đó, dù bạn có yêu cầu, AI cũng chỉ trao đổi và viết tài liệu (có một
-  đoạn kiểm tra tự động chặn lại). Nhờ vậy AI không "làm tắt" khi chưa hiểu đúng nghiệp vụ.
-- Muốn biết app làm được gì (Excel, Word, PDF, lấy dữ liệu từ web, tính toán...): xem
-  [docs/capabilities.md](../capabilities.md), hoặc hỏi AI ở bước 0.5.
-- Có thể bỏ qua bước 0.5 nếu nghiệp vụ đã rõ và bạn đã có file mô tả đầy đủ.
-- Câu hỏi về **nghiệp vụ** (dữ liệu, quy tắc, cách tính, file) nằm ở **bước 1**: ở mỗi điểm dừng, AI chờ bạn trả lời.
-- **Bước 2** chỉ hỏi một lượt về **giao diện**, sau đó chạy tự động đến khi có trên giao diện; chỉ sửa trong phạm vi
-  chức năng đó, không ảnh hưởng chức năng khác, giữ nguyên dữ liệu đã có. Nếu bị gián đoạn (hết lượt, mất mạng...),
-  dán lại prompt 2: AI làm tiếp từ bước dở, không hỏi lại.
-- Trong Claude Code, AI có thể xin quyền chạy lệnh hoặc sửa file: hãy chọn cho phép (Yes / Allow) để AI làm tiếp.
-- Muốn sửa nghiệp vụ sau này: làm lại bước 1 (AI cập nhật tài liệu cũ), rồi bước 2 (AI cập nhật code tại chỗ).
-- Chỉ muốn đổi giao diện: gõ `Đổi giao diện chức năng <tên chức năng>` rồi dán prompt 2 ngay trong cùng tin nhắn.
+Cấp quyền cho người dùng không cần prompt: quản trị viên làm trên trang `/admin` của ứng dụng
+(chọn ứng dụng, tick màn hình cho từng người / nhóm).
+
+## Lần đầu cài trên máy
+Trong PowerShell ở thư mục dự án: `Copy-Item .env.example .env`, điền các dòng `POSTGRES_*` (xin người phụ trách khung
+sườn - mọi máy dùng chung một cơ sở dữ liệu), rồi `powershell -ExecutionPolicy Bypass -File .\run.ps1`.
+
+## Lưu ý
+- **AI bị chặn viết code cho đến bước 2** (hoặc bước sửa lỗi / gửi lên server / phát triển thêm). Trước đó AI chỉ trao
+  đổi và viết tài liệu, nên không "làm tắt" khi chưa hiểu đúng nghiệp vụ.
+- **AI tự sửa khi gặp lỗi** trong phạm vi chức năng của nó, đến khi `scripts/check.py` và `scripts/doctor.py` đều đạt;
+  không được sửa test hay giấu lỗi ([docs/rules/10-self-repair.md](../rules/10-self-repair.md)).
+- Ở mỗi điểm dừng, AI chờ bạn trả lời. Sau lượt hỏi về giao diện, AI tự làm đến khi xong.
+- Bị gián đoạn (hết lượt, mất mạng): dán lại đúng prompt đó, AI làm tiếp từ chỗ dở.
+- Muốn biết app làm được gì: [docs/capabilities.md](../capabilities.md), hoặc hỏi AI ở bước 0.5.
+- Trong Claude Code, khi AI xin quyền chạy lệnh / sửa file: chọn cho phép để AI làm tiếp.

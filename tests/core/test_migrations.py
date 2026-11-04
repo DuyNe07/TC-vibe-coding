@@ -24,7 +24,7 @@ def test_upgrade_applies_every_chain_once() -> None:
     assert migrate.upgrade() == [] and migrate.pending() == {}, "a second run changes nothing"
 
 
-def test_update_documents_changes_and_deletes_json_rows() -> None:
+def test_update_documents_changes_and_flags_json_rows_deleted() -> None:
     name = "core__migration_probe"
 
     def body(sync: sa.Connection) -> None:
@@ -33,7 +33,10 @@ def test_update_documents_changes_and_deletes_json_rows() -> None:
             table = db.document_table(name)
             sync.execute(sa.insert(table), [{"id": "1", "data": {"a": 1}}, {"id": "2", "data": {"a": 2, "old": True}}])
             assert ops.update_documents(name, lambda d: None if d.get("old") else {**d, "b": d["a"] * 10}) == 2
-            assert [tuple(r) for r in sync.execute(sa.select(table.c.id, table.c.data))] == [("1", {"a": 1, "b": 10})]
+            rows = dict(sync.execute(sa.select(table.c.id, table.c.data)).all())
+            assert rows["1"] == {"a": 1, "b": 10}
+            assert rows["2"]["is_deleted"] is True, "None flags the document deleted: the row stays (soft delete)"
+            assert ops.update_documents(name, lambda d: None if d.get("old") else d) == 0, "already flagged"
             ops.drop_table(name)
             assert not ops.has_table(name)
 

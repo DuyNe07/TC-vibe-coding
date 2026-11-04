@@ -40,7 +40,8 @@ and rule A.0 of `00-golden-rules.md`.
 6. **Implement bottom-up**: models -> business (+ tests) -> repositories -> builders -> dto -> services
    (log main steps) -> controller methods -> pages -> manifest (`pages=(...)`).
    - Registering with the gateway = exporting the ONE controller from `backend/features/<key>/__init__.py`
-     (done by the scaffold; no central list to edit, so features never conflict).
+     AND the app's line in `backend/app_registry.py` (both done by the scaffold: `--prefix <your short name>`;
+     one line per app, so features never conflict). Without the line the app is hidden and its backend refuses calls.
    - The feature's navigation = `manifest.py`: its card appears on Home and its pages in the app's sidebar menu.
 7. **Remove the scaffold** `ping` (dto, service, controller method, test, page call) once real use cases exist.
 8. **Test**: unit tests for every BR-xx and every service in `backend/features/<key>/tests/`.

@@ -26,6 +26,7 @@ Mỗi dòng "Làm được" đều đã có sẵn thư viện và lớp dùng ch
 | Làm được | Ở đâu |
 |---|---|
 | Lưu danh sách/bản ghi lâu dài (thêm, sửa, xoá, tìm, lọc) trong cơ sở dữ liệu PostgreSQL của ứng dụng | `SqlRepository` -> bảng `<github người làm>__<chức_năng>__<tên>` (một cơ sở dữ liệu dùng chung cho mọi người) |
+| Xoá không mất dữ liệu: bản ghi bị xoá chỉ được đánh dấu (cờ xoá, ai xoá, lúc nào), có thể khôi phục / làm màn hình "Thùng rác" | `repository.delete` / `restore` / `list_deleted` |
 | Trạng thái và luồng duyệt (ví dụ Nháp -> Đã gửi -> Đã duyệt) | enum trong `models/` + quy tắc chuyển trạng thái trong `business/` |
 | Lịch sử thay đổi (ai sửa, lúc nào) nếu nghiệp vụ cần | thêm trường vào model, lấy người đang đăng nhập từ `self.current_user` |
 | Không làm được: nối tới SQL Server / ERP / Google Sheets của hệ thống khác; nhiều người sửa cùng một dòng cùng lúc | - |
@@ -37,10 +38,12 @@ Mỗi dòng "Làm được" đều đã có sẵn thư viện và lớp dùng ch
 | Sửa trực tiếp trong ô như Excel, thêm/xoá dòng rồi bấm Lưu | `editable_table` |
 | Chọn một dòng để xem chi tiết / sửa | `data_table(selection="single")` |
 | Form nhập liệu (chữ, số, ngày, chọn một / nhiều, bật tắt) | `st.text_input`, `st.number_input`, `st.date_input`, `st.selectbox`... |
-| Ô số liệu tổng hợp (KPI), biểu đồ cột / đường / tròn | `stat_row`, `st.bar_chart`, `st.plotly_chart` |
+| Ô số liệu tổng hợp (KPI), biểu đồ cột / đường / vùng / tròn (tự gộp nhóm nhỏ vào "Khác", tự rút gọn khi quá nhiều điểm) | `stat_row`, `bar_chart`, `line_chart`, `pie_chart` |
 | Tải file lên, tải file về | `file_upload`, `download_button` |
 | Hộp thoại xác nhận, tab, khối gấp gọn | `st.dialog`, `st.tabs`, `st.expander` |
 | Mỗi chức năng là một ứng dụng: một thẻ ở Trang chủ, bấm vào thì menu bên trái hiện các màn hình của ứng dụng đó | `manifest.py` (`pages=(...)`) |
+| Tài khoản master (cấp trên quản trị viên): chỉ master tạo / sửa / xoá quản trị viên và tick ứng dụng cho từng quản trị viên | có sẵn trong khung sườn (`/admin`) |
+| Mỗi người làm có đường dẫn riêng cho các ứng dụng của mình, ví dụ `/anhthy-ten-ung-dung` | `backend/app_registry.py` |
 | Đăng nhập; quản trị viên tạo tài khoản, nhóm người dùng và cấp quyền theo từng ứng dụng: chọn ứng dụng rồi tick màn hình cho từng người / nhóm (quyền = quyền cá nhân + quyền của các nhóm) | có sẵn trong khung sườn: trang "Người dùng & phân quyền", mở bằng địa chỉ `/admin` (không có trên menu) |
 | Chức năng mẫu tự ẩn khi app đã có chức năng thật đầu tiên | có sẵn trong khung sườn |
 | Menu bên trái của ứng dụng chia màn hình theo nhóm (ví dụ Sales, Phòng SO); chỉ hiện những gì người dùng được phép mở | `manifest.py` + `menu_group` của trang |
@@ -79,7 +82,7 @@ Chưa làm được, và cách đi đường khác:
 | Gửi email, gửi Zalo/Teams tự động | Không có. Thay bằng: xuất file rồi người dùng tự gửi |
 | Chạy tự động theo giờ (job định kỳ) | Ứng dụng chỉ chạy khi có người mở. Thay bằng: người dùng bấm nút khi cần |
 | Nối trực tiếp vào ERP / SQL / Google Sheets | Chưa có. Thay bằng: xuất file từ hệ thống kia rồi tải lên đây |
-| Dùng cho hàng triệu dòng dữ liệu | Mỗi bản ghi lưu dạng một tài liệu JSON trong PostgreSQL, lọc trong Python; phù hợp đến khoảng trăm nghìn dòng mỗi bảng |
+| Dùng cho hàng triệu dòng dữ liệu | Mỗi bản ghi lưu dạng một tài liệu JSON trong PostgreSQL, lọc trong Python; phù hợp đến khoảng 200 nghìn dòng mỗi bảng. Có giới hạn an toàn: file Excel tối đa 200 nghìn dòng, bảng hiển thị tối đa 200 nghìn dòng (bảng chọn dòng 10 nghìn, bảng sửa trực tiếp 5 nghìn), biểu đồ tự rút gọn |
 | Đăng nhập bằng tài khoản Windows / Microsoft (SSO) | Chưa có. Tài khoản do quản trị viên tạo trong ứng dụng |
 | Chạy trên điện thoại như app cài đặt | Chỉ là web nội bộ, mở bằng trình duyệt |
 

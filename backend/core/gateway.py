@@ -24,6 +24,7 @@ from dataclasses import dataclass
 from typing import Any, TypeVar, cast
 
 from backend.core import db
+from backend.core.apps import ensure_registered
 from backend.core.base.base_controller import BaseController
 from backend.core.config import get_settings
 from backend.core.current_user import get_current_user
@@ -105,6 +106,8 @@ class Gateway:
         call = GatewayCall(type(controller).feature_key(), controller, action, request)
         started = time.perf_counter()
         try:
+            if call.feature_key:
+                ensure_registered(call.feature_key)  # backend/app_registry.py: an unregistered app never runs
             result = self._chain(0)(call)
         except AppError as exc:
             logger.warning("%s failed: [%s] %s", call.name, exc.code, exc.message)

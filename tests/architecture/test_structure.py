@@ -99,3 +99,22 @@ def test_feature_declares_its_developer(key: str) -> None:
         f'backend/features/{key}/__init__.py must declare DEVELOPER = "<github username>": the shared database '
         "prefixes every table of the feature with it (docs/rules/02-backend-architecture.md, Persistence)"
     )
+
+
+@pytest.mark.parametrize("key", BE_KEYS)
+def test_feature_is_registered_in_the_app_registry(key: str) -> None:
+    from backend.core.apps import REGISTRY_FILE, registered_apps
+
+    assert key in registered_apps(), (
+        f'App {key!r} is not registered: add ("<your prefix>", "{key}") to APPS in {REGISTRY_FILE} '
+        "(docs/rules/04-frontend-streamlit.md, app registry). Unregistered apps are hidden and refuse every call."
+    )
+
+
+def test_the_app_registry_lists_only_existing_apps_with_unique_urls() -> None:
+    from backend.core.apps import REGISTRY_FILE, app_url_path, registered_apps
+
+    unknown = sorted(set(registered_apps()) - set(BE_KEYS))
+    assert not unknown, f"{REGISTRY_FILE} lists apps that do not exist: {unknown}"
+    urls = [app_url_path(key) for key in registered_apps()]
+    assert len(urls) == len(set(urls)), f"Two apps share a URL in {REGISTRY_FILE}: {sorted(urls)}"

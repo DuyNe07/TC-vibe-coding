@@ -108,7 +108,7 @@ py -3.13 -m venv .venv
 .venv/Scripts/python.exe -X utf8 -m pytest backend/features/<key>/tests -q
 
 # Scaffold a NEW feature (never for an existing one)
-.venv/Scripts/python.exe -X utf8 scripts/new_feature.py <key> --title "<VI title>" --developer <github-username> --description "<VI sentence>" --icon "<emoji>" --group "<VI group>" --owner "<owner>"
+.venv/Scripts/python.exe -X utf8 scripts/new_feature.py <key> --title "<VI title>" --developer <github-username> --prefix <builder short name, e.g. anhthy> --description "<VI sentence>" --icon "<emoji>" --group "<VI group>" --owner "<owner>"
 
 # Gateway registration check: lists the use cases the pages can call through the gateway
 .venv/Scripts/python.exe -X utf8 -c "from backend.features.<key> import <Pascal>Controller as C; print(sorted(C.actions()))"
@@ -172,7 +172,8 @@ and use that port in the health check and stop commands.
 9. **Language.** Code, identifiers, comments, docstrings, logs: English. Everything the user sees: Vietnamese, from the
    document.
 10. **No conflict with existing work.** Write ONLY in `backend/features/<key>/`, `frontend/features/<key>/`,
-   `docs/plans/<key>-*.md` and `docs/business/<key>.md` (only: the UI concept block and new UCs of Step 0, sections
+   the app's ONE line `("<prefix>", "<key>")` in `backend/app_registry.py` (added by the scaffold; required, or the app
+   is hidden and refuses calls), `docs/plans/<key>-*.md` and `docs/business/<key>.md` (only: the UI concept block and new UCs of Step 0, sections
    10 and 11, `Status`). Never modify other features, `sample_product_import`, `backend/core/`, `backend/shared/`,
    `frontend/core/`, `frontend/app.py`, `frontend/home/`, `scripts/`, `tests/`, `run.ps1`, `requirements.txt`,
    `.streamlit/`, `conftest.py`, `pyproject.toml`. If something seems missing in the framework, build it inside the
@@ -361,6 +362,7 @@ Read first: `CLAUDE.md`, `docs/rules/00`-`03`, `06`, `07`, `09`, the business do
                show_success(f"Đã lưu {result.saved} dòng.")
    ```
    Components: `panel`, `stat_row`, `data_table` (with `selection=` to pick rows), `editable_table`, `frame_to_records`,
+   `bar_chart` / `line_chart` / `pie_chart` (the ONLY way to draw charts),
    `file_upload`, `download_button`, `empty_state`, `section_title`, `show_success`, `show_error`; formatting:
    `format_number`, `format_currency`, `format_datetime` (`frontend.core.formatting`). Widget keys `key=self.key("...")`;
    session data `self.state`; side effects only inside `if st.button(...)` (or `st.form` + `st.form_submit_button`);
@@ -423,6 +425,6 @@ Read first: `CLAUDE.md`, `docs/rules/00`-`03`, `06`, `07`, `09`, the business do
 3. Kết quả kiểm tra: `ALL CHECKS PASSED` and `APP IS HEALTHY` (paste both lines); numbers of UC / BR / AC implemented
    and tested; the problems you fixed on the way (one line each, from the `## Fix log`).
 4. Giả định khi triển khai (from section 10), in plain words; pre-existing problems outside the scope, if any.
-5. Muốn thay đổi: nghiệp vụ -> Prompt 1 rồi Prompt 2; chỉ giao diện -> write "Đổi giao diện chức năng <tên>" and paste
-   Prompt 2 in the same message (the UI questions come back with the current UI as the proposal). The feature is
-   updated in place and existing data is kept.
+5. Muốn thay đổi: thêm vào chức năng -> `docs/prompt/05-extend-feature.md`; chỉ giao diện -> write "Đổi giao diện chức
+   năng <tên>" and paste Prompt 2 in the same message (the UI questions come back with the current UI as the
+   proposal). The feature is updated in place and existing data is kept. Gửi lên server -> `docs/prompt/04-sync-to-server.md`.

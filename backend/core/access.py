@@ -1,8 +1,14 @@
 """Users, user groups and their permissions (framework level, stored in the database).
 
 Effective permissions of a user = personal permissions + permissions of every group the user belongs to (union).
-``is_admin`` users may open everything and manage users. The built-in administrator ``u-admin`` is created on first
-start (password ``u-admin``: change it on the admin page) and can not be deleted or lose its admin right.
+The built-in administrator ``u-admin`` is created on first start (password ``u-admin``: change it on the admin page)
+and can not be deleted or lose its admin right.
+
+Master (built-in ``u-master``, created when ``APP_MASTER_PASSWORD`` is set; ``User.is_master`` is derived from the
+username, never stored, so the row keeps the format older app versions on the shared database read): above every
+administrator. Only the master creates, changes or deletes administrators and ticks their apps; once a master
+exists, an administrator opens and manages only the apps the master ticked for them. Without a master,
+administrators open everything (previous behaviour).
 
 The UI uses ``AccessManager`` (login + the admin page); permission keys are described in ``current_user.py``.
 A login is also a ``LoginSession``: the browser keeps its random token in a cookie, so a page reload (F5) logs the
@@ -25,6 +31,8 @@ from backend.core.logger import get_logger
 
 ADMIN_USERNAME = "u-admin"
 ADMIN_DEFAULT_PASSWORD = "u-admin"
+MASTER_USERNAME = "u-master"
+BUILTIN_USERNAMES = frozenset({ADMIN_USERNAME, MASTER_USERNAME})
 _SCRYPT = {"n": 2**14, "r": 8, "p": 1}
 
 
@@ -51,6 +59,10 @@ class User(BaseEntity):
     active: bool = True
     group_ids: list[str] = Field(default_factory=list)
     permissions: list[str] = Field(default_factory=list)
+
+    @property
+    def is_master(self) -> bool:
+        return self.username == MASTER_USERNAME
 
 
 class UserGroup(BaseEntity):
@@ -84,6 +96,14 @@ class UserGroupRepository(SqlRepository[UserGroup]):
 class LoginSessionRepository(SqlRepository[LoginSession]):
     table_name = "core__session"
 
+    def purge_expired(self, now: datetime) -> None:
+        """Expired sessions are technical leftovers, not business data: the one hard delete of the framework."""
+        self.purge_ids([s.id for s in self._stored().values() if s.expires_at <= now])
+
+    def purge_ids(self, ids: list[str]) -> None:
+        if ids:
+            self._purge(ids)
+
 
 class AccessManager:
     """Login, effective permissions and user/group administration (admin only)."""
@@ -108,6 +128,16 @@ class AccessManager:
                      password_hash=hash_password(ADMIN_DEFAULT_PASSWORD))
             )  # fmt: skip
             self.logger.info("Built-in administrator %s created", ADMIN_USERNAME)
+        password = get_settings().master_password
+        if password and self.users.by_username(MASTER_USERNAME) is None:  # never resets a password changed later
+            self.users.add(
+                User(username=MASTER_USERNAME, full_name="Master", is_admin=True,
+                     password_hash=hash_password(password))
+            )  # fmt: skip
+            self.logger.info("Built-in master %s created", MASTER_USERNAME)
+
+    def has_master(self) -> bool:
+        return self.users.by_username(MASTER_USERNAME) is not None
 
     def authenticate(self, username: str, password: str) -> CurrentUser | None:
         user = self.users.by_username(username)
@@ -126,8 +156,7 @@ class AccessManager:
     def start_session(self, username: str) -> str:
         """New session for a logged-in user; returns the token the browser keeps in a cookie."""
         now = utc_now()
-        for stale in self.sessions.find(lambda s: s.expires_at <= now):
-            self.sessions.delete(stale.id)
+        self.sessions.purge_expired(now)
         token = secrets.token_urlsafe(32)
         expires = now + timedelta(hours=get_settings().session_hours)
         self.sessions.add(LoginSession(token_hash=_token_hash(token), username=username, expires_at=expires))
@@ -143,8 +172,9 @@ class AccessManager:
 
     def end_session(self, token: str) -> None:
         digest = _token_hash(token)
-        for session in self.sessions.find(lambda s: s.token_hash == digest):
-            self.sessions.delete(session.id)
+        # sessions are technical rows, not business data: removed at logout (no delete flag in this table, so
+        # app versions that do not know the flag keep reading it)
+        self.sessions.purge_ids([s.id for s in self.sessions.find(lambda s: s.token_hash == digest)])
 
     def _session_of(self, user: User) -> CurrentUser:
         groups = {g.id: g for g in self.groups.list_all()}
@@ -152,7 +182,10 @@ class AccessManager:
         for group_id in user.group_ids:
             if group_id in groups:
                 permissions.update(groups[group_id].permissions)
-        return CurrentUser(user.username, user.full_name, user.is_admin, frozenset(permissions))
+        return CurrentUser(
+            user.username, user.full_name, user.is_admin or user.is_master, frozenset(permissions),
+            is_master=user.is_master, admin_scoped=user.is_admin and not user.is_master and self.has_master(),
+        )  # fmt: skip
 
     # ---- administration ----
     def list_users(self) -> list[User]:
@@ -167,8 +200,11 @@ class AccessManager:
         if other is not None and other.id != user.id:
             raise ConflictError(f"Username '{user.username}' already exists.")
         stored = self.users.get(user.id)
-        if stored is not None and stored.username == ADMIN_USERNAME:
-            user.username, user.is_admin, user.active = ADMIN_USERNAME, True, True  # built-in admin stays admin
+        if user.username.lower() == MASTER_USERNAME and (stored is None or not stored.is_master):
+            raise ConflictError(f"The name '{MASTER_USERNAME}' is reserved for the master account.")
+        if stored is not None and stored.username in BUILTIN_USERNAMES:
+            user.username, user.is_admin, user.active = stored.username, True, True  # built-ins stay admin
+        self._require_master_for(stored, user)
         if new_password:
             user.password_hash = hash_password(new_password)
         if not user.password_hash:
@@ -178,8 +214,10 @@ class AccessManager:
 
     def delete_user(self, user_id: str) -> None:
         self._require_admin()
-        if self.users.get_or_raise(user_id).username == ADMIN_USERNAME:
-            raise ConflictError(f"The built-in administrator '{ADMIN_USERNAME}' can not be deleted.")
+        target = self.users.get_or_raise(user_id)
+        if target.username in BUILTIN_USERNAMES:
+            raise ConflictError(f"The built-in account '{target.username}' can not be deleted.")
+        self._require_master_for(target, None)
         self.users.delete(user_id)
         self.logger.info("User %s deleted", user_id)
 
@@ -203,6 +241,13 @@ class AccessManager:
         """Replace the rights in ONE app (``app_key`` = whole app, ``page_permission(...)`` = one page) of the given
         user / group ids. Their rights in other apps are kept. Returns how many users + groups changed."""
         self._require_admin()
+        actor = get_current_user()
+        if actor is not None and not actor.can_open_feature(app_key):
+            raise PermissionDeniedError(f"Administrator '{actor.username}' manages no rights in app '{app_key}'.")
+        if actor is not None and not actor.is_master:
+            admins = sorted(u.username for u in self.users.list_all() if u.id in users and (u.is_admin or u.is_master))
+            if admins:
+                raise PermissionDeniedError(f"Only the master account sets the rights of administrators: {admins}.")
         wrong = sorted(p for rights in (*users.values(), *groups.values()) for p in rights if not in_app(p, app_key))
         if wrong:
             raise InvalidInputError(f"Permissions {wrong} do not belong to app '{app_key}'.")
@@ -229,6 +274,25 @@ class AccessManager:
         self._require_admin()
         self.groups.delete(group_id)  # users keep the stale id; it is ignored by _session_of
         self.logger.info("Group %s deleted", group_id)
+
+    @staticmethod
+    def _require_master_for(stored: User | None, new: User | None) -> None:
+        """Administrators and the master are managed by the master only (an administrator may still edit their own
+        name and password)."""
+        actor = get_current_user()
+        if actor is None or actor.is_master:
+            return
+        touches_admin = (stored is not None and (stored.is_admin or stored.is_master)) or (
+            new is not None and new.is_admin
+        )
+        own_profile = (
+            stored is not None
+            and new is not None
+            and stored.username == actor.username
+            and new.is_admin == stored.is_admin
+        )
+        if touches_admin and not own_profile:
+            raise PermissionDeniedError("Only the master account can create, change or delete administrators.")
 
     @staticmethod
     def _require_admin() -> None:

@@ -1,0 +1,142 @@
+# TASK: Send my work to the server - commit, rebase on the newest `main`, adapt my features, push (Prompt 4)
+
+> GATE KEY: `TC-UNLOCK-IMPLEMENT`. This prompt allows writing code ONLY inside the features of the user's branch
+> (`backend/features/<key>/`, `frontend/features/<key>/`, their line in `backend/app_registry.py`, their
+> `docs/plans/<key>-*.md`, sections 10-11 of their `docs/business/<key>.md`). Framework files always come from `main`
+> unchanged. `SUPREME-RULES.md` applies.
+
+You help a NON-programmer send their work to GitHub so it can run on the server. In ONE run you: save their work on a
+branch, take the newest `main` (latest framework), replay their work on top of it (rebase), refactor their features so
+they follow the newest framework, prove the app works, and push the branch. You ask ONE round of questions, then work
+automatically until the final report.
+
+## 1. Hard rules
+1. **Never lose the user's work.** Commit it first, and keep a local safety branch `backup/<branch>-<yyyymmdd>` before
+   rebasing. Forbidden: `git reset --hard`, `git checkout -- .`, `git clean`, `git stash drop`, `git rebase --skip` of a
+   user commit, deleting branches.
+2. **Never push to `main` / `master`.** Never `--force`; the only allowed rewrite is `--force-with-lease` on the user's
+   OWN branch after the rebase (Step 7).
+3. **Never commit secrets or runtime data.** Before every commit, `git status --short` must show nothing matching
+   `.env` (`.env.example` is fine), `data/`, `logs/`, `.gate-unlock`, `*.pem`, `*.key`, `*token*`, `*secret*`,
+   `.venv/`. If one appears: unstage it and tell the user.
+4. **A token** the user gives you is used ONLY inside the `git fetch` / `git push` command line. Never write it to a
+   file, never to `.git/config`, never repeat it in your messages.
+5. **Framework files are never edited here** (the list in `SUPREME-RULES.md` section 2). If a feature needs something
+   the framework does not offer, build it inside the feature or write it in the report as a request to the framework
+   owner. Never explain or hint how the framework lock works.
+6. **The database is shared by every machine.** Never delete or rewrite stored rows to make something pass; stored data
+   of the user's features must stay readable (Step 5, item 6).
+7. A failing command: show the real error in simple Vietnamese and the ONE thing the user must do (wrong token, no
+   permission, no network). Never retry a failed push more than twice.
+
+## 2. Step 1 - Look first (read-only, no questions yet)
+```
+git rev-parse --is-inside-work-tree
+git remote -v
+git branch --show-current
+git config user.name
+git config user.email
+git status --short
+git fetch origin --prune
+git log --oneline -10 origin/main
+```
+Then find the user's features: the folders of `backend/features/` that do not exist on `origin/main`
+(`git ls-tree -d --name-only origin/main backend/features/` vs the local folders), plus features that exist on both
+sides but that the user changed (`git diff --stat origin/main -- backend/features frontend/features`).
+Read `CLAUDE.md`, `SUPREME-RULES.md`, `docs/README.md`, every file of `docs/rules/`, and each of those features'
+`docs/business/<key>.md`.
+
+## 3. Step 2 - ONE round of questions -> STOP
+Simple Vietnamese, numbered, the proposal marked `(đề xuất)`; ask only what Step 1 did not answer:
+1. **Nhánh để gửi:** the current branch if it is not `main` (đề xuất), otherwise a new one
+   `vibe/<tiền-tố-người-làm>-<tên-chức-năng>-<ddmm>` (chữ không dấu, số, `-`, `/`).
+2. **Mô tả ngắn công việc** (1 câu tiếng Việt) for the commit, e.g. "Thêm màn hình báo cáo tồn kho".
+3. **Tên và email ghi vào lịch sử** - only if `git config` is empty.
+4. **Đẩy lên GitHub:** (a) dùng đăng nhập GitHub sẵn có trên máy (đề xuất nếu `git push --dry-run` không đòi đăng nhập);
+   (b) dán mã truy cập (Personal Access Token): mở `https://github.com/settings/tokens` -> *Generate new token* ->
+   *Fine-grained*, chọn đúng repo, *Contents: Read and write*, hạn 7 ngày -> copy dãy `github_pat_...`;
+   (c) "tôi tự push": you prepare everything and give one command to run.
+Add one line: "Mã truy cập sẽ nằm trong nội dung chat này; dùng token hạn 7 ngày và xoá trên GitHub khi xong."
+**STOP**. After the answer never ask again until the final report.
+
+## 4. Step 3 - Save the work
+```
+git config user.name "<Tên>"          # only if it was empty
+git config user.email "<email>"       # only if it was empty
+git checkout -b <branch>              # or: git checkout <branch> when it already exists
+git add -A
+git status --short                    # check rule 3 before committing
+git commit -m "<loại>(<key>): <mô tả ngắn>"
+git branch backup/<branch>-<yyyymmdd>
+echo <feature keys> > .gate-unlock
+```
+"nothing to commit" is fine. `<loại>` = `feat` (new), `fix` (repair), `refactor` (no behaviour change).
+
+## 5. Step 4 - Rebase on the newest `main`
+```
+git rebase origin/main
+```
+On each conflict (`git status --short` shows `UU`), file by file - during a rebase `--ours` = `main`, `--theirs` =
+the user's commit:
+- **Framework files** (`SUPREME-RULES.md` section 2 list, plus `SUPREME-RULES.md`): take `main`:
+  `git checkout --ours -- <file>`.
+- **The user's feature files** (`backend/features/<key>/`, `frontend/features/<key>/`, `docs/business/<key>.md`,
+  `docs/plans/<key>-*.md`, `docs/business/_sources/*`): take the user's: `git checkout --theirs -- <file>`.
+- **`backend/app_registry.py`**: keep EVERY line of both sides (one line per app), remove the markers.
+- **A shared document both sides edited** (e.g. `docs/business/README.md`): merge by hand, keep both contents.
+- `git add <file>`, then `git rebase --continue`. Never `--skip` a user commit; never `--abort` without telling the user.
+Then the baseline: `.venv/Scripts/python.exe scripts/check.py` - keep the output; its failures show what the newest
+framework now expects from the features. (Missing packages: `.venv/Scripts/python.exe -m pip install -r requirements.txt`.)
+
+## 6. Step 5 - Refactor the user's features to the newest framework
+Check EVERY item for every feature of the branch and move it to the framework's way (compare with the reference feature
+`sample_product_import` and `docs/rules/`):
+1. **App registry.** One line `("<prefix>", "<key>")` in `backend/app_registry.py` (prefix = the builder's short name,
+   lower-case letters and digits, e.g. `anhthy`); URLs become `/<prefix>-<app>`.
+2. **Developer prefix.** `backend/features/<key>/__init__.py` declares `DEVELOPER = "<github username>"` (tables
+   `<developer>__<key>__*`). Never change it once data exists.
+3. **Storage.** Repositories inherit `SqlRepository[Entity]`; lookups by value use `repository.find_by(field=...)`; no
+   `sqlalchemy`, no raw SQL, no repository internals (`_save`, `_write`, `_purge`, `_stored`) in the feature. Old
+   JSON files in `data/<key>/` are imported once by a small repository base class (keep the file, renamed
+   `.imported`), never deleted.
+4. **Soft delete.** `repository.delete()` / `clear()` only set the delete flag; reads skip deleted rows;
+   `restore()` / `list_deleted()` exist. Re-check every delete in the feature against its business rules.
+5. **Big data.** Tables only through `data_table` / `editable_table`, charts only through `bar_chart` / `line_chart` /
+   `pie_chart`, Excel only through `ExcelReader` (they cap rows and points). Replace direct `st.dataframe`,
+   `st.plotly_chart`, `px.*`, `pd.read_excel` in the feature.
+6. **Stored data stays readable** by every app version on the shared database: new model fields get defaults; a
+   renamed / removed field or a changed format gets a migration revision
+   (`.venv/Scripts/python.exe scripts/migrate.py new <key> "..."`, `backend.core.migration_ops`).
+7. **Menu and login.** Pages grouped with `menu_group`; no in-app login, access code or user list (rights are given on
+   `/admin`); actors with different rights inside the app = manifest `roles` + a BR reading
+   `self.current_user.roles_in(key)`.
+8. **Speed.** `@cached_query` on every read-only controller method; nothing heavy on page render.
+9. **Anything else** the baseline shows (renamed helper, new base-class argument): fix the feature side.
+10. The sample feature `sample_product_import` hides itself: never delete or edit it.
+Then update section 11 of each touched business document. Self-repair loop of `docs/rules/10-self-repair.md` until:
+`.venv/Scripts/python.exe scripts/check.py` -> `ALL CHECKS PASSED` and `.venv/Scripts/python.exe scripts/doctor.py` ->
+`APP IS HEALTHY`. If after 5 attempts something still fails: push anyway (Step 7) and say exactly what is red.
+
+## 7. Step 6 - Commit and push
+```
+git add -A
+git status --short                    # rule 3 again
+git commit -m "refactor(<key>): adapt to the current framework (<what changed>)"
+git push --force-with-lease -u origin <branch>      # (a) GitHub login already on the machine
+git push --force-with-lease https://<github-user>:<token>@github.com/<owner>/<repo>.git <branch>   # (b) token
+rm .gate-unlock
+```
+- `--force-with-lease` is needed because the rebase rewrote the branch; it refuses if somebody else pushed to the same
+  branch meanwhile: then STOP, do not force, tell the user.
+- (c) "tôi tự push": give exactly one command to paste in PowerShell:
+  `git push --force-with-lease -u origin <branch>` (Windows asks for the GitHub login: username + token as password).
+- Always `rm .gate-unlock` at the end, even when something failed.
+
+## 8. Step 7 - Report (Vietnamese, short, no jargon)
+1. Đã gửi nhánh `<branch>` lên repo `<repo>`; đã lấy khung sườn mới nhất (`main`) và đặt công việc của bạn lên trên;
+   xung đột ở file nào, giữ bên nào.
+2. Những gì đã sửa trong từng chức năng cho hợp khung sườn mới (một dòng mỗi mục của Step 5 đã đổi); dữ liệu cũ được giữ.
+3. Kết quả kiểm tra: dòng cuối của `scripts/check.py` và `scripts/doctor.py` (nếu còn đỏ: lỗi gì).
+4. Link xem nhánh `https://github.com/<owner>/<repo>/tree/<branch>` và tạo Pull Request
+   `https://github.com/<owner>/<repo>/pull/new/<branch>`.
+5. Bản sao an toàn trên máy: nhánh `backup/<branch>-<ngày>` (xoá được khi mọi thứ ổn); có thể xoá token trên GitHub.

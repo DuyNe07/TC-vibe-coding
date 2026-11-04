@@ -25,13 +25,13 @@ calculations, use cases, files, what each screen must show and allow) must be se
    content in Vietnamese; data field names are snake_case English (e.g. `quantity`) with the Vietnamese meaning in
    the "Description" column.
 4. **Stay inside what the app can do.** Read `docs/capabilities.md` before writing; never document a behaviour it
-   does not support (login, e-mail, scheduled jobs, ERP/SQL connection, Google search, pages needing login or
+   does not support (e-mail, scheduled jobs, ERP/SQL connection, Google search, Windows / Microsoft login, pages needing login or
    JavaScript). For such a wish, write the closest supported behaviour and say it to the user.
 5. **Never invent business rules.** Everything comes from the user's material or answers. Ask about anything that
    changes what the user sees or what the application does. Only truly minor details may use a default; each
    default is written in section 10 as `Giả định: ...` and shown to the user for confirmation in step 6.
-5. **Stop points.** At every `STOP`, end your message and wait for the user's reply. Never skip a STOP.
-6. **Robustness.** Never fail silently. If a file cannot be read, say which one and how the user can fix it
+6. **Stop points.** At every `STOP`, end your message and wait for the user's reply. Never skip a STOP.
+7. **Robustness.** Never fail silently. If a file cannot be read, say which one and how the user can fix it
    (e.g. "hãy dán nội dung vào chat" or "lưu file vào thư mục `docs/business/_sources/`"). If your tool is in a
    read-only / plan mode and you cannot write files, tell the user in one Vietnamese sentence to allow editing,
    then continue.
@@ -44,7 +44,9 @@ Sources, in this order:
    already answers.
 3. Existing business documents in `docs/business/` (except `_TEMPLATE.md`, `README.md`,
    `sample_product_import.md`): if the material is about an existing feature, you UPDATE its document
-   (keep what is still valid, never delete content without the user's agreement).
+   (keep what is still valid, never delete content without the user's agreement). If that feature is already
+   `Implemented` and the user wants to add to it, `docs/prompt/05-extend-feature.md` does analysis AND build in one
+   run: suggest it.
 To read Excel / Word / PDF files your tool cannot open directly, use the project's Python
 (`.venv/Scripts/python.exe` on Windows, `.venv/bin/python` otherwise; if `.venv` is missing run
 `py -3.13 -m venv .venv` then `.venv/Scripts/python.exe -m pip install -r requirements.txt`):

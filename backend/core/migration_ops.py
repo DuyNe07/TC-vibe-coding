@@ -6,7 +6,7 @@ Every table is ``id`` + ``data`` (one JSON document per entity), so most changes
 
     def upgrade() -> None:
         audit = ops.feature_table("yarn_costing", "audit_log")
-        ops.update_documents(audit, lambda doc: {**doc, "username": ""})   # add / rename / drop fields
+        ops.update_documents(audit, lambda doc: {**doc, "username": ""})   # add / rename / drop fields; None = flag deleted
         ops.drop_table(ops.feature_table("yarn_costing", "user_group"))   # table no longer used
 """
 
@@ -16,6 +16,7 @@ from typing import Any
 import sqlalchemy as sa
 from alembic import op
 
+from backend.core.base.base_model import utc_now
 from backend.core.base.base_repository import feature_developer
 from backend.core.db import document_table
 
@@ -45,8 +46,8 @@ def rename_table(old: str, new: str) -> None:
 
 
 def update_documents(name: str, change: Callable[[dict[str, Any]], dict[str, Any] | None]) -> int:
-    """Apply ``change`` to every document of a table: return the new document, or None to delete the row.
-    Returns how many rows changed. Missing table: nothing to do."""
+    """Apply ``change`` to every document of a table: return the new document, or None to flag it deleted
+    (soft delete, SUPREME-RULES.md: the row stays). Returns how many rows changed. Missing table: nothing to do."""
     if not has_table(name):
         return 0
     table = document_table(name)
@@ -55,10 +56,10 @@ def update_documents(name: str, change: Callable[[dict[str, Any]], dict[str, Any
     for row_id, data in bind.execute(sa.select(table.c.id, table.c.data)).all():
         new = change(dict(data))
         if new is None:
-            bind.execute(sa.delete(table).where(table.c.id == row_id))
-        elif new != data:
+            if data.get("is_deleted"):
+                continue
+            new = {**data, "is_deleted": True, "deleted_at": utc_now().isoformat(), "deleted_by": "migration"}
+        if new != data:
             bind.execute(sa.update(table).where(table.c.id == row_id).values(data=new))
-        else:
-            continue
-        changed += 1
+            changed += 1
     return changed

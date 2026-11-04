@@ -1,4 +1,4 @@
-"""Screen 1 - Import from Excel (URL: /sample-product-import)."""
+"""Screen 1 - Import from Excel (URL: /duyne07-sample-product-import)."""
 
 import streamlit as st
 

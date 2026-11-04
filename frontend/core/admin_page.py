@@ -2,7 +2,8 @@
 
 Tab 1 - rights per app: pick an app, tick which screens each user / group may open (one grid like an Excel sheet).
 Tab 2 - accounts, tab 3 - groups: a list on the left (one click opens it), the details on the right.
-Effective rights of a user = personal rights + rights of all their groups. Administrators open everything.
+Effective rights of a user = personal rights + rights of all their groups. Administrators open everything until a
+master account exists; then the master ticks the apps of each administrator and only the master manages them.
 """
 
 from collections.abc import Callable, Sequence
@@ -11,7 +12,7 @@ from typing import Any
 import streamlit as st
 from pydantic import ValidationError as PydanticValidationError
 
-from backend.core.access import ADMIN_USERNAME, AccessManager, User, UserGroup
+from backend.core.access import BUILTIN_USERNAMES, AccessManager, User, UserGroup
 from backend.core.current_user import CurrentUser, in_app, page_permission, role_permission
 from backend.core.exceptions import AppError, InvalidInputError
 from frontend.core.base_page import BasePage
@@ -47,7 +48,10 @@ class AdminPage(BasePage):
     def _rights_tab(self, access: AccessManager, users: list[User], groups: list[UserGroup]) -> None:
         from frontend.core.router import get_router
 
-        apps = {m.key: m for m in get_router().registry.visible_features()}
+        actor = self.current_user
+        apps = {
+            m.key: m for m in get_router().registry.visible_features() if actor is None or actor.can_open_feature(m.key)
+        }
         if not apps:
             empty_state("Chưa có ứng dụng nào để phân quyền.", icon="🧩")
             return
@@ -63,11 +67,18 @@ class AdminPage(BasePage):
         ]
         pages = {page_permission(app.key, p.slug): p for p in app.pages}
         roles = {role_permission(app.key, code): label for code, label in app.roles}
-        admins = [u.username for u in users if u.is_admin]
+        is_master = actor is None or actor.is_master
+        has_master = access.has_master()
+        admins = [u.username for u in users if u.is_admin and not u.is_master]
         st.caption(
             f"Tick ô để cho mở màn hình. **{WHOLE_APP}** = mọi màn hình của {app.title}, kể cả màn hình thêm sau này"
             + (" (không gồm vai trò; cột **Vai trò** do ứng dụng quyết định được làm gì). " if roles else ". ")
-            + f"Quyền của nhóm được cộng cho mọi thành viên. Quản trị viên ({', '.join(admins)}) luôn mở được tất cả."
+            + "Quyền của nhóm được cộng cho mọi thành viên. "
+            + (
+                "Quản trị viên chỉ mở được các ứng dụng master tick cho họ."
+                if has_master
+                else f"Quản trị viên ({', '.join(admins)}) luôn mở được tất cả."
+            )
         )
         version = self.state.get("rights_version", 0)  # new grids after a save
         columns: dict[str, Any] = {
@@ -82,7 +93,8 @@ class AdminPage(BasePage):
 
         user_rows: list[dict[str, Any]] = []
         group_rows: list[dict[str, Any]] = []
-        people = [u for u in users if not u.is_admin]
+        # the master also ticks the apps of administrators (they are scoped once a master exists)
+        people = [u for u in users if not u.is_master and (not u.is_admin or (is_master and has_master))]
         section_title("Người dùng")
         if people:
             keyword = self._search(len(people), "rights.search", "Tìm người dùng")
@@ -169,7 +181,8 @@ class AdminPage(BasePage):
                 self._new_user_dialog(access, groups)
             picked = self._pick(
                 "user", users,
-                label=lambda u: (":material/shield_person: " if u.is_admin else "") + u.username
+                label=lambda u: (":material/workspace_premium: " if u.is_master else ":material/shield_person: " if u.is_admin else "")
+                + u.username
                 + ("" if u.active else " :gray[(đã khoá)]"),
                 caption=lambda u: ", ".join(filter(None, [u.full_name, *(group_names.get(g, "") for g in u.group_ids)])),
                 search=lambda u: f"{u.username} {u.full_name}",
@@ -179,10 +192,16 @@ class AdminPage(BasePage):
             if user is None:
                 st.info("Chọn một người dùng trong danh sách để xem và sửa.", icon=":material/arrow_back:")
                 return
-            self._user_form(access, user, groups)
+            self._user_form(access, user, groups, users)
 
-    def _user_form(self, access: AccessManager, user: User, groups: list[UserGroup]) -> None:
-        builtin = user.username == ADMIN_USERNAME
+    def _user_form(self, access: AccessManager, user: User, groups: list[UserGroup], users: list[User]) -> None:
+        builtin = user.username in BUILTIN_USERNAMES
+        actor = self.current_user
+        is_master = actor is None or actor.is_master
+        # administrators and the master are managed by the master only (an administrator edits their own profile)
+        locked = (
+            (user.is_admin or user.is_master) and not is_master and (actor is None or actor.username != user.username)
+        )
         with st.container(border=True), st.form(self.key(f"user.form.{user.id}"), border=False):
             st.subheader(user.username, anchor=False)
             left, right = st.columns(2)
@@ -191,10 +210,15 @@ class AdminPage(BasePage):
             password = st.text_input("Mật khẩu mới", type="password", help="Để trống nếu không đổi mật khẩu.")
             left, right = st.columns(2)
             active = left.toggle("Đang hoạt động", value=user.active, disabled=builtin)
-            is_admin = right.toggle("Quản trị (mở được tất cả)", value=user.is_admin, disabled=builtin)
+            is_admin = right.toggle(
+                "Quản trị viên", value=user.is_admin, disabled=builtin or not is_master,
+                help="Chỉ tài khoản master cấp hoặc gỡ quyền quản trị.",
+            )  # fmt: skip
             group_ids = self._groups_input(groups, user.group_ids)
-            st.caption(self._apps_of(user, groups))
-            saved = st.form_submit_button("Lưu thay đổi", type="primary", icon=":material/save:")
+            st.caption(self._apps_of(user, groups, any(u.is_master for u in users)))
+            saved = st.form_submit_button("Lưu thay đổi", type="primary", icon=":material/save:", disabled=locked)
+        if locked:
+            st.caption("Chỉ tài khoản master được sửa hoặc xoá quản trị viên.")
         if saved:
             values = {"username": username.strip(), "full_name": full_name.strip(), "active": active,
                       "is_admin": is_admin, "group_ids": group_ids}  # fmt: skip
@@ -202,7 +226,11 @@ class AdminPage(BasePage):
                 lambda: access.save_user(User.model_validate({**user.model_dump(), **values}), password),
                 f"Đã lưu người dùng {username}.",
             )
-        if not builtin and st.button("Xoá người dùng", icon=":material/delete:", key=self.key(f"user.del.{user.id}")):
+        if (
+            not builtin
+            and not locked
+            and st.button("Xoá người dùng", icon=":material/delete:", key=self.key(f"user.del.{user.id}"))
+        ):
             self._confirm_delete(f"người dùng **{user.username}**", lambda: access.delete_user(user.id), "user")
 
     def _new_user_dialog(self, access: AccessManager, groups: list[UserGroup]) -> None:
@@ -360,10 +388,12 @@ class AdminPage(BasePage):
         dialog()
 
     @staticmethod
-    def _apps_of(user: User, groups: list[UserGroup]) -> str:
+    def _apps_of(user: User, groups: list[UserGroup], has_master: bool) -> str:
         from frontend.core.router import get_router
 
-        if user.is_admin:
+        if user.is_master:
+            return "Được mở: mọi ứng dụng (master)."
+        if user.is_admin and not has_master:
             return "Được mở: mọi ứng dụng (quản trị)."
         rights = {*user.permissions, *(p for g in groups if g.id in user.group_ids for p in g.permissions)}
         who = CurrentUser(user.username, permissions=frozenset(rights))

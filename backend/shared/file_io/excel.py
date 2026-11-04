@@ -13,6 +13,8 @@ from openpyxl import Workbook
 from openpyxl.styles import Alignment, Font, PatternFill
 from openpyxl.utils import get_column_letter
 
+from backend.core.config import get_settings
+from backend.core.exceptions import FileProcessingError
 from backend.shared.file_io.base_file import BaseFileReader, BaseFileWriter, FileSource, read_source
 
 Rows = list[dict[str, Any]]
@@ -20,13 +22,17 @@ SheetData = Sequence[Mapping[str, Any]] | pd.DataFrame
 
 
 class ExcelReader(BaseFileReader[Rows]):
-    """Reads one sheet into a list of dicts. Empty cells become ``None``; fully empty rows are dropped."""
+    """Reads one sheet into a list of dicts. Empty cells become ``None``; fully empty rows are dropped.
+
+    At most ``max_rows`` data rows (default ``APP_EXCEL_MAX_ROWS``, 200 000): a bigger sheet raises
+    ``FileProcessingError`` instead of freezing the app for minutes (only ``max_rows + 1`` rows are parsed)."""
 
     supported_extensions = (".xlsx", ".xlsm", ".xls", ".csv")
 
-    def __init__(self, sheet_name: str | int = 0, header_row: int = 0) -> None:
+    def __init__(self, sheet_name: str | int = 0, header_row: int = 0, max_rows: int | None = None) -> None:
         self.sheet_name = sheet_name
         self.header_row = header_row
+        self.max_rows = max_rows or get_settings().excel_max_rows
 
     def read_dataframe(self, source: FileSource) -> pd.DataFrame:
         return pd.DataFrame(self.read(source))
@@ -36,12 +42,17 @@ class ExcelReader(BaseFileReader[Rows]):
         return list(pd.ExcelFile(BytesIO(content)).sheet_names)
 
     def _read(self, stream: BytesIO, extension: str) -> Rows:
+        limit = self.max_rows + 1  # one more row than allowed tells "too big" without reading the rest
         if extension == ".csv":
-            frame = pd.read_csv(stream, header=self.header_row, dtype=object, encoding="utf-8-sig")
+            frame = pd.read_csv(stream, header=self.header_row, dtype=object, encoding="utf-8-sig", nrows=limit)
         else:
             engine = "xlrd" if extension == ".xls" else "openpyxl"
             frame = pd.read_excel(
-                stream, sheet_name=self.sheet_name, header=self.header_row, dtype=object, engine=engine
+                stream, sheet_name=self.sheet_name, header=self.header_row, dtype=object, engine=engine, nrows=limit
+            )
+        if len(frame) > self.max_rows:  # counted before dropping empty rows: a cut is refused, never silent
+            raise FileProcessingError(
+                f"The sheet has more than {self.max_rows} rows: split the file or filter it before uploading."
             )
         frame = frame.dropna(how="all")
         frame.columns = [str(col).strip() for col in frame.columns]

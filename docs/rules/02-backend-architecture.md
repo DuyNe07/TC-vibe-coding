@@ -127,6 +127,16 @@ JSON document in table `<developer>__<feature_key>__item` (created automatically
 - **RAM cache (automatic).** A repository keeps its whole table in RAM after the first read; this process's writes
   clear it at once, other processes' writes show after `APP_DB_CACHE_SECONDS` (default 30). Entities read are
   shared: change them with `entity.model_copy(update={...})` and save, never in place.
+- **Soft delete (SUPREME-RULES.md).** Every entity carries `is_deleted`, `deleted_at`, `deleted_by` (`BaseEntity`,
+  kept out of `model_dump()` so DTOs built with `**entity.model_dump()` are unaffected; stored in the JSON document).
+  `delete(id)` / `clear()` only set the flag (who + when from `self.current_user`); every read (`get`, `list_all`,
+  `find`, `find_one`, `find_by`, `exists`, `count`) skips flagged rows; `restore(id)` clears the flag;
+  `list_deleted()` lists them (e.g. a "Thùng rác" screen). Features never hard-delete (no SQL, no repository
+  internals: `tests/architecture/test_data_safety.py`). In a migration, `update_documents(... -> None)` flags too.
+- **Lookups by value:** `repository.find_by(code="A01")` (several fields = AND) answers from an index built once per
+  loaded table (dropped on any write) - use it instead of `find(lambda ...)` inside loops over big tables.
+- **Volume guards (`get_settings()`, `.env`):** a table read with more than `APP_DB_WARN_ROWS` (200 000) rows logs a
+  WARNING; `ExcelReader(max_rows=...)` refuses sheets over `APP_EXCEL_MAX_ROWS` (200 000) with a clear error.
 - **Read-only use cases:** decorate the controller method with `@cached_query` (from `backend.core.base`). The gateway
   keeps the result in RAM (LRU, 256 results) until any data is written, so page reruns do not recompute lists, price
   tables or generated files. Never on a use case that writes, reads an uploaded file, or depends on the current user.
@@ -143,9 +153,15 @@ JSON document in table `<developer>__<feature_key>__item` (created automatically
   (`create_document_table(ops.feature_table(key, "item"))`).
 
 ## Users and permissions (framework: `backend/core/access.py`, `backend/core/current_user.py`)
-- Login is required for every page. Built-in administrator: `u-admin` (first password `u-admin`), full rights.
+- Login is required for every page. Built-in administrator: `u-admin` (first password `u-admin`).
+- Master account `u-master` (above every administrator; created at start when `APP_MASTER_PASSWORD` is set in
+  `.env`, first password = that value): opens everything, and is the ONLY account that creates, changes, deletes or
+  promotes administrators and ticks their apps. Once a master exists, an administrator opens and manages only the apps
+  the master ticked for them (`CurrentUser.admin_scoped`); without a master, administrators open everything.
   A login survives page reloads (F5): cookie `tc_session` -> table `core__session`, `APP_SESSION_HOURS` (default 12);
   logout or deactivating the user ends it.
+- Apps are registered in `backend/app_registry.py` (rules 04, App registry): the gateway refuses every call of an
+  unregistered app's controller.
 - Rights are given **per app** (= feature). Permission keys: `"<feature_key>"` = the whole app (also its future pages),
   `"<feature_key>/<page_slug>"` = one page (landing page without slug: `"<feature_key>/main"`). A user's rights =
   personal keys + keys of all their groups (union). `AccessManager.set_rights_in_app(app_key, users, groups)` replaces

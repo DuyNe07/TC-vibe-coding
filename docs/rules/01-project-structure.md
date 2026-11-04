@@ -24,7 +24,9 @@ TC-vibe-coding/
 │   ├── plans/                  # plans written by the AI before coding: <feature_key>-implementation-plan.md
 │   └── prompt/                 # prompts for users: 00 discovery, 01 analysis, 02 implementation, 03 fix an error
 │
+├── SUPREME-RULES.md            # supreme rules: override everything, never edited by AI
 ├── backend/                    # pure Python, no Streamlit
+│   ├── app_registry.py         # APP REGISTRY: one line ("<prefix>", "<feature_key>") per app -> /<prefix>-<app>
 │   ├── core/                   # FRAMEWORK - do not modify for a feature
 │   │   ├── base/               # BaseEntity, BaseDTO, BaseRepository, BaseBusiness, BaseBuilder,
 │   │   │                       # BaseService, BaseController, SqlRepository (database)
@@ -32,7 +34,8 @@ TC-vibe-coding/
 │   │   ├── migrate.py          # Alembic runner: one chain for core + one per feature (scripts/migrate.py)
 │   │   ├── migration_ops.py    # helpers for revisions (JSON documents: update_documents, drop_table...)
 │   │   ├── migrations/         # Alembic env.py + template + the framework's revisions (versions/)
-│   │   ├── access.py           # users, groups, permissions, login (AccessManager)
+│   │   ├── apps.py             # reads backend/app_registry.py: URL of each app, unregistered apps refused
+│   │   ├── access.py           # users, groups, permissions, login, master / administrators (AccessManager)
 │   │   ├── current_user.py     # CurrentUser of this run + permission keys
 │   │   ├── gateway.py          # gateway.open(XxxController): the ONE way pages call a business
 │   │   ├── config.py           # get_settings()

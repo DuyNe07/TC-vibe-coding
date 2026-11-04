@@ -227,3 +227,10 @@ logs/
 .claude/*
 !.claude/settings.json
 .claude/settings.local.json
+
+# Database migrations are ALWAYS versioned: scripts/migrate.py applies them in run.ps1 and in the Docker image
+!scripts/migrate.py
+!backend/core/migrate.py
+!backend/core/migration_ops.py
+!backend/core/migrations/
+!backend/features/*/migrations/

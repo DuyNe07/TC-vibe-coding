@@ -47,7 +47,10 @@ keeps `.env`, `.venv`, `data/`, `logs/` and `.git` out of the image. `run.ps1` s
 - `.env` (created from `.env.example`, git-ignored): `APP_NAME`, `APP_ENV`, `APP_LOG_LEVEL`, `APP_DATA_DIR`, `APP_PORT`,
   and the database: `POSTGRES_IP`, `POSTGRES_PORT`, `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD` (empty = local
   SQLite file `data/app.db`). Never commit the password. `APP_SESSION_HOURS` (default 12) = how long a login
-  survives page reloads.
+  survives page reloads. `APP_MASTER_PASSWORD` = first password of the master account `u-master` (created at start
+  when set; never reset afterwards). Volume caps: `APP_DB_WARN_ROWS`, `APP_EXCEL_MAX_ROWS`, `APP_TABLE_MAX_ROWS`,
+  `APP_SELECT_MAX_ROWS`, `APP_EDIT_MAX_ROWS`, `APP_CHART_MAX_POINTS`, `APP_CHART_MAX_CATEGORIES`
+  (`backend/core/config.py`).
 - Read settings with `get_settings()` (`backend/core/config.py`). New settings go there with a default.
 - Streamlit options: `.streamlit/config.toml`.
 

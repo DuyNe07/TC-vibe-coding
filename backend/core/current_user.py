@@ -30,10 +30,21 @@ def in_app(permission: str, feature_key: str) -> bool:
 
 @dataclass(frozen=True)
 class CurrentUser:
+    """``is_master``: the owner account above every administrator (opens everything, manages administrators).
+    ``admin_scoped``: an administrator limited to the apps the master ticked for them (true as soon as a master
+    account exists); an unscoped administrator opens everything, as before the master existed."""
+
     username: str
     full_name: str = ""
     is_admin: bool = False
     permissions: frozenset[str] = field(default_factory=frozenset)  # personal + every group (union)
+    is_master: bool = False
+    admin_scoped: bool = False
+
+    @property
+    def all_apps(self) -> bool:
+        """Opens every app and page without ticks: the master, or an administrator not scoped by a master."""
+        return self.is_master or (self.is_admin and not self.admin_scoped)
 
     @property
     def display_name(self) -> str:
@@ -41,7 +52,7 @@ class CurrentUser:
 
     def can_open_feature(self, feature_key: str) -> bool:
         """True when the user may open at least one page of the feature (gateway check)."""
-        return self.is_admin or any(in_app(p, feature_key) for p in self.permissions)
+        return self.all_apps or any(in_app(p, feature_key) for p in self.permissions)
 
     def roles_in(self, feature_key: str) -> frozenset[str]:
         """Role codes granted in one app (personal + groups). Administrators get none automatically: the app decides."""
@@ -50,7 +61,7 @@ class CurrentUser:
 
     def can_open_page(self, feature_key: str, page_slug: str) -> bool:
         return (
-            self.is_admin
+            self.all_apps
             or feature_key in self.permissions
             or page_permission(feature_key, page_slug) in self.permissions
         )

@@ -1,6 +1,5 @@
-"""Screen 2 - Product list & stock report (URL: /sample-product-import-products)."""
+"""Screen 2 - Product list & stock report (URL: /duyne07-sample-product-import-products)."""
 
-import plotly.express as px
 import streamlit as st
 
 from backend.core.gateway import gateway
@@ -11,7 +10,7 @@ from backend.features.sample_product_import.dto.product_dto import (
     StockStatus,
 )
 from frontend.core.base_page import BasePage
-from frontend.core.components import data_table, download_button, panel, stat_row
+from frontend.core.components import data_table, download_button, panel, pie_chart, stat_row
 from frontend.core.formatting import format_currency, format_datetime, format_number
 from frontend.features.sample_product_import.components.labels import STOCK_STATUS_LABELS
 
@@ -79,14 +78,11 @@ class ProductListPage(BasePage):
                 )
         with chart_col, panel("Tồn kho", icon="📊"):
             counts = {"Hết hàng": summary.out_of_stock, "Sắp hết": summary.low_stock, "Còn hàng": summary.in_stock}
-            if summary.product_count:
-                figure = px.pie(
-                    names=list(counts),
-                    values=list(counts.values()),
-                    hole=0.55,
-                    color_discrete_sequence=["#DA1E28", "#FF832B", "#24A148"],
-                )
-                figure.update_layout(margin={"l": 0, "r": 0, "t": 10, "b": 0}, height=260, showlegend=True)
-                st.plotly_chart(figure, key=self.key("chart"))
-            else:
-                st.caption("Chưa có dữ liệu.")
+            pie_chart(
+                [{"Trạng thái": name, "Số sản phẩm": count} for name, count in counts.items()],
+                names="Trạng thái",
+                values="Số sản phẩm",
+                key=self.key("chart"),
+                height=260,
+                empty_message="Chưa có dữ liệu.",
+            )

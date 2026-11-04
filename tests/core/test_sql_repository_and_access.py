@@ -196,3 +196,90 @@ def test_a_repository_that_seeds_on_first_read_does_not_recurse() -> None:
 
     assert [n.text for n in SeededRepository().list_all()] == ["seed"]
     assert SeededRepository().count() == 1
+
+
+def test_master_manages_administrators_and_scopes_them() -> None:
+    from backend.core.access import MASTER_USERNAME
+    from backend.core.config import get_settings
+
+    access = AccessManager()
+    access.ensure_admin()
+    admin = access.authenticate(ADMIN_USERNAME, "u-admin")
+    assert admin is not None and admin.all_apps and not admin.admin_scoped, "no master yet: admins open everything"
+
+    settings = get_settings()
+    old, settings.master_password = settings.master_password, "m-secret"
+    try:
+        access.ensure_admin()
+    finally:
+        settings.master_password = old
+    master = access.authenticate(MASTER_USERNAME, "m-secret")
+    assert master is not None and master.is_master and master.is_admin and master.can_open_feature("any_app")
+    admin = access.authenticate(ADMIN_USERNAME, "u-admin")
+    assert admin is not None and admin.admin_scoped and not admin.can_open_feature("any_app")
+
+    set_current_user(admin)
+    try:
+        with pytest.raises(PermissionDeniedError):  # an administrator can not create administrators
+            access.save_user(User(username="boss", is_admin=True), "pw")
+        with pytest.raises(PermissionDeniedError):  # nor rights in an app the master did not give them
+            access.set_rights_in_app("any_app", {}, {})
+        stored = access.users.by_username(ADMIN_USERNAME)
+        access.save_user(stored.model_copy(update={"full_name": "Tôi"}), "new-pw")  # own profile: allowed
+    finally:
+        set_current_user(None)
+
+    set_current_user(master)
+    try:
+        admin_user = access.users.by_username(ADMIN_USERNAME)
+        assert access.set_rights_in_app("any_app", {admin_user.id: {"any_app"}}, {}) == 1
+        with pytest.raises(ConflictError):
+            access.delete_user(access.users.by_username(MASTER_USERNAME).id)
+    finally:
+        set_current_user(None)
+    admin = access.authenticate(ADMIN_USERNAME, "new-pw")
+    assert admin is not None and admin.can_open_feature("any_app") and not admin.can_open_feature("other_app")
+
+
+def test_shared_database_rows_keep_the_format_older_app_versions_read() -> None:
+    """Every machine uses ONE database: rows written by this version must never carry keys an older version rejects
+    (its models forbid unknown keys), and this version must ignore keys written by a newer one."""
+    from backend.core import db
+    from backend.core.access import MASTER_USERNAME
+    from backend.core.config import get_settings
+
+    old_user = {"id", "created_at", "updated_at", "username", "full_name", "password_hash", "is_admin", "active",
+                "group_ids", "permissions"}  # fmt: skip
+    old_session = {"id", "created_at", "updated_at", "token_hash", "username", "expires_at"}
+    access = AccessManager()
+    settings = get_settings()
+    old, settings.master_password = settings.master_password, "m-secret"
+    try:
+        access.ensure_admin()
+    finally:
+        settings.master_password = old
+    token = access.start_session(MASTER_USERNAME)
+
+    def documents(name: str) -> list[dict]:
+        async def read() -> list[dict]:
+            async with db.engine().connect() as connection:
+                return [r.data for r in (await connection.execute(db.document_table(name).select())).all()]
+
+        return db.run(read())
+
+    assert all(set(d) <= old_user for d in documents("core__user")), documents("core__user")
+    assert all(set(d) <= old_session for d in documents("core__session"))
+    assert access.users.by_username(MASTER_USERNAME).is_master, "master = the u-master name, not a stored flag"
+    access.end_session(token)
+    assert documents("core__session") == [], "logout removes the technical session row (no flagged row left)"
+
+    future = {**documents("core__user")[0], "added_by_a_newer_version": 1}
+
+    async def write() -> None:
+        async with db.engine().begin() as connection:
+            table = db.document_table("core__user")
+            await connection.execute(table.update().where(table.c.id == future["id"]).values(data=future))
+
+    db.run(write())
+    db.table_changed("core__user")
+    assert access.users.get(future["id"]) is not None, "unknown keys from a newer version are ignored"

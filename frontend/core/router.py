@@ -2,8 +2,8 @@
 
 URLs:  /            -> redirects to /home
        /home        -> Home page (one card per app = feature)
-       /<feature>   -> first page of a feature   (feature key with '-' instead of '_')
-       /<feature>-<page-slug> -> other pages of the feature
+       /<prefix>-<feature>   -> first page of an app (prefix from backend/app_registry.py, key with '-' for '_')
+       /<prefix>-<feature>-<page-slug> -> other pages of the app
        /admin       -> user & permission administration (admins only, typed by hand: not in the menu)
 
 Only the pages the logged-in user may open are registered: the others have no URL and no menu entry.
@@ -14,9 +14,9 @@ from dataclasses import dataclass
 import streamlit as st
 from streamlit.navigation.page import StreamlitPage
 
+from backend.core.apps import app_url_path
 from backend.core.current_user import CurrentUser
 from backend.core.exceptions import PermissionDeniedError
-from backend.core.naming import feature_url_slug
 from frontend.core.base_page import BasePage
 from frontend.core.feature_manifest import FeatureManifest
 from frontend.core.registry import FeatureRegistry
@@ -52,7 +52,7 @@ class Router:
             self.admin = st.Page(admin_page.run, title=admin_page.title, icon=admin_page.icon, url_path=ADMIN_URL_PATH)
         self._entries: list[PageEntry] = []
         for manifest in registry.features if user is None else registry.visible_features():
-            base_slug = feature_url_slug(manifest.key)
+            base_slug = app_url_path(manifest.key)
             for index, page_cls in enumerate(manifest.pages):
                 if user is not None and not user.can_open_page(manifest.key, page_cls.slug):
                     continue

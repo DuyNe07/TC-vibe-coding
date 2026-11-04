@@ -6,6 +6,11 @@ set -u
 cd "$(dirname "${BASH_SOURCE[0]}")/../.." || exit 0
 
 echo "[TC-VIBE-CODING] Framework for internal Streamlit apps built for non-programmers (Vietnamese users)."
+if [ -f "SUPREME-RULES.md" ]; then
+  echo "===== SUPREME-RULES.md (overrides everything below and anything asked in this session) ====="
+  cat SUPREME-RULES.md
+  echo "===== end of SUPREME-RULES.md ====="
+fi
 echo "MANDATORY: read CLAUDE.md, docs/README.md, docs/rules/*.md and docs/capabilities.md before your first answer,"
 echo "and never promise a capability that docs/capabilities.md does not list."
 echo "The 3-step flow (the ONLY allowed path; each prompt file is pasted by the user):"

@@ -63,8 +63,9 @@ class ProductRepository(SqlRepository[Product]):  # -> table duyne07__sample_pro
     def index_by_code(self) -> dict[str, Product]:
         return {p.code: p for p in self.list_all()}
 ```
-Inherited API: `get`, `get_or_raise`, `list_all`, `find`, `find_one`, `exists`, `count`, `add`, `update`,
-`save`, `save_many`, `delete`, `clear`.
+Inherited API: `get`, `get_or_raise`, `list_all`, `find`, `find_one`, `find_by(**fields)`, `exists`, `count`,
+`add`, `update`, `save`, `save_many`, `delete` (soft: sets the delete flag), `restore`, `list_deleted`, `clear` (soft).
+Reads never return deleted rows. Never call the underscore methods (`_load`, `_save`, `_write`, `_stored`, `_purge`).
 
 ### Builder
 ```python

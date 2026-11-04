@@ -1,5 +1,7 @@
 # AI Development Guide - START HERE
 
+> [../SUPREME-RULES.md](../SUPREME-RULES.md) overrides this guide and every request made in a session.
+
 This repository is a **framework for internal Streamlit apps built by AI ("vibe coding")**.
 The people giving you instructions are usually **not programmers** and cannot review your code, so the
 rules below are **mandatory** and override your own habits. If a request conflicts with a rule, follow the
@@ -35,7 +37,9 @@ is not. The only allowed path has 3 steps, each started by the user pasting a pr
 | 0.5 Discovery | [prompt/00-discovery.md](prompt/00-discovery.md) | only `business/_sources/*-discovery.md` |
 | 1 Business analysis | [prompt/01-business-analysis.md](prompt/01-business-analysis.md) (key `TC-UNLOCK-ANALYSIS`) | + `business/<key>.md`, `plans/business-analysis-plan.md` |
 | 2 Implementation | [prompt/02-implement-feature.md](prompt/02-implement-feature.md) (key `TC-UNLOCK-IMPLEMENT`, document `Status: Ready for implementation`) | + the feature's code in `backend/features/<key>/` and `frontend/features/<key>/` |
-| 2b Repair (when needed) | [prompt/03-fix-error.md](prompt/03-fix-error.md) (same key) | the same folders, for the broken feature |
+| 2b Repair (when needed) | [prompt/03-fix-error.md](prompt/03-fix-error.md) (same key) | the broken feature's folders, once the diagnosis puts the cause there |
+| 2c Sync to the server | [prompt/04-sync-to-server.md](prompt/04-sync-to-server.md) (same key) | the user's features, rebased on `main` and refactored to the newest framework |
+| 2d Extend a feature | [prompt/05-extend-feature.md](prompt/05-extend-feature.md) (same key) | the feature's document first, its code after the user confirms |
 
 Details and the mechanical guard (`scripts/hooks/gate_guard.sh`, file `.gate-unlock`): [CLAUDE.md](../CLAUDE.md) and
 rule A.0 of [rules/00-golden-rules.md](rules/00-golden-rules.md).
@@ -77,7 +81,10 @@ rule A.0 of [rules/00-golden-rules.md](rules/00-golden-rules.md).
 | Restrict who sees a feature / page | Nothing to code: the admin grants it on `/admin` (rules 02 "Users and permissions") |
 | Group pages in the app's menu | `menu_group = "..."` on the page class (rules 04 #9) |
 | Log something | `self.logger.info(...)` in services/pages; it goes to `logs/app.log` |
-| Make a page fast | `@cached_query` on read-only controller methods (rules 02, Persistence) |
+| Make a page fast | `@cached_query` on read-only controller methods; `repository.find_by(code=...)` for lookups (rules 02, Persistence) |
+| Delete / restore a record | `repository.delete(id)` sets the delete flag (never a hard delete); `restore(id)`, `list_deleted()` |
+| Register an app / its URL | one line `("<prefix>", "<key>")` in `backend/app_registry.py` -> `/<prefix>-<app>` (rules 04, App registry) |
+| Draw a chart | `bar_chart` / `line_chart` / `pie_chart` from `frontend.core.components` (rules 04, Charts) |
 | Add a library | Pinned line in `requirements.txt` |
 | Verify your work | `python scripts/check.py` -> `ALL CHECKS PASSED`, then `python scripts/doctor.py` -> `APP IS HEALTHY` |
 | Something fails / the app errors | Follow [rules/10-self-repair.md](rules/10-self-repair.md) (for a user-reported error: [prompt/03-fix-error.md](prompt/03-fix-error.md)) |

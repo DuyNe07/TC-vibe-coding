@@ -7,7 +7,9 @@ from typing import Any, Literal
 import pandas as pd
 import streamlit as st
 
+from backend.core.config import get_settings
 from frontend.core.components.panel import empty_state
+from frontend.core.formatting import format_number
 
 Rows = Sequence[Mapping[str, Any]] | pd.DataFrame
 LAZY_ROWS = 1000  # bigger tables send only the rows on screen to the browser (fast reruns)
@@ -36,6 +38,16 @@ def _clean_value(value: Any) -> Any:
     return value
 
 
+def _capped(frame: pd.DataFrame, limit: int) -> pd.DataFrame:
+    """The first ``limit`` rows, with a Vietnamese note when rows were cut (filter or export to see the rest)."""
+    if len(frame) <= limit:
+        return frame
+    st.caption(
+        f"Đang hiện {format_number(limit)}/{format_number(len(frame))} dòng đầu tiên. Hãy lọc bớt, hoặc xuất Excel để xem đủ."
+    )
+    return frame.head(limit)
+
+
 def frame_to_records(frame: pd.DataFrame) -> list[dict[str, Any]]:
     """DataFrame -> list of dicts ready for DTOs (empty cells become None, never NaN)."""
     return [{str(k): _clean_value(v) for k, v in record.items()} for record in frame.to_dict("records")]
@@ -60,6 +72,9 @@ def data_table(
     if frame.empty:
         empty_state(empty_message)
         return []
+    settings = get_settings()
+    # selection tables cannot be lazy: every row goes to the browser, so their cap is much lower
+    frame = _capped(frame, settings.table_max_rows if selection is None else settings.select_max_rows)
     options: dict[str, Any] = {
         "lazy": selection is None and len(frame) > LAZY_ROWS,  # Streamlit 1.64: lazy cannot be combined with on_select
         "hide_index": True,
@@ -95,6 +110,15 @@ def editable_table(
     returned rows to a use case when the user clicks a button, e.g. ``feature.save_rows(SaveRowsRequest(rows=...))``.
     """
     frame = _to_frame(rows, columns)
+    limit = get_settings().edit_max_rows
+    if len(frame) > limit:  # never return [] or a cut list: a "save" would then delete the rows not shown
+        st.warning(
+            f"Bảng có {format_number(len(frame))} dòng, quá nhiều để sửa trực tiếp (tối đa {format_number(limit)}). "
+            "Hãy lọc bớt rồi sửa; bảng dưới đây chỉ để xem.",
+            icon=":material/warning:",
+        )
+        data_table(frame, column_config=column_config, column_order=column_order, height=height, key=f"{key}.view")
+        return frame_to_records(frame)
     edited = st.data_editor(
         frame,
         key=key,
