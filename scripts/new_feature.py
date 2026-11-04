@@ -211,7 +211,7 @@ def main() -> int:
         return 1
     prefix = (args.prefix or re.sub(r"[^a-z0-9]", "", args.developer.lower())).strip()
     if not PREFIX_PATTERN.match(prefix):
-        print(f"ERROR: --prefix {prefix!r} must be lower-case letters and digits (e.g. anhthy).")
+        print(f"ERROR: --prefix {prefix!r} must be lower-case letters and digits (e.g. tenban).")
         return 1
     backend_dir = ROOT / "backend" / "features" / key
     frontend_dir = ROOT / "frontend" / "features" / key

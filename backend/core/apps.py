@@ -39,7 +39,7 @@ def ensure_registered(feature_key: str) -> None:
 
 
 def app_url_path(feature_key: str) -> str:
-    """URL of an app's landing page without the leading "/": ``anhthy`` + ``leave_request`` -> ``anhthy-leave-request``.
+    """URL of an app's landing page without the leading "/": ``tenban`` + ``leave_request`` -> ``tenban-leave-request``.
     (Streamlit 1.64 refuses nested URL paths, so the prefix is joined with "-", not "/".)"""
     ensure_registered(feature_key)
     return f"{registered_apps()[feature_key]}-{feature_url_slug(feature_key)}"
