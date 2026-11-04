@@ -3,52 +3,58 @@
 name: tc-vibe-coding
 
 x-app: &app
-  image: tc-vibe-coding:${VERSION:-latest}
-  env_file: ../.env
-  environment:
-    MIGRATE: "0"   # deploy.sh migrates once (service "migrate") before the replicas start
-  restart: unless-stopped
-  healthcheck:
-    test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8501/_stcore/health', timeout=2)"]
-    interval: 10s
-    timeout: 5s
-    start_period: 60s
-    retries: 3
+    image: tc-vibe-coding:${VERSION:-latest}
+    env_file: ../.env
+    environment:
+        MIGRATE: "0" # deploy.sh migrates once (service "migrate") before the replicas start
+    restart: unless-stopped
+    healthcheck:
+        test:
+            [
+                "CMD",
+                "python",
+                "-c",
+                "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8501/_stcore/health', timeout=2)",
+            ]
+        interval: 10s
+        timeout: 5s
+        start_period: 60s
+        retries: 3
 
 services:
-  migrate:
-    <<: *app
-    profiles: ["tools"]   # never started by `up`: deploy.sh runs it with `docker compose run --rm migrate`
-    restart: "no"
-    command: ["python", "scripts/migrate.py"]
-    volumes: [data:/app/data]
+    migrate:
+        <<: *app
+        profiles: ["tools"] # never started by `up`: deploy.sh runs it with `docker compose run --rm migrate`
+        restart: "no"
+        command: ["python", "scripts/migrate.py"]
+        volumes: [data:/app/data]
 
-  app-1:
-    <<: *app
-    container_name: tc-vibe-coding-1
-    volumes: [data:/app/data, logs-1:/app/logs]
-  app-2:
-    <<: *app
-    container_name: tc-vibe-coding-2
-    volumes: [data:/app/data, logs-2:/app/logs]
-  app-3:
-    <<: *app
-    container_name: tc-vibe-coding-3
-    volumes: [data:/app/data, logs-3:/app/logs]
+    app-1:
+        <<: *app
+        container_name: tc-vibe-coding-1
+        volumes: [data:/app/data, logs-1:/app/logs]
+    app-2:
+        <<: *app
+        container_name: tc-vibe-coding-2
+        volumes: [data:/app/data, logs-2:/app/logs]
+    app-3:
+        <<: *app
+        container_name: tc-vibe-coding-3
+        volumes: [data:/app/data, logs-3:/app/logs]
 
-  nginx:
-    image: nginx:1.27-alpine
-    container_name: tc-vibe-coding-nginx
-    restart: unless-stopped
-    ports: ["${PORT:-80}:80"]
-    volumes: [./nginx.conf:/etc/nginx/conf.d/default.conf:ro]
-    depends_on:
-      app-1: {condition: service_healthy}
-      app-2: {condition: service_healthy}
-      app-3: {condition: service_healthy}
+    nginx:
+        image: nginx:1.27-alpine
+        container_name: tc-vibe-coding-nginx
+        restart: unless-stopped
+        ports: ["${PORT:-80}:80"]
+        volumes: [./nginx.conf:/etc/nginx/conf.d/default.conf:ro]
+        depends_on:
+            app-1: { condition: service_healthy }
+            app-2: { condition: service_healthy }
+            app-3: { condition: service_healthy }
 
 volumes:
-  data: {name: tc-vibe-coding-data}   # the volume of the former single container: data is kept
-  logs-1: {name: tc-vibe-coding-logs-1}
-  logs-2: {name: tc-vibe-coding-logs-2}
-  logs-3: {name: tc-vibe-coding-logs-3}
+    data: { name: tc-vibe-coding-data }
+    logs-1: { name: tc-vibe-coding-logs-1 }
+    logs-2: { name: tc-vibe-coding-logs-2 }
+    logs-3: { name: tc-vibe-coding-logs-3 }
