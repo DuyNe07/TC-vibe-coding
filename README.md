@@ -46,10 +46,14 @@ Tuỳ chọn thêm vào cuối lệnh: `-Port 8600` (đổi cổng), `-NoBrowser
 ### Chạy trên máy chủ bằng Docker
 
 ```bash
-./packaging/build.sh -v 1.2.0    # đóng gói: build image tc-vibe-coding:1.2.0
-./packaging/deploy.sh -v 1.2.0   # chạy (docker compose): cập nhật cơ sở dữ liệu, thay 3 bản app, khởi động lại nginx ở cổng 80
+./packaging/build.sh -v 1.2.0 --deploy   # đóng gói rồi chạy luôn (thường dùng lệnh này)
+./packaging/build.sh -v 1.2.0            # chỉ đóng gói image tc-vibe-coding:1.2.0
+./packaging/deploy.sh -v 1.2.0           # chỉ chạy (docker compose): cập nhật cơ sở dữ liệu, thay 3 bản app, khởi động lại nginx ở cổng 80
 docker compose -f packaging/docker-compose.yml ps   # xem trạng thái
+cat packaging/RELEASE                    # phiên bản mới nhất đã đóng gói / đang chạy
 ```
+`packaging/RELEASE` (chỉ nằm trên máy chủ, không đưa lên git) ghi phiên bản, nhánh, commit, giờ đóng gói, và sau khi
+chạy thành công thêm `deployed_version` / `deployed_at`.
 Người dùng vào `http://<IP-máy-chủ>/home`. Máy chủ chỉ cần mở **một cổng: 80** (của nginx; đổi bằng
 `PORT=8080 ./packaging/deploy.sh -v ...`). 3 bản app `tc-vibe-coding-1..3` chạy cùng một image, cùng cơ sở dữ liệu;
 nginx giữ mỗi người dùng ở đúng một bản. Cần file `.env` (như trên) ở thư mục gốc dự án; `.env` không bao giờ được

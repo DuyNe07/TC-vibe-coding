@@ -33,5 +33,10 @@ echo "==> Replacing the app replicas and nginx"
 docker rm -f tc-vibe-coding >/dev/null 2>&1 || true   # the single container of the former build.sh, if any
 compose up -d --force-recreate --remove-orphans --wait app-1 app-2 app-3 nginx
 
+# record what runs now in packaging/RELEASE (written by build.sh)
+touch RELEASE
+sed -i '/^deployed_/d' RELEASE
+printf 'deployed_version=%s\ndeployed_at=%s\n' "$VERSION" "$(date '+%Y-%m-%d %H:%M:%S')" >> RELEASE
+
 echo "==> tc-vibe-coding:$VERSION is running on http://<server-ip>:${PORT:-80}/home"
 echo "    status: docker compose -f packaging/docker-compose.yml ps   |   logs: docker logs -f tc-vibe-coding-1"
