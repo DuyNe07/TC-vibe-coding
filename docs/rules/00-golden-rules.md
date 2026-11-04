@@ -8,7 +8,7 @@ Claude Code Stop hook (`.claude/settings.json` -> `scripts/hooks/stop_guard.sh`)
    analysing it is always allowed. Phase 0 (default) may write only `docs/business/_sources/*-discovery.md`; phase 1
    (the user pasted `docs/prompt/01-business-analysis.md`) may also write the business document and the analysis plan;
    phase 2 (the user pasted `docs/prompt/02-implement-feature.md` AND `Status: Ready for implementation`) may write the
-   feature's own code; Prompt 3 (repair), Prompt 4 (sync to the server: rebase on `main` + refactor) and Prompt 5
+   feature's own code; Prompt 3 (repair), Prompt 4 (sync to the server: rebase on `dev` + refactor, Pull Request into `dev`) and Prompt 5
    (extend a finished feature, code only after the updated document is confirmed) use the same key for their features. You MUST NOT write code, run `scripts/new_feature.py`, start the app or install packages before
    phase 2, and MUST NOT create `.gate-unlock` or change `scripts/hooks/` to get around the guard.
 1. You MUST read `docs/README.md`, every file in `docs/rules/` and `docs/capabilities.md` before your first change in

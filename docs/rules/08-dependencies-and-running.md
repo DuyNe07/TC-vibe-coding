@@ -39,9 +39,13 @@ Rules:
 3. After adding one, run `run.ps1` again (it auto-installs) or `.venv/Scripts/python.exe -m pip install -r requirements.txt`.
 
 ## Server deployment (Docker)
-`./build.sh -v <version>` builds image `tc-vibe-coding:<version>` from `Dockerfile` (Python 3.13, `requirements.txt`),
-removes the old container and starts the new one (`--env-file .env`, volumes for `data/` and `logs/`). `.dockerignore`
-keeps `.env`, `.venv`, `data/`, `logs/` and `.git` out of the image. `run.ps1` stays the launcher on a developer PC.
+Everything lives in `packaging/`. `./packaging/build.sh -v <version>` builds image `tc-vibe-coding:<version>` from
+`packaging/Dockerfile` (Python 3.13, `requirements.txt`; build context = repository root). `./packaging/deploy.sh -v
+<version>` runs `packaging/docker-compose.yml`: migrates the database once (service `migrate`), recreates the 3 app
+replicas `tc-vibe-coding-1..3` (`.env`, shared `data/` volume, one `logs/` volume each, no published port), waits until
+each answers `/_stcore/health`, then recreates nginx (`packaging/nginx.conf`: sticky `ip_hash`, WebSocket) - the ONLY
+published port (80, `PORT=` to change).
+`.dockerignore` keeps `.env`, `.venv`, `data/`, `logs/` and `.git` out of the image. `run.ps1` stays the launcher on a developer PC.
 
 ## Configuration
 - `.env` (created from `.env.example`, git-ignored): `APP_NAME`, `APP_ENV`, `APP_LOG_LEVEL`, `APP_DATA_DIR`, `APP_PORT`,

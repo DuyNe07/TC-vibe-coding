@@ -86,7 +86,7 @@ esac
 case "$LOWER" in
   backend/core/* | backend/shared/* | frontend/core/* | frontend/app.py | frontend/home/* | frontend/public/* | \
   tests/* | scripts/* | .claude/* | .streamlit/* | conftest.py | run.ps1 | requirements.txt | pyproject.toml | \
-  dockerfile | build.sh | .dockerignore | .gitignore | .gitattributes | claude.md | agents.md | docs/rules/* | \
+  packaging/* | .dockerignore | .gitignore | .gitattributes | claude.md | agents.md | docs/rules/* | \
   docs/prompt/* | docs/readme.md | docs/capabilities.md | docs/business/_template.md | docs/business/readme.md)
     framework_open || frozen
     exit 0
