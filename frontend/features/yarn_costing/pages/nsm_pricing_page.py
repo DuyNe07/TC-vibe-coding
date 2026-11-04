@@ -61,7 +61,6 @@ from frontend.features.yarn_costing.components.labels import (
     label_of,
 )
 from frontend.features.yarn_costing.components.permissions import action_state, explain, own_factory
-from frontend.features.yarn_costing.components.pick_table import pick_table
 from frontend.features.yarn_costing.pages.loss_group_page import LOSS_PREFILL_KEY, LossGroupPage
 
 OPEN_YARN_KEY = "open_yarn"
@@ -134,7 +133,7 @@ class NsmPricingPage(BasePage):
         items = sorted(data.items, key=lambda y: y.requested_at)
         names = {p.code: p.name for p in reference.packaging}
         with panel("Mã cần xử lý", icon="📋"):
-            picked = pick_table(
+            picked = data_table(
                 yarn_summary_rows(items, names),
                 column_config=YARN_SUMMARY_CONFIG,
                 column_order=LIST_COLUMNS,

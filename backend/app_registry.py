@@ -12,4 +12,5 @@ One line per app, so branches never conflict. `scripts/new_feature.py` adds the 
 APPS: tuple[tuple[str, str], ...] = (
     # (url prefix, feature key)
     ("duyne07", "sample_product_import"),
+    ("xuan2894", "yarn_costing"),
 )

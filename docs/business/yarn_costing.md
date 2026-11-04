@@ -1573,6 +1573,7 @@ không có vai trò phù hợp (BR-47, BR-48); phía xử lý vẫn kiểm tra l
 | 5.7 / UC-44 / UC-45 | `builders/component_file_builder.py` (ComponentFileReaderBuilder, ComponentTemplateBuilder); `services/download_component_template_service.py`, `services/import_component_file_service.py`; `YarnCostingController.download_component_template`, `import_component_file` |
 | BR-66..BR-69 | `business/component_import_business.py::ComponentImportBusiness` (`check_row` BR-66, `declared_group` BR-67, `relabel_yarn` BR-68, `plan` BR-69) |
 | BR-70 (mã kế toán chờ, 2026-11-03) | `models/yarn.py::Yarn.is_locked` (chỉ dòng giá có mã kế toán mới khoá), `business/price_line_business.py::PriceLineBusiness.apply_result` (gán mã chờ vào dòng Thường), `dto/request_dto.py::YarnDTO.pending_accounting_code`, `pages/nsm_pricing_page.py` ("Mã kế toán chờ"); test `tests/test_waiting_accounting_code.py` (AC-86..AC-88), AC-89: nút ĐCNSM chỉ khi có dòng giá (đã có) |
+| Khung sườn mới (2026-11-04) | App đăng ký ở `backend/app_registry.py` với tiền tố `xuan2894` (đường dẫn `/xuan2894-yarn-costing`); bảng có chọn dòng dùng lại `data_table` của khung sườn (bỏ `components/pick_table.py`); xoá dữ liệu là đặt cờ xoá của khung sườn (`repository.delete`), dữ liệu cũ vẫn đọc được |
 | Screen 7 | `pages/dashboard_page.py::DashboardPage` |
 | Screen 8 | `pages/user_audit_page.py::UserAuditPage` (Nhật ký thao tác; UC-02) |
 | Menu theo vai trò | `manifest.py` (thứ tự) + `menu_group` của mỗi trang (menu bên trái gấp / mở của khung sườn); cảnh báo BR-61: `components/data_warnings.py` |

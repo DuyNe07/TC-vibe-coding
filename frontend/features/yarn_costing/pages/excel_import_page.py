@@ -30,7 +30,6 @@ from frontend.features.yarn_costing.components.factory_picker import factory_seg
 from frontend.features.yarn_costing.components.flash import show_flash
 from frontend.features.yarn_costing.components.labels import IMPORT_MODE_LABELS, label_of
 from frontend.features.yarn_costing.components.permissions import action_state, explain, is_so, own_factory
-from frontend.features.yarn_costing.components.pick_table import pick_table
 
 PREVIEW_KEY = "import_preview"
 COMMITTED_KEY = "import_committed"
@@ -264,7 +263,7 @@ class ExcelImportPage(BasePage):
     def _import_list(self, feature: YarnCostingController, factory: str) -> str | None:
         batches = feature.list_import_batches(ListImportBatchesRequest(factory_code=factory))
         with panel("Các lần nhập", icon="🗂️"):
-            picked = pick_table(
+            picked = data_table(
                 [
                     {
                         "Mã lần nhập": b.import_id,

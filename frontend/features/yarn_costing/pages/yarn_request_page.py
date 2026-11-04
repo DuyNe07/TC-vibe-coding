@@ -18,7 +18,7 @@ from backend.features.yarn_costing.dto.request_dto import (
     YarnSummaryDTO,
 )
 from frontend.core.base_page import BasePage
-from frontend.core.components import panel
+from frontend.core.components import data_table, panel
 from frontend.features.yarn_costing.components.columns import YARN_SUMMARY_CONFIG, yarn_summary_rows
 from frontend.features.yarn_costing.components.data_warnings import show_data_warnings
 from frontend.features.yarn_costing.components.dialogs import confirm_dialog
@@ -36,7 +36,6 @@ from frontend.features.yarn_costing.components.labels import (
     label_of,
 )
 from frontend.features.yarn_costing.components.permissions import action_state, explain
-from frontend.features.yarn_costing.components.pick_table import pick_table
 
 
 def packaging_choices(reference: ReferenceDataResponse, factory: str | None) -> dict[str, str]:
@@ -181,7 +180,7 @@ class YarnRequestPage(BasePage):
         items = sorted(data.items, key=lambda y: y.requested_at, reverse=True)
         names = {p.code: p.name for p in reference.packaging}
         with panel("Danh sách yêu cầu", icon="📋"):
-            picked = pick_table(
+            picked = data_table(
                 yarn_summary_rows(items, names),
                 column_config=YARN_SUMMARY_CONFIG,
                 selection="single",
