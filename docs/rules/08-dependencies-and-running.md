@@ -44,7 +44,9 @@ Everything lives in `packaging/`. `./packaging/build.sh -v <version>` builds ima
 <version>` runs `packaging/docker-compose.yml`: migrates the database once (service `migrate`), recreates the 3 app
 replicas `tc-vibe-coding-1..3` (`.env`, shared `data/` volume, one `logs/` volume each, no published port), waits until
 each answers `/_stcore/health`, then recreates nginx (`packaging/nginx.conf`: sticky `ip_hash`, WebSocket) - the ONLY
-published port (80, `PORT=` to change).
+published port (80, `PORT=` to change). `build.sh ... --deploy` runs `deploy.sh` right after the build. `build.sh`
+writes `packaging/RELEASE` (version, branch, commit, built_at; git-ignored), `deploy.sh` adds `deployed_version` /
+`deployed_at` once the replicas are healthy.
 `.dockerignore` keeps `.env`, `.venv`, `data/`, `logs/` and `.git` out of the image. `run.ps1` stays the launcher on a developer PC.
 
 ## Configuration

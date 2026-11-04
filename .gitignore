@@ -234,3 +234,6 @@ logs/
 !backend/core/migration_ops.py
 !backend/core/migrations/
 !backend/features/*/migrations/
+
+# newest build / deploy on a server (packaging/build.sh, deploy.sh)
+packaging/RELEASE
