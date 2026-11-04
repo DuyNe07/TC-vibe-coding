@@ -242,7 +242,6 @@ def yarn_dto(yarn: Yarn, rate: Decimal | None = None, packaging_name: str = "") 
             "stage_details",
             "max_ck_no",
             "max_pp_no",
-            "pending_accounting_code",
         }
     )
     return YarnDTO(

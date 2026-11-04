@@ -68,6 +68,7 @@ from frontend.features.yarn_costing.components.labels import (
     TECHNOLOGY_LABELS,
 )
 from frontend.features.yarn_costing.components.permissions import action_state, explain
+from frontend.features.yarn_costing.components.pick_table import pick_table
 from frontend.features.yarn_costing.components.recalc_diff import open_recalc_diff_dialog, render_recalc_diff
 
 COL = st.column_config
@@ -403,7 +404,7 @@ class MasterDataPage(BasePage):
         )
         section_title("Các phiên bản định mức")
         versions: list[RateVersionDTO] = ref.rate_versions
-        picked = data_table(
+        picked = pick_table(
             [
                 {
                     "Mã phiên bản": v.version_code,
@@ -757,7 +758,7 @@ class MasterDataPage(BasePage):
     def _batches_tab(self, feature: YarnCostingController, factory: str) -> None:
         self._not_priced_block(feature, factory)
         batches = feature.list_recalc_batches(ListRecalcBatchesRequest(factory_code=factory))
-        picked = data_table(
+        picked = pick_table(
             batch_rows(batches.items),
             column_config=BATCH_CONFIG,
             selection="single",

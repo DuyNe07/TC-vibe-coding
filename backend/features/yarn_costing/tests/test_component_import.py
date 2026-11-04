@@ -192,7 +192,9 @@ def test_permissions_and_locked_groups() -> None:  # AC-84
     code = priced_s1()
     yarns = YarnRepository().list_all()
     yarn = next(y for y in yarns if y.yarn_code == code)
-    locked = yarn.model_copy(update={"pending_accounting_code": "KT-1"})
+    coded = [line.model_copy(update={"accounting_code": "KT-1"}) for line in yarn.lines]
+    locked = yarn.model_copy(update={"lines": coded})  # BR-32 (a waiting code no longer locks - BR-70)
+    assert locked.is_locked
     YarnRepository().store(yarns, [locked])
     xs1 = user_with("XS1", username="xs1")
     content = workbook([row(GROUP, "PE MVS", 60, "CM MVS", 40)])

@@ -136,11 +136,12 @@ class Yarn(BaseEntity):
     stage_details: list[StageCostDetail] = Field(default_factory=list)
     max_ck_no: int = 0
     max_pp_no: int = 0
-    pending_accounting_code: str | None = None
+    pending_accounting_code: str | None = None  # BR-70: waits for the first Thường line, never locks the yarn
 
     @property
     def is_locked(self) -> bool:
-        return bool(self.pending_accounting_code) or any(line.has_accounting_code for line in self.lines)
+        """BR-32: locked when a price line has an accounting code (a waiting code does not lock - BR-70)."""
+        return any(line.has_accounting_code for line in self.lines)
 
     @property
     def regular_line(self) -> PriceLine | None:

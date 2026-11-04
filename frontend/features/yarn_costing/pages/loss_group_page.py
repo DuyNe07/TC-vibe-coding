@@ -35,6 +35,7 @@ from frontend.features.yarn_costing.components.labels import (
     label_of,
 )
 from frontend.features.yarn_costing.components.permissions import action_state, explain, is_so, own_factory
+from frontend.features.yarn_costing.components.pick_table import pick_table
 
 LOSS_PREFILL_KEY = "loss_prefill"
 FORM_KEY = "loss_form"
@@ -112,7 +113,7 @@ class LossGroupPage(BasePage):
         stage_codes = data.stage_codes or all_groups.stage_codes
 
         with panel("Nhóm tiêu hao", icon="📋"):
-            picked = data_table(
+            picked = pick_table(
                 self._group_rows(data, stage_codes),
                 column_config={f"{s} (%)": loss_percent(f"{s} (%)") for s in stage_codes},
                 selection="single",

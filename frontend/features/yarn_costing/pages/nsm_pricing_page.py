@@ -61,6 +61,7 @@ from frontend.features.yarn_costing.components.labels import (
     label_of,
 )
 from frontend.features.yarn_costing.components.permissions import action_state, explain, own_factory
+from frontend.features.yarn_costing.components.pick_table import pick_table
 from frontend.features.yarn_costing.pages.loss_group_page import LOSS_PREFILL_KEY, LossGroupPage
 
 OPEN_YARN_KEY = "open_yarn"
@@ -133,7 +134,7 @@ class NsmPricingPage(BasePage):
         items = sorted(data.items, key=lambda y: y.requested_at)
         names = {p.code: p.name for p in reference.packaging}
         with panel("Mã cần xử lý", icon="📋"):
-            picked = data_table(
+            picked = pick_table(
                 yarn_summary_rows(items, names),
                 column_config=YARN_SUMMARY_CONFIG,
                 column_order=LIST_COLUMNS,
@@ -177,6 +178,8 @@ class NsmPricingPage(BasePage):
                 ("Khoá", yes_no(y.is_locked)),
                 ("Sợi so sánh", text_or_dash(y.reference_yarn_code)),
             ]
+            if y.pending_accounting_code:  # BR-70: shown only, never edited here
+                facts.append(("Mã kế toán chờ", y.pending_accounting_code))
             columns = st.columns(3)
             for index, (label, value) in enumerate(facts):
                 columns[index % 3].markdown(f"**{label}:** {value}")

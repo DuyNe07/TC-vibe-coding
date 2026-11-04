@@ -366,3 +366,35 @@ thành nhóm sợi pha, tiêu hao tính theo thành phần, đổi tên thành p
 - Thử trên bản chép dữ liệu thật với bản nháp S1: 255 nhóm hợp lệ, 245 dòng bị loại (230 vì thiếu nhóm thành phần, chủ yếu PE), 354
   mã bị ảnh hưởng, 95 mã không ghép được (thành phần tỷ lệ 0% còn NSM trong dữ liệu cũ S1), 95 mã đổi giá (trung bình −0,21%, từ
   −2,91% đến −0,01%); dữ liệu thật không đổi.
+
+## Fix log
+- 2026-10-15 | Bảng giá đã tính báo lỗi `StreamlitIncompatibleParametersError: lazy=True and on_select cannot be used
+  together` | khung dùng chung `frontend/core/components/data_table.py` bật `lazy` khi bảng > 1.000 dòng, Streamlit 1.64
+  không cho `lazy` cùng chọn dòng; bảng giá có 4.000+ dòng và có chọn dòng | sửa trong chức năng: thêm
+  `components/pick_table.py::pick_table` (cùng cách dùng, không bật `lazy` khi có chọn dòng; không chọn dòng thì dùng
+  `data_table`), thay 7 bảng có chọn dòng ở 6 màn (Bảng giá, Yêu cầu, Nhập NSM, Tiêu hao, Dữ liệu nền ×2, Nhập Excel);
+  không sửa khung dùng chung | không thêm test tự động (lỗi chỉ ở giao diện; bài thử hiển thị dùng dữ liệu trống) |
+  AppTest 1.500 dòng có chọn dòng: `data_table` lỗi đúng câu trên, `pick_table` chạy; ALL CHECKS PASSED (203), APP IS
+  HEALTHY. Đề nghị người phụ trách khung sửa `data_table` (không bật `lazy` khi có `selection`).
+
+## Cập nhật 2026-11-03: mã kế toán chờ (BR-70)
+Tóm tắt: mã có mã kế toán chờ (từ file Excel cũ, chưa có giá) không còn bị khoá; xưởng và Phòng SO sửa NSM như mã thường; khi
+tính được giá lần đầu, mã chờ gắn vào dòng Thường và mã chuyển "Có mã kế toán". Giao diện: thêm dòng "Mã kế toán chờ" ở khối
+thông tin mã (Nhập NSM & tính giá); nút "Tạo bản ĐCNSM" giữ như cũ (chỉ khi có dòng giá). Bỏ vòng hỏi giao diện (đã chốt ở
+Prompt 1 câu 4-5).
+
+| Spec item | Description (VI) | Code element | Test | Status |
+|---|---|---|---|---|
+| BR-70 / BR-32 | Mã kế toán chờ không làm khoá bản NSM | `models/yarn.py::Yarn.is_locked` | `test_waiting_accounting_code.py::test_waiting_code_does_not_lock_and_is_attached_when_priced` | ✅ |
+| BR-70 / UC-21 | Tính được giá → gán mã chờ vào dòng Thường, "Có mã kế toán" | `business/price_line_business.py::PriceLineBusiness.apply_result` (đã có) | như trên (AC-86) | ✅ |
+| BR-70 | Chưa tính được → giữ mã chờ, vẫn sửa được | `Yarn.is_locked`, `apply_result` | `test_waiting_code_kept_when_still_not_priced` (AC-87) | ✅ |
+| BR-70 / BR-24 | Nhóm tiêu hao không "đang khoá" vì mã chờ | `business/loss_business.py::locked_codes` dùng `Yarn.is_locked` | `test_waiting_code_does_not_lock_the_loss_group` (AC-88) | ✅ |
+| 4.12 `pending_accounting_code` / Screen 3 | Hiện "Mã kế toán chờ: <mã>" (chỉ xem) | `dto/request_dto.py::YarnDTO`, `builders/dto_builders.py`, `pages/nsm_pricing_page.py` | test hiển thị trang | ✅ |
+| UC-24 / AC-89 | Nút "Tạo bản ĐCNSM" chỉ khi có dòng giá | `pages/nsm_pricing_page.py` (`if detail.lines`, đã có) | test hiển thị trang | ✅ |
+
+- [x] Code  - [x] Tests  - [x] Document (mục 11, Status Implemented)  - [x] check.py / doctor.py (xem Fix log)
+
+### Fix log
+- 2026-11-03 | test AC-84 (`test_component_import.py::test_permissions_and_locked_groups`) dùng mã kế toán chờ để làm khoá nhóm |
+  từ BR-70 mã chờ không còn khoá | test khoá bằng mã kế toán trên dòng giá (đúng BR-32), giữ nguyên điều kiện kiểm tra của AC-84 |
+  pytest chức năng đạt.

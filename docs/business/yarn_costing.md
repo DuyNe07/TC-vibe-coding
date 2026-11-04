@@ -6,7 +6,7 @@
 | Icon (Biểu tượng) | 🧵 |
 | Owner (Người phụ trách) | Phòng SO |
 | Status (Trạng thái) | Implemented |
-| Last updated | 2026-10-13 |
+| Last updated | 2026-11-03 |
 
 ## 1. Goal (Mục tiêu)
 Hiện nay giá sợi của Xưởng Sợi 1 (S1) và Sợi 4 (S4) được tính trên hai file Excel có macro: Sales gửi yêu cầu qua
@@ -61,6 +61,7 @@ vai trò). Một tài khoản có thể có nhiều vai trò. Quản trị viên
 | Tiêu hao sơ cấp | Tiêu hao của sợi một nguyên liệu + một công nghệ, xưởng nhập tay, ví dụ "PE Normal - Ring" |
 | Tiêu hao thứ cấp | Tiêu hao của sợi pha, app tính từ 1-5 nhóm thành phần và tỷ lệ (BR-26) |
 | Công đoạn ghép | Công đoạn được miễn kiểm tra khớp NSM - tiêu hao (BR-15) |
+| Mã kế toán chờ | Mã kế toán của một mã sợi lấy từ file Excel cũ khi mã đó chưa có dòng giá; app giữ lại và gán vào dòng Thường khi mã tính được giá lần đầu (BR-70) |
 | Bản NSM | Một bộ NSM + thành phần nguyên liệu + đóng gói của một mã; mã gốc là bản 0, mỗi ĐCNSM là một bản mới |
 | ĐCNSM | Điều chỉnh năng suất máy của riêng một sợi (do công nghệ, chất lượng nguyên liệu, sản lượng lớn); tạo bản NSM mới có mã `S4-586 (ĐCNSM1)` |
 | Dòng giá thường | Giá đại trà của một bản NSM, mã = mã của bản NSM |
@@ -285,7 +286,8 @@ Mỗi yêu cầu của Sales tạo một mã sợi (bản NSM gốc). Mỗi ĐCN
 | first_priced_at | date | No | Ngày tính giá lần đầu (dữ liệu cũ: "Ngày tính giá" của file) | 2026-09-26 |
 | last_calculated_at | datetime | No | Lần tính gần nhất | |
 | effective_date | date | No | Ngày hiệu lực của giá hiện tại (lần tính lại toàn bộ gần nhất, hoặc ngày tính) | 2026-09-26 |
-| is_locked | yes-no (tính) | - | Có ít nhất một dòng giá (4.13) của bản NSM này có mã kế toán | Không |
+| is_locked | yes-no (tính) | - | Có ít nhất một dòng giá (4.13) của bản NSM này có mã kế toán; mã kế toán chờ không làm khoá (BR-70) | Không |
+| pending_accounting_code | text ≤ 100 | No | Mã kế toán chờ (BR-70): đọc từ sheet `4. Bang gia da tinh` khi mã chưa có dòng Thường; xoá khi đã gán vào dòng Thường | S4260400001F900405 |
 
 #### 4.12.1 Thành phần nguyên liệu của sợi (Yarn component)
 | Field | Type | Required | Description | Example |
@@ -310,6 +312,7 @@ Mỗi yêu cầu của Sales tạo một mã sợi (bản NSM gốc). Mỗi ĐCN
 | Đã tính giá / Có mã kế toán | Chưa tính được | Một lần tính lại không đạt kiểm tra khớp (giữ nguyên giá đang có, BR-16) |
 | (mới) | Đã tính giá / Chưa tính được | Tạo ĐCNSM (UC-24) hoặc nhập từ file (UC-34) |
 | (mới, nhập từ file) | Có mã kế toán | Dòng dữ liệu cũ có mã kế toán (UC-34) |
+| Chưa tính được | Có mã kế toán | Bản đang giữ mã kế toán chờ tính được giá lần đầu (UC-21, UC-43, tính lại): mã chờ gán vào dòng Thường (BR-70) |
 Đã huỷ và Từ chối là trạng thái cuối: không sửa, không dùng lại mã.
 
 ### 4.13 Dòng bảng giá (Price line)
@@ -728,10 +731,11 @@ Mọi UC làm thay đổi dữ liệu đều chạy bằng tài khoản đã đ�
   4. Khi bấm Lưu: lưu NSM, thành phần nguyên liệu, cách nhập, sợi so sánh, lý do cảnh báo. Nếu kiểm tra khớp đạt: tạo / cập nhật dòng
      Thường và dòng Thí nghiệm (BR-30), cập nhật các dòng CK/PP đang có (BR-31), lưu chi tiết công đoạn, ghi lịch sử giá
      (event Tính lần đầu hoặc Sửa NSM), trạng thái → Đã tính giá, first_priced_at = hôm nay nếu chưa có, effective_date =
-     hôm nay. Nếu không đạt: trạng thái → Chưa tính được + danh sách lý do (BR-16), không tạo / đổi giá.
+     hôm nay; nếu bản đang giữ mã kế toán chờ thì gán mã đó vào dòng Thường vừa tạo và trạng thái → Có mã kế toán (BR-70).
+     Nếu không đạt: trạng thái → Chưa tính được + danh sách lý do (BR-16), không tạo / đổi giá, mã kế toán chờ giữ nguyên.
 - **Output:** "Đã lưu giá <mã>: <tổng> VND/kg (<usd> USD/kg)." hoặc "Đã lưu NSM <mã> nhưng chưa tính được giá: <lý do>."
 - **Errors:** thông báo của BR-09..BR-12, BR-32, BR-38, BR-56, BR-57.
-- **Rules applied:** BR-09 … BR-23, BR-30, BR-31, BR-32, BR-37, BR-38, BR-56, BR-57, BR-58, BR-64
+- **Rules applied:** BR-09 … BR-23, BR-30, BR-31, BR-32, BR-37, BR-38, BR-56, BR-57, BR-58, BR-64, BR-70
 
 ### UC-22: Xem chi tiết tính giá và lịch sử
 - **Actor:** Người xem
@@ -743,19 +747,20 @@ Mọi UC làm thay đổi dữ liệu đều chạy bằng tài khoản đã đ�
 - **Rules applied:** BR-22, BR-23
 
 ### UC-23: Sửa NSM của mã đã có giá (nhập sai)
-Dùng lại UC-21 trên mã "Đã tính giá" / "Chưa tính được" chưa khoá; lịch sử ghi event "Sửa NSM". Mã đã khoá: nút lưu bị
-tắt và hiện thông báo BR-32, kèm nút "Tạo bản ĐCNSM" (UC-24).
+Dùng lại UC-21 trên mã "Đã tính giá" / "Chưa tính được" chưa khoá (mã chỉ giữ mã kế toán chờ là chưa khoá, sửa được như mã
+thường - BR-70); lịch sử ghi event "Sửa NSM". Mã đã khoá: nút lưu bị tắt và hiện thông báo BR-32, kèm nút "Tạo bản ĐCNSM"
+(UC-24).
 
 ### UC-24: Tạo bản ĐCNSM
 - **Actor:** Xưởng (xưởng của mã), Phòng SO
-- **Trigger:** Screen 3, mở một mã (gốc hoặc ĐCNSM, bất kể khoá), bấm "Tạo bản ĐCNSM", nhập lý do, sửa NSM / thành phần nguyên liệu, bấm
+- **Trigger:** Screen 3, mở một mã đã có dòng giá (gốc hoặc ĐCNSM, bất kể khoá; mã chưa có dòng giá không hiện nút - BR-70), bấm "Tạo bản ĐCNSM", nhập lý do, sửa NSM / thành phần nguyên liệu, bấm
   "Kiểm tra và xem giá" rồi "Lưu bản ĐCNSM".
 - **Main flow:** 1. Chép tên, đóng gói, thành phần nguyên liệu, NSM từ bản đang mở vào form. 2. Kiểm tra như UC-21 (trừ khoá) + lý do bắt
   buộc. 3. Cấp mã ĐCNSM (BR-33). 4. Tạo mã sợi mới (origin ĐCNSM, revision_no = n), tính giá như UC-21 bước 4. Bản gốc giữ
   nguyên.
 - **Output:** "Đã tạo bản <mã ĐCNSM>: <tổng> VND/kg."
 - **Errors:** "Vui lòng nhập lý do điều chỉnh."; các lỗi của UC-21.
-- **Rules applied:** BR-09 … BR-23, BR-30, BR-33, BR-38, BR-56, BR-57, BR-58, BR-64
+- **Rules applied:** BR-09 … BR-23, BR-30, BR-33, BR-38, BR-56, BR-57, BR-58, BR-64, BR-70
 
 ### UC-25: Tạo dòng chiết khấu / phụ phí
 - **Actor:** Xưởng (xưởng của mã), Phòng SO
@@ -966,7 +971,7 @@ tắt và hiện thông báo BR-32, kèm nút "Tạo bản ĐCNSM" (UC-24).
 | BR-21 | Tính toán giữ đủ chữ số thập phân (không làm tròn trung gian) | - |
 | BR-22 | USD/kg = Tổng VND/kg ÷ tỷ giá đang dùng (4.9) tại lúc xem / xuất; đổi tỷ giá không làm đổi giá VND và không ghi lịch sử giá | - |
 | BR-23 | Hiển thị và xuất: VND làm tròn đến đồng; USD 4 chữ số thập phân; tỷ lệ, tiêu hao, hồi phế dạng % 2 chữ số thập phân; thời gian 4 chữ số thập phân; định mức VND/phút 2 chữ số thập phân | - |
-| BR-24 | Nhóm tiêu hao "bị ảnh hưởng" khi sửa nhóm G = G và mọi nhóm thứ cấp dùng G làm thành phần (trực tiếp hoặc gián tiếp). Bản NSM bị ảnh hưởng = mọi bản NSM (trạng thái Đã tính giá, Có mã kế toán, Chưa tính được) có `loss_group_key` thuộc các nhóm bị ảnh hưởng. G "đang khoá" nếu ít nhất một bản NSM bị ảnh hưởng đang khoá. Nhóm không khoá: xưởng của nhóm hoặc Phòng SO được sửa. Nhóm đang khoá: chỉ Phòng SO được sửa, bắt buộc lý do; thay đổi áp dụng cho TẤT CẢ bản NSM bị ảnh hưởng, kể cả bản đã khoá | Nhóm tiêu hao '<nhóm>' đang được dùng cho sợi đã có mã kế toán (<tối đa 5 mã>). Chỉ Phòng SO được sửa. |
+| BR-24 | Nhóm tiêu hao "bị ảnh hưởng" khi sửa nhóm G = G và mọi nhóm thứ cấp dùng G làm thành phần (trực tiếp hoặc gián tiếp). Bản NSM bị ảnh hưởng = mọi bản NSM (trạng thái Đã tính giá, Có mã kế toán, Chưa tính được) có `loss_group_key` thuộc các nhóm bị ảnh hưởng. G "đang khoá" nếu ít nhất một bản NSM bị ảnh hưởng đang khoá (BR-32; bản chỉ giữ mã kế toán chờ không tính là khoá - BR-70). Nhóm không khoá: xưởng của nhóm hoặc Phòng SO được sửa. Nhóm đang khoá: chỉ Phòng SO được sửa, bắt buộc lý do; thay đổi áp dụng cho TẤT CẢ bản NSM bị ảnh hưởng, kể cả bản đã khoá | Nhóm tiêu hao '<nhóm>' đang được dùng cho sợi đã có mã kế toán (<tối đa 5 mã>). Chỉ Phòng SO được sửa. |
 | BR-25 | Nhóm sơ cấp và nhóm "Nhập từ file - chưa khai báo thành phần": tiêu hao nhập tay từng công đoạn | - |
 | BR-26 | Tiêu hao thứ cấp tại công đoạn s = Σ (tiêu hao của thành phần i tại s × tỷ lệ i) nếu `secondary_method` của s = Bình quân; = Σ tiêu hao của thành phần i tại s nếu = Cộng thẳng. Tính lại tự động mỗi khi một thành phần thay đổi | - |
 | BR-27 | Nhóm thứ cấp có 1-5 thành phần; mỗi thành phần là một nhóm (bất kỳ loại) đã có của cùng xưởng, khác chính nó và không tạo vòng (A dùng B, B dùng A); mỗi tỷ lệ > 0 và tổng tỷ lệ = 100% (sai lệch ≤ 0,01%) | Nhóm sợi pha cần từ 1 đến 5 thành phần, tổng tỷ lệ bằng 100% và không được dùng chính nó làm thành phần. |
@@ -974,7 +979,7 @@ tắt và hiện thông báo BR-32, kèm nút "Tạo bản ĐCNSM" (UC-24).
 | BR-29 | Chỉ xoá được nhóm tiêu hao không có mã sợi nào dùng và không là thành phần của nhóm khác | Không xoá được: nhóm đang được dùng bởi <N> mã sợi / <M> nhóm sợi pha. |
 | BR-30 | Dòng Thí nghiệm của một bản NSM: mã = mã dòng Thường + "TN" (ví dụ S4-2020TN, S4-586 (ĐCNSM2)TN); mỗi khoản = khoản của dòng Thường × `trial_factor`. Tạo cùng lúc với dòng Thường, cập nhật mỗi khi dòng Thường đổi hoặc hệ số đổi. Dòng CK/PP không tạo dòng thí nghiệm | - |
 | BR-31 | Dòng CK/PP: mã = mã dòng Thường + " (CKn)" hoặc " (PPn)", n = số thứ tự lớn nhất đã dùng cho loại đó của bản NSM + 1 (không dùng lại). Mỗi khoản = khoản của dòng Thường × (1 − %) với Chiết khấu, × (1 + %) với Phụ phí. Tự cập nhật (giữ nguyên %) mỗi khi dòng Thường đổi | - |
-| BR-32 | Bản NSM bị khoá khi ít nhất một dòng giá của nó (Thường, Thí nghiệm, CK, PP) có mã kế toán. Bản khoá: không sửa tên, đóng gói, tỷ lệ pha, NSM; không sửa / xoá dòng CK/PP đã có mã kế toán. Vẫn được: tạo ĐCNSM, tạo dòng CK/PP mới, nhập / sửa mã kế toán, và giá vẫn được tính lại theo BR-24, BR-36 | Mã <mã> đã có mã kế toán nên không sửa được. Muốn điều chỉnh NSM, hãy tạo bản ĐCNSM. |
+| BR-32 | Bản NSM bị khoá khi ít nhất một dòng giá của nó (Thường, Thí nghiệm, CK, PP) có mã kế toán. Bản khoá: không sửa tên, đóng gói, tỷ lệ pha, NSM; không sửa / xoá dòng CK/PP đã có mã kế toán. Vẫn được: tạo ĐCNSM, tạo dòng CK/PP mới, nhập / sửa mã kế toán, và giá vẫn được tính lại theo BR-24, BR-36. Mã kế toán chờ không làm khoá bản NSM (BR-70) | Mã <mã> đã có mã kế toán nên không sửa được. Muốn điều chỉnh NSM, hãy tạo bản ĐCNSM. |
 | BR-33 | Mã ĐCNSM = mã gốc + " (ĐCNSMn)", n = số lớn nhất đã dùng cho mã gốc đó + 1 (bản nhập từ file "(ĐCNSM)" không số được tính là n = 1); bắt buộc lý do | Vui lòng nhập lý do điều chỉnh. |
 | BR-34 | % CK/PP: 0 < % < 100; bắt buộc lý do và đơn hàng; chỉ tạo cho bản NSM đã có dòng Thường | % chiết khấu / phụ phí phải lớn hơn 0 và nhỏ hơn 100. / Vui lòng nhập lý do và đơn hàng cụ thể. |
 | BR-35 | Chỉ xoá được dòng CK/PP chưa có mã kế toán; không xoá được dòng Thường, Thí nghiệm | Dòng <mã dòng> đã có mã kế toán, không xoá được. |
@@ -1012,6 +1017,7 @@ tắt và hiện thông báo BR-32, kèm nút "Tạo bản ĐCNSM" (UC-24).
 | BR-67 | Lưu một nhóm hợp lệ từ file khai báo thành phần: nhóm đã có (mọi loại: Sơ cấp, Nhập từ file - chưa khai báo thành phần, Thứ cấp) → `level` = Thứ cấp, `components` = các thành phần trong file (thay toàn bộ thành phần cũ), `losses` = tính theo BR-26 từ thành phần (thay toàn bộ tiêu hao cũ, kể cả công đoạn thành phần không có tiêu hao → 0); giữ `group_key`, `yarn_group_label`, `material`, `technology`. Nhóm chưa có → tạo nhóm Thứ cấp mới: `group_key` = tên đã chuẩn hoá, `yarn_group_label` = tên như trong file, `material` trống, `technology` = cột Công nghệ. Ghi `updated_by`, `updated_at` | - |
 | BR-68 | Đổi thành phần của mã sợi khi nhóm tiêu hao của mã được khai báo lại bằng file (BR-67): với mỗi thành phần của mã có dây chuyền chải thô X: ứng viên = các thành phần của nhóm mà nhóm thành phần có tiêu hao chải thô > 0 ở X hoặc ở dây chuyền tương đương của X (BR-64); đúng 1 ứng viên → `material_label` = `material_tech_key` của ứng viên; nhiều ứng viên → chọn ứng viên có tỷ lệ trong nhóm bằng tỷ lệ của thành phần mã (sai lệch ≤ 0,01%), còn lại nhiều hơn 1 hoặc không có → không ghép được. Không đổi tỷ lệ, dây chuyền, NSM, lượt; thành phần "Không chải thô" giữ nguyên tên. Áp dụng cả mã đã khoá (chỉ đổi tên nguyên liệu). Mã có thành phần không ghép được → sau khi tính lại là "Chưa tính được" với lý do "Không ghép được thành phần '<tên>' (<dây chuyền>) của mã với thành phần của nhóm tiêu hao '<nhóm>'. Vui lòng chọn lại nguyên liệu ở màn Nhập NSM." và có tên trong file kết quả | Không ghép được thành phần '<tên>' (<dây chuyền>) của mã với thành phần của nhóm tiêu hao '<nhóm>'. Vui lòng chọn lại nguyên liệu ở màn Nhập NSM. |
 | BR-69 | Quyền tải file khai báo thành phần: vai trò Xưởng chỉ tải cho xưởng mình, và chỉ được đổi nhóm không khoá (BR-24; dòng của nhóm đang khoá bị loại với thông báo BR-24) và tạo nhóm mới; Phòng SO tải cho cả hai xưởng, đổi được mọi nhóm kể cả nhóm đang khoá; Kế toán, Sales không được tải | Nhóm tiêu hao '<nhóm>' đang được dùng cho sợi đã có mã kế toán (<tối đa 5 mã>). Chỉ Phòng SO được sửa. / Tài khoản của bạn chưa có vai trò cho thao tác '<thao tác>'. Hãy nhờ quản trị viên cấp vai trò ở trang /admin. |
+| BR-70 | Mã kế toán chờ (bổ sung 2026-11-03): khi nhập sheet `4. Bang gia da tinh`, mã kế toán của một mã chưa có dòng Thường được lưu vào `pending_accounting_code`. Mã kế toán chờ KHÔNG làm khoá bản NSM (BR-32) và không làm nhóm tiêu hao "đang khoá" (BR-24): xưởng của mã và Phòng SO sửa tên, đóng gói, tỷ lệ pha, nguyên liệu, NSM như mã chưa khoá (UC-21, UC-23). Khi bản tính được giá lần đầu (UC-21, UC-43, mọi lần tính lại): tạo dòng Thường, gán mã kế toán chờ vào dòng Thường (người nhập = người thực hiện thao tác, lúc = lúc lưu), xoá mã chờ, trạng thái → "Có mã kế toán" (từ đó bản bị khoá theo BR-32). Tính không đạt → giữ mã chờ, trạng thái "Chưa tính được". Nút "Tạo bản ĐCNSM" (UC-24) chỉ hiện khi bản đang mở có ít nhất một dòng giá. Màn Nhập NSM hiện "Mã kế toán chờ: <mã>" (chỉ xem, không sửa / xoá trên màn hình) | - |
 
 ## 8. Screens (Màn hình)
 
@@ -1111,14 +1117,14 @@ không có vai trò phù hợp (BR-47, BR-48); phía xử lý vẫn kiểm tra l
 - **Information shown:** số yêu cầu mỗi trạng thái của xưởng chọn; danh sách mã (UC-19) mặc định lọc "Chờ xưởng xem" và "Chưa
   tính được", cũ nhất trước.
 - **Inputs:** Xưởng; chọn một mã. Với mã đang mở: thông tin mã (tên, nhóm sợi, chi số, công nghệ, nhóm tiêu hao, đóng gói,
-  trạng thái, khoá, lý do chưa tính được); Cách nhập (Tự điền / Tự nhập, mặc định Tự nhập); bảng thành phần nguyên liệu (Nguyên
+  trạng thái, khoá, lý do chưa tính được, "Mã kế toán chờ: <mã>" khi có - BR-70); Cách nhập (Tự điền / Tự nhập, mặc định Tự nhập); bảng thành phần nguyên liệu (Nguyên
   liệu, Tỷ lệ %, Dây chuyền chải thô, Lượt - app tự đánh, NSM chải thô, NSM của sợi so sánh; thêm / xoá dòng khi nhóm tiêu hao
   chưa có thành phần); NSM các công đoạn không phải chải thô theo BR-13 (kg/giờ), cạnh mỗi ô: NSM của sợi so sánh; ô Lý do khác sợi cùng nhóm (hiện khi có cảnh
   báo); ô Lý do từ chối.
 - **Result block (sau "Kiểm tra và xem giá"):** kết quả kiểm tra khớp (đạt / danh sách lý do); bảng chi tiết công đoạn (4.14, có cột "Ghi chú tiêu hao" - BR-64);
   5 khoản, Tổng VND/kg, USD/kg, giá thí nghiệm.
 - **Buttons:** "Lấy NSM từ sợi cùng nhóm" → UC-20; "Kiểm tra và xem giá" → UC-21 (không lưu); "Lưu NSM và giá" → UC-21; "Từ
-  chối" → UC-18; "Lưu NSM và giá" trên mã đã có giá chưa khoá → UC-23; "Tạo bản ĐCNSM" → UC-24 (form chuyển sang chế độ ĐCNSM, có ô Lý do điều chỉnh, nút "Lưu bản ĐCNSM");
+  chối" → UC-18; "Lưu NSM và giá" trên mã đã có giá chưa khoá → UC-23; "Tạo bản ĐCNSM" (chỉ hiện khi mã đã có dòng giá, BR-70) → UC-24 (form chuyển sang chế độ ĐCNSM, có ô Lý do điều chỉnh, nút "Lưu bản ĐCNSM");
   "Khai báo tiêu hao cho nhóm này" (hiện khi thiếu nhóm tiêu hao) → mở Screen 4 với nhóm điền sẵn.
 - **After actions:** thông báo của UC; mã chuyển trạng thái trong danh sách.
 
@@ -1356,6 +1362,15 @@ không có vai trò phù hợp (BR-47, BR-48); phía xử lý vẫn kiểm tra l
   SO tải cùng file → mọi dòng hợp lệ được lưu, mã đã có mã kế toán được tính lại; Kế toán → nút tắt kèm chú thích BR-47.
 - [ ] AC-85 (UC-45): Bản nháp "mau-khai-bao-thanh-phan-soi-pha-S1-20260929.xlsx" (sheet "Khai bao thanh phan S1", có thêm các cột
   gợi ý) tải lên được; các cột không đọc bị bỏ qua; dòng để trống Thành phần 1-5 không đổi gì.
+- [ ] AC-86 (BR-70, UC-21): Mã S4-1032 "Chưa tính được", chưa có dòng giá, có mã kế toán chờ S4260400001F900405 → màn Nhập
+  NSM hiện "Mã kế toán chờ: S4260400001F900405", nút "Lưu NSM và giá" bật cho Xưởng S4; sửa nguyên liệu, tỷ lệ C3 40% và lưu,
+  kiểm tra khớp đạt → có dòng Thường mang mã kế toán S4260400001F900405, trạng thái "Có mã kế toán", mã bị khoá (BR-32).
+- [ ] AC-87 (BR-70): Cùng mã như AC-86, lưu NSM nhưng kiểm tra khớp không đạt → trạng thái "Chưa tính được" kèm lý do, mã kế
+  toán chờ giữ nguyên, lần sau vẫn sửa được.
+- [ ] AC-88 (BR-70, BR-24): Nhóm tiêu hao chỉ được dùng bởi các mã có mã kế toán chờ → nhóm không "đang khoá"; Xưởng của nhóm
+  sửa tiêu hao được, không cần Phòng SO.
+- [ ] AC-89 (BR-70, UC-24): Mã chưa có dòng giá (có hoặc không có mã kế toán chờ) → không có nút "Tạo bản ĐCNSM"; mã đã có
+  dòng giá (khoá hoặc không) → có nút.
 
 ## 10. Open questions (Câu hỏi mở)
 - Giả định: 5 vai trò cố định (SALES, XS1, XS4, KT, SO); quản trị viên tích vai trò cho từng tài khoản ở trang `/admin` trước khi dùng.
@@ -1408,8 +1423,8 @@ không có vai trò phù hợp (BR-47, BR-48); phía xử lý vẫn kiểm tra l
 - Giả định (triển khai): mã trong sheet bảng giá không có ở sheet NSM và chưa có trong app bị loại; mã trùng trong sheet bảng giá
   lấy dòng đầu; công nghệ khác Ring / MVS bị loại dòng; sheet thiếu cột bắt buộc làm dừng cả file; sheet định mức thiếu mã bắt
   buộc bị bỏ qua với thông báo "Thiếu định mức cho: ...".
-- Giả định (triển khai): mã kế toán của mã sợi nhập từ file chưa tính được giá được giữ chờ (mã coi như đã khoá) và gán vào dòng
-  Thường khi dòng này được tạo.
+- Giả định (triển khai): mã kế toán của mã sợi nhập từ file chưa tính được giá được giữ chờ và gán vào dòng Thường khi dòng
+  này được tạo. Từ 2026-11-03 (BR-70, người dùng chốt): mã kế toán chờ không làm khoá mã, mã vẫn sửa được như thường.
 - Giả định (triển khai): bảng Quy trình và bảng Đóng gói trên màn hình lưu theo kiểu "thay cả danh sách" (dòng bị xoá khỏi bảng
   sẽ bị xoá); không xoá được loại đóng gói đang có mã sợi dùng; lưu đóng gói chỉ tính lại khi phút/kg của loại đang dùng thay
   đổi.
@@ -1557,6 +1572,7 @@ không có vai trò phù hợp (BR-47, BR-48); phía xử lý vẫn kiểm tra l
 | Screen 6 | `pages/excel_import_page.py::ExcelImportPage` (loại "Khai báo thành phần sợi pha": `components/component_import.py::render_component_import`) |
 | 5.7 / UC-44 / UC-45 | `builders/component_file_builder.py` (ComponentFileReaderBuilder, ComponentTemplateBuilder); `services/download_component_template_service.py`, `services/import_component_file_service.py`; `YarnCostingController.download_component_template`, `import_component_file` |
 | BR-66..BR-69 | `business/component_import_business.py::ComponentImportBusiness` (`check_row` BR-66, `declared_group` BR-67, `relabel_yarn` BR-68, `plan` BR-69) |
+| BR-70 (mã kế toán chờ, 2026-11-03) | `models/yarn.py::Yarn.is_locked` (chỉ dòng giá có mã kế toán mới khoá), `business/price_line_business.py::PriceLineBusiness.apply_result` (gán mã chờ vào dòng Thường), `dto/request_dto.py::YarnDTO.pending_accounting_code`, `pages/nsm_pricing_page.py` ("Mã kế toán chờ"); test `tests/test_waiting_accounting_code.py` (AC-86..AC-88), AC-89: nút ĐCNSM chỉ khi có dòng giá (đã có) |
 | Screen 7 | `pages/dashboard_page.py::DashboardPage` |
 | Screen 8 | `pages/user_audit_page.py::UserAuditPage` (Nhật ký thao tác; UC-02) |
 | Menu theo vai trò | `manifest.py` (thứ tự) + `menu_group` của mỗi trang (menu bên trái gấp / mở của khung sườn); cảnh báo BR-61: `components/data_warnings.py` |

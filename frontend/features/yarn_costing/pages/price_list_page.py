@@ -60,6 +60,7 @@ from frontend.features.yarn_costing.components.labels import (
     label_of,
 )
 from frontend.features.yarn_costing.components.permissions import action_state, explain
+from frontend.features.yarn_costing.components.pick_table import pick_table
 from frontend.features.yarn_costing.pages.nsm_pricing_page import OPEN_YARN_KEY, NsmPricingPage
 
 ACCOUNTING_FILTER = {"Có": True, "Chưa có": False}
@@ -95,7 +96,7 @@ class PriceListPage(BasePage):
         )
 
         with panel("Bảng giá", icon="📋"):
-            picked = data_table(
+            picked = pick_table(
                 price_line_rows(data.items),
                 column_config=PRICE_LINE_CONFIG,
                 selection="single",

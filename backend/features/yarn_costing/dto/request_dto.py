@@ -42,6 +42,7 @@ class YarnDTO(BaseDTO):
     last_calculated_at: datetime | None = None
     effective_date: date | None = None
     is_locked: bool = False
+    pending_accounting_code: str | None = None  # BR-70: "Mã kế toán chờ"
     total_vnd: Decimal | None = None
     usd_per_kg: Decimal | None = None
 

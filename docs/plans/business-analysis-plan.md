@@ -155,3 +155,45 @@ mã sợi sau khi đổi nhóm. 6. Ai được tải, nhóm đang khoá. 7. Xem 
 | Trả lời 4a | Tiêu hao tính hoàn toàn theo thành phần | BR-67, AC-79 |
 | Trả lời 6a | Quyền như sửa tiêu hao | BR-69, BR-47, AC-84 |
 | Trả lời 7a | Xem trước, ngày hiệu lực + lý do, tính lại | UC-45, AC-79 |
+
+# Cập nhật 2026-11-03 (lần 4): mã có mã kế toán chờ nhưng chưa có giá
+
+## 1. Phạm vi
+Cập nhật tài liệu `docs/business/yarn_costing.md` (chức năng Tính giá sợi, giữ feature_key `yarn_costing`, nhóm Trang chủ,
+biểu tượng, người phụ trách như cũ). Không thêm chức năng mới.
+
+## 2. Nguồn
+| ID | Nội dung | Nguồn |
+|---|---|---|
+| S-01 | S4-1032 không sửa được NSM vì "đã có mã kế toán", dù mã chưa từng có giá (trạng thái Chưa tính được) | tin nhắn người dùng 2026-11-03 |
+| S-02 | Màn Nhập NSM & tính giá không có nút "Tạo bản ĐCNSM" cho S4-1032 | tin nhắn người dùng 2026-11-03 |
+| S-03 | Mã kế toán của mã nhập từ file chưa tính được giá được giữ chờ, mã coi như đã khoá, gán vào dòng Thường khi dòng được tạo | tài liệu mục 10 (Giả định triển khai) |
+| S-04 | BR-32: bản NSM khoá khi có dòng giá có mã kế toán; UC-23/UC-24: mã khoá hiện nút "Tạo bản ĐCNSM", tạo ĐCNSM "bất kể khoá" | tài liệu BR-32, UC-23, UC-24 |
+| S-05 | Dữ liệu ngày 2026-11-03: 166 mã có mã kế toán chờ, chưa có dòng giá (S4: 158, S1: 8), tất cả "Chưa tính được"; 99 nhóm tiêu hao được các mã này dùng, 96 nhóm "đang khoá" (BR-24) chỉ vì các mã này | dữ liệu app |
+
+## 3. Câu hỏi (vòng 1)
+1. Mã có mã kế toán chờ (chưa có giá): (a) cho sửa NSM, tỷ lệ pha, nguyên liệu, đóng gói như mã chưa khoá; mã kế toán vẫn chờ
+   và tự gắn vào dòng Thường khi tính được giá (đề xuất); (b) giữ khoá như hiện nay, chỉ cho tạo bản ĐCNSM.
+2. Ai được sửa các mã này: (a) như mã bình thường: xưởng của mã và Phòng SO (đề xuất); (b) chỉ Phòng SO.
+3. Nhóm tiêu hao chỉ "đang khoá" vì các mã có mã kế toán chờ (96 nhóm): (a) không coi là khoá nữa, xưởng tự sửa được (đề xuất);
+   (b) vẫn khoá, chỉ Phòng SO sửa.
+4. Nút "Tạo bản ĐCNSM": (a) hiện cho mọi mã đã khoá hoặc đã có giá, kể cả mã chưa có giá nhưng có mã kế toán chờ (đề xuất, đúng
+   UC-24); (b) chỉ hiện khi mã đã có giá.
+5. Mã kế toán chờ: (a) hiện trên khối thông tin mã ở màn Nhập NSM ("Mã kế toán chờ: …"), không sửa được trên màn hình (đề xuất);
+   (b) hiện và cho Kế toán / Phòng SO sửa hoặc xoá; (c) không hiện.
+
+## 4. Trả lời
+1. a - mã có mã kế toán chờ sửa được như mã chưa khoá; mã chờ gán vào dòng Thường khi tính được giá lần đầu.
+2. a - xưởng của mã và Phòng SO.
+3. a - mã kế toán chờ không làm nhóm tiêu hao "đang khoá".
+4. b - nút "Tạo bản ĐCNSM" chỉ hiện khi mã đã có dòng giá.
+5. a - hiện "Mã kế toán chờ: <mã>" trên màn Nhập NSM, chỉ xem.
+
+## 5. Bảng đối chiếu nguồn
+| S-xx | Nội dung | Được ghi ở |
+|---|---|---|
+| S-01 | Mã chưa có giá bị khoá vì mã kế toán chờ | BR-70, BR-32, mục 4.12 (`is_locked`, `pending_accounting_code`), UC-21, UC-23, AC-86, AC-87 |
+| S-02 | Nút "Tạo bản ĐCNSM" | BR-70, UC-24, Screen 3, AC-89 |
+| S-03 | Mã kế toán chờ gán vào dòng Thường | BR-70, UC-21 bước 4, bảng trạng thái 4.12, mục 3 (Thuật ngữ), mục 10 |
+| S-04 | BR-32 / UC-23 / UC-24 | BR-32, UC-23, UC-24 |
+| S-05 | 96 nhóm tiêu hao "đang khoá" vì mã chờ | BR-24, BR-70, AC-88 |
