@@ -121,7 +121,7 @@ framework now expects from the features. (Missing packages: `.venv/Scripts/pytho
 Check EVERY item for every feature of the branch and move it to the framework's way (compare with the reference feature
 `sample_product_import` and `docs/rules/`):
 1. **App registry.** One line `("<prefix>", "<key>")` in `backend/app_registry.py` (prefix = the builder's short name,
-   lower-case letters and digits, e.g. `anhthy`); URLs become `/<prefix>-<app>`.
+   lower-case letters and digits, e.g. `tenban`); URLs become `/<prefix>-<app>`.
 2. **Developer prefix.** `backend/features/<key>/__init__.py` declares `DEVELOPER = "<github username>"` (tables
    `<developer>__<key>__*`). Never change it once data exists.
 3. **Storage.** Repositories inherit `SqlRepository[Entity]`; lookups by value use `repository.find_by(field=...)`; no

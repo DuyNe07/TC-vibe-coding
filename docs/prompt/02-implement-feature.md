@@ -108,7 +108,7 @@ py -3.13 -m venv .venv
 .venv/Scripts/python.exe -X utf8 -m pytest backend/features/<key>/tests -q
 
 # Scaffold a NEW feature (never for an existing one)
-.venv/Scripts/python.exe -X utf8 scripts/new_feature.py <key> --title "<VI title>" --developer <github-username> --prefix <builder short name, e.g. anhthy> --description "<VI sentence>" --icon "<emoji>" --group "<VI group>" --owner "<owner>"
+.venv/Scripts/python.exe -X utf8 scripts/new_feature.py <key> --title "<VI title>" --developer <github-username> --prefix <builder short name, e.g. tenban> --description "<VI sentence>" --icon "<emoji>" --group "<VI group>" --owner "<owner>"
 
 # Gateway registration check: lists the use cases the pages can call through the gateway
 .venv/Scripts/python.exe -X utf8 -c "from backend.features.<key> import <Pascal>Controller as C; print(sorted(C.actions()))"

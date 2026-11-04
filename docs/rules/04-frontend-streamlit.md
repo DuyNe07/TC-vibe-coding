@@ -11,9 +11,9 @@
 
 ### App registry (`backend/app_registry.py`) - REQUIRED for every app
 Every app is ONE line `("<prefix>", "<feature_key>")` in `APPS`, where `<prefix>` is the builder's short name
-(lower-case letters and digits, e.g. `anhthy`): all of that person's apps live under `/anhthy-...`
-(Streamlit 1.64 refuses nested paths such as `/anhthy/app`, so the prefix is joined with `-`).
-- `scripts/new_feature.py ... --prefix anhthy` adds the line (default prefix: the developer name, lower-case).
+(lower-case letters and digits, e.g. `tenban`): all of that person's apps live under `/tenban-...`
+(Streamlit 1.64 refuses nested paths such as `/tenban/app`, so the prefix is joined with `-`).
+- `scripts/new_feature.py ... --prefix tenban` adds the line (default prefix: the developer name, lower-case).
 - The router (URLs, Home card, menu) and the gateway (backend calls) both read it: an app that is not registered is
   reported on Home as not registered, has no URL, and its controller refuses every call.
 - `tests/architecture/test_structure.py` fails while an app is missing, listed twice, or listed but deleted.

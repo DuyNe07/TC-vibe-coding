@@ -43,7 +43,7 @@ Mỗi dòng "Làm được" đều đã có sẵn thư viện và lớp dùng ch
 | Hộp thoại xác nhận, tab, khối gấp gọn | `st.dialog`, `st.tabs`, `st.expander` |
 | Mỗi chức năng là một ứng dụng: một thẻ ở Trang chủ, bấm vào thì menu bên trái hiện các màn hình của ứng dụng đó | `manifest.py` (`pages=(...)`) |
 | Tài khoản master (cấp trên quản trị viên): chỉ master tạo / sửa / xoá quản trị viên và tick ứng dụng cho từng quản trị viên | có sẵn trong khung sườn (`/admin`) |
-| Mỗi người làm có đường dẫn riêng cho các ứng dụng của mình, ví dụ `/anhthy-ten-ung-dung` | `backend/app_registry.py` |
+| Mỗi người làm có đường dẫn riêng cho các ứng dụng của mình, ví dụ `/tenban-ten-ung-dung` | `backend/app_registry.py` |
 | Đăng nhập; quản trị viên tạo tài khoản, nhóm người dùng và cấp quyền theo từng ứng dụng: chọn ứng dụng rồi tick màn hình cho từng người / nhóm (quyền = quyền cá nhân + quyền của các nhóm) | có sẵn trong khung sườn: trang "Người dùng & phân quyền", mở bằng địa chỉ `/admin` (không có trên menu) |
 | Chức năng mẫu tự ẩn khi app đã có chức năng thật đầu tiên | có sẵn trong khung sườn |
 | Menu bên trái của ứng dụng chia màn hình theo nhóm (ví dụ Sales, Phòng SO); chỉ hiện những gì người dùng được phép mở | `manifest.py` + `menu_group` của trang |
