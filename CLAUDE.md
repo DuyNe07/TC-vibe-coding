@@ -23,7 +23,7 @@ lines which phase we are in and what the next step is.
 | 1. Business analysis | the user pastes [docs/prompt/01-business-analysis.md](docs/prompt/01-business-analysis.md) (key `TC-UNLOCK-ANALYSIS`) | + `docs/business/<key>.md`, `docs/plans/business-analysis-plan.md` |
 | 2. Implementation | the user pastes [docs/prompt/02-implement-feature.md](docs/prompt/02-implement-feature.md) (key `TC-UNLOCK-IMPLEMENT`) **and** the document's `Status` is `Ready for implementation` | + `backend/features/<key>/`, `frontend/features/<key>/`, the app's ONE line in `backend/app_registry.py`, `docs/plans/<key>-*.md`, and in the document: section 8 UI block, new UCs of Step 0, sections 10-11, `Status` |
 | 2b. Repair | the user pastes [docs/prompt/03-fix-error.md](docs/prompt/03-fix-error.md) (key `TC-UNLOCK-IMPLEMENT`) because something does not work | the broken feature's folders, only when the diagnosis puts the cause there (environment, `.env`, shared database and framework causes are reported, not edited) |
-| 2c. Sync to the server | the user pastes [docs/prompt/04-sync-to-server.md](docs/prompt/04-sync-to-server.md) (key `TC-UNLOCK-IMPLEMENT`) | the folders of the user's features (rebased on `main`, refactored to the newest framework; framework files always come from `main`) |
+| 2c. Sync to the server | the user pastes [docs/prompt/04-sync-to-server.md](docs/prompt/04-sync-to-server.md) (key `TC-UNLOCK-IMPLEMENT`) | the folders of the user's features (rebased on `dev`, refactored to the newest framework; framework files always come from `dev`) |
 | 2d. Extend a feature | the user pastes [docs/prompt/05-extend-feature.md](docs/prompt/05-extend-feature.md) (key `TC-UNLOCK-IMPLEMENT`) | first only `docs/business/<key>.md` + `docs/plans/<key>-extension-*.md`; after the user confirms the updated document, the same as phase 2 for that feature |
 
 Rules of the gate:
@@ -52,6 +52,10 @@ Rules of the gate:
   self-repair loop of [docs/rules/10-self-repair.md](docs/rules/10-self-repair.md).
 
 ## Essentials (details in the docs)
+- Branches: `main` = stable showcase, updated only by the framework owner from `dev`; `dev` = the team branch where
+  everyone's work is merged through Pull Requests. New work starts on an own `vibe/...` branch from the newest `dev`
+  (Prompts 2 and 5), Prompt 4 rebases on `dev` and opens a Pull Request into `dev`. Never commit or push to `main` or
+  `dev` directly. Someone outside the team branches from `main` instead.
 - ONE process: `run.ps1` (PowerShell) starts Streamlit only (no API/HTTP). Pages run business actions through
   `gateway.open(XxxController)`; each feature exposes ONE controller (top layer) from its package root.
 - Work from `docs/business/<feature_key>.md`. Never invent business rules.

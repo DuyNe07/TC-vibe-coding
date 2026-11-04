@@ -190,6 +190,16 @@ and use that port in the health check and stop commands.
 ## 5. Step 1 - Preflight
 0. Open the gate: write the in-scope feature keys into `.gate-unlock` (section 3). Without it every write to code is
    refused by `scripts/hooks/gate_guard.sh`. Do this only now, never before the user's Step 0 answer.
+0b. Own branch from the newest `dev`:
+```
+git fetch origin --prune
+git branch --show-current
+git checkout -b vibe/<prefix>-<key>-<ddmm> origin/dev   # ONLY when the current branch is `main` or `dev`
+```
+Work never happens directly on `main` or `dev`: on one of them, start the feature branch from the newest `dev` (the
+team branch) as above - uncommitted files (the business document) move with it. Already on an own branch: stay on it
+(Prompt 4 rebases it on `dev` later). The checkout refuses (conflicting local changes): stay where you are and say so
+in the final report. Never `git stash`, `reset` or `clean` here.
 1. If `.venv` is missing, create it (section 3). Run the quality gate once BEFORE changing anything (baseline).
    If it fails because of missing packages, install them and re-run. If it fails in code outside your scope, do not
    touch that code: note it as "pre-existing" for the final report.

@@ -74,7 +74,17 @@ Step 0, for the NEW or CHANGED parts only, with the current UI (`Giao diện đ�
 touched screens). No screen change: skip this step. From here on never ask anything again.
 
 ## 7. Step 6 - Build in place
-Open the gate: `echo <key> > .gate-unlock`. Then follow `docs/prompt/02-implement-feature.md` sections 3 (commands),
+Open the gate: `echo <key> > .gate-unlock`. Then the branch:
+```
+git fetch origin --prune
+git branch --show-current
+git checkout -b vibe/<prefix>-<key>-<ddmm> origin/dev   # ONLY when the current branch is `main` or `dev`
+```
+Work never happens directly on `main` or `dev`: on one of them, start the feature branch from the newest `dev` (the
+team branch) as above - uncommitted files (the business document) move with it. Already on an own branch: stay on it
+(Prompt 4 rebases it on `dev` later). The checkout refuses (conflicting local changes): stay where you are and say so
+in the final report. Never `git stash`, `reset` or `clean` here.
+Then follow `docs/prompt/02-implement-feature.md` sections 3 (commands),
 4 (rules), 7-13 (build, roles, pitfalls, verify) in **existing-feature mode**: never scaffold, never delete folders,
 update in place. In the plan of Step 4 add the traceability rows of the NEW / CHANGED items only, plus one row
 "regression: existing tests" that must stay green. Order: models (defaults) -> migration revision if stored data

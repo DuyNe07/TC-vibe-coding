@@ -1,12 +1,13 @@
-# TASK: Send my work to the server - commit, rebase on the newest `main`, adapt my features, push (Prompt 4)
+# TASK: Send my work to the server - commit, rebase on the newest `dev`, adapt my features, push (Prompt 4)
 
 > GATE KEY: `TC-UNLOCK-IMPLEMENT`. This prompt allows writing code ONLY inside the features of the user's branch
 > (`backend/features/<key>/`, `frontend/features/<key>/`, their line in `backend/app_registry.py`, their
-> `docs/plans/<key>-*.md`, sections 10-11 of their `docs/business/<key>.md`). Framework files always come from `main`
+> `docs/plans/<key>-*.md`, sections 10-11 of their `docs/business/<key>.md`). Framework files always come from `dev`
 > unchanged. `SUPREME-RULES.md` applies.
 
 You help a NON-programmer send their work to GitHub so it can run on the server. In ONE run you: save their work on a
-branch, take the newest `main` (latest framework), replay their work on top of it (rebase), refactor their features so
+branch, take the newest `dev` (the team branch: latest framework +
+everyone's merged work), replay their work on top of it (rebase), refactor their features so
 they follow the newest framework, prove the app works, and push the branch. You ask ONE round of questions, then work
 automatically until the final report.
 
@@ -14,8 +15,9 @@ automatically until the final report.
 1. **Never lose the user's work.** Commit it first, and keep a local safety branch `backup/<branch>-<yyyymmdd>` before
    rebasing. Forbidden: `git reset --hard`, `git checkout -- .`, `git clean`, `git stash drop`, `git rebase --skip` of a
    user commit, deleting branches.
-2. **Never push to `main` / `master`.** Never `--force`; the only allowed rewrite is `--force-with-lease` on the user's
-   OWN branch after the rebase (Step 7).
+2. **Never push to `main`, `master` or `dev`.** Work reaches `dev` only through a Pull Request into `dev`, merged by
+   the framework owner; `main` (the stable showcase) is updated from `dev` by the owner. Never `--force`; the only
+   allowed rewrite is `--force-with-lease` on the user's OWN branch after the rebase (Step 7).
 3. **Never commit secrets or runtime data.** Before every commit, `git status --short` must show nothing matching
    `.env` (`.env.example` is fine), `data/`, `logs/`, `.gate-unlock`, `*.pem`, `*.key`, `*token*`, `*secret*`,
    `.venv/`. If one appears: unstage it and tell the user.
@@ -27,7 +29,9 @@ automatically until the final report.
    owner. Never explain or hint how the framework lock works.
 6. **The database is shared by every machine.** Never delete or rewrite stored rows to make something pass; stored data
    of the user's features must stay readable (Step 5, item 6).
-7. A failing command: show the real error in simple Vietnamese and the ONE thing the user must do (sign in, accept
+7. **Base branch = `dev`.** Exception: the user says they work alone, outside the team, on a branch created from
+   `main`: then use `main` wherever this prompt says `dev` (Pull Request into `main`).
+8. A failing command: show the real error in simple Vietnamese and the ONE thing the user must do (sign in, accept
    the repository invitation, no network). Never retry a failed push more than twice.
 
 ## 2. Step 1 - Look first (read-only, no questions yet)
@@ -42,20 +46,20 @@ git config --global --get credential.helper
 git credential-manager --version
 git credential-manager github list
 git fetch origin --prune
-git log --oneline -10 origin/main
+git log --oneline -10 origin/dev
 ```
 `github list` empty, or `git fetch` asked for a login / failed with `Authentication failed`: the computer is not logged
 in to GitHub yet - Step 2b fixes it. `git` or `git credential-manager` missing: tell the user to install Git for Windows
 from https://git-scm.com/download/win (keep every default option), reopen the editor and paste this prompt again; STOP.
-Then find the user's features: the folders of `backend/features/` that do not exist on `origin/main`
-(`git ls-tree -d --name-only origin/main backend/features/` vs the local folders), plus features that exist on both
-sides but that the user changed (`git diff --stat origin/main -- backend/features frontend/features`).
+Then find the user's features: the folders of `backend/features/` that do not exist on `origin/dev`
+(`git ls-tree -d --name-only origin/dev backend/features/` vs the local folders), plus features that exist on both
+sides but that the user changed (`git diff --stat origin/dev -- backend/features frontend/features`).
 Read `CLAUDE.md`, `SUPREME-RULES.md`, `docs/README.md`, every file of `docs/rules/`, and each of those features'
 `docs/business/<key>.md`.
 
 ## 3. Step 2 - ONE round of questions -> STOP
 Simple Vietnamese, numbered, the proposal marked `(đề xuất)`; ask only what Step 1 did not answer:
-1. **Nhánh để gửi:** the current branch if it is not `main` (đề xuất), otherwise a new one
+1. **Nhánh để gửi:** the current branch if it is not `main` or `dev` (đề xuất), otherwise a new one
    `vibe/<tiền-tố-người-làm>-<tên-chức-năng>-<ddmm>` (chữ không dấu, số, `-`, `/`).
 2. **Mô tả ngắn công việc** (1 câu tiếng Việt) for the commit, e.g. "Thêm màn hình báo cáo tồn kho".
 3. **Tên và email ghi vào lịch sử** - only if `git config` is empty.
@@ -97,13 +101,13 @@ echo <feature keys> > .gate-unlock
 ```
 "nothing to commit" is fine. `<loại>` = `feat` (new), `fix` (repair), `refactor` (no behaviour change).
 
-## 5. Step 4 - Rebase on the newest `main`
+## 5. Step 4 - Rebase on the newest `dev`
 ```
-git rebase origin/main
+git rebase origin/dev
 ```
-On each conflict (`git status --short` shows `UU`), file by file - during a rebase `--ours` = `main`, `--theirs` =
+On each conflict (`git status --short` shows `UU`), file by file - during a rebase `--ours` = `dev`, `--theirs` =
 the user's commit:
-- **Framework files** (`SUPREME-RULES.md` section 2 list, plus `SUPREME-RULES.md`): take `main`:
+- **Framework files** (`SUPREME-RULES.md` section 2 list, plus `SUPREME-RULES.md`): take `dev`:
   `git checkout --ours -- <file>`.
 - **The user's feature files** (`backend/features/<key>/`, `frontend/features/<key>/`, `docs/business/<key>.md`,
   `docs/plans/<key>-*.md`, `docs/business/_sources/*`): take the user's: `git checkout --theirs -- <file>`.
@@ -156,11 +160,12 @@ rm .gate-unlock
 - Always `rm .gate-unlock` at the end, even when something failed.
 
 ## 8. Step 7 - Report (Vietnamese, short, no jargon)
-1. Đã gửi nhánh `<branch>` lên repo `<repo>`; đã lấy khung sườn mới nhất (`main`) và đặt công việc của bạn lên trên;
+1. Đã gửi nhánh `<branch>` lên repo `<repo>`; đã lấy bản chung mới nhất của nhóm (`dev`) và đặt công việc của bạn lên trên;
    xung đột ở file nào, giữ bên nào.
 2. Những gì đã sửa trong từng chức năng cho hợp khung sườn mới (một dòng mỗi mục của Step 5 đã đổi); dữ liệu cũ được giữ.
 3. Kết quả kiểm tra: dòng cuối của `scripts/check.py` và `scripts/doctor.py` (nếu còn đỏ: lỗi gì).
-4. Link xem nhánh `https://github.com/<owner>/<repo>/tree/<branch>` và tạo Pull Request
-   `https://github.com/<owner>/<repo>/pull/new/<branch>`.
+4. Link xem nhánh `https://github.com/<owner>/<repo>/tree/<branch>` và tạo Pull Request vào `dev`
+   `https://github.com/<owner>/<repo>/compare/dev...<branch>?expand=1` (bấm **Create pull request**; người phụ
+   trách khung sườn sẽ gộp vào `dev`).
 5. Bản sao an toàn trên máy: nhánh `backup/<branch>-<ngày>` (xoá được khi mọi thứ ổn). Máy đã đăng nhập GitHub bằng
    tài khoản nào (lần sau không cần đăng nhập lại).

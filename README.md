@@ -46,10 +46,14 @@ Tuỳ chọn thêm vào cuối lệnh: `-Port 8600` (đổi cổng), `-NoBrowser
 ### Chạy trên máy chủ bằng Docker
 
 ```bash
-./build.sh -v 1.2.0          # build image tc-vibe-coding:1.2.0, gỡ container cũ, chạy container mới ở cổng 8501
-PORT=8600 ./build.sh -v 1.3.0
+./packaging/build.sh -v 1.2.0    # đóng gói: build image tc-vibe-coding:1.2.0
+./packaging/deploy.sh -v 1.2.0   # chạy (docker compose): cập nhật cơ sở dữ liệu, thay 3 bản app, khởi động lại nginx ở cổng 80
+docker compose -f packaging/docker-compose.yml ps   # xem trạng thái
 ```
-Cần file `.env` (như trên) cạnh `build.sh`; `.env` không bao giờ được đóng vào image. Xem log: `docker logs -f tc-vibe-coding`.
+Người dùng vào `http://<IP-máy-chủ>/home`. Máy chủ chỉ cần mở **một cổng: 80** (của nginx; đổi bằng
+`PORT=8080 ./packaging/deploy.sh -v ...`). 3 bản app `tc-vibe-coding-1..3` chạy cùng một image, cùng cơ sở dữ liệu;
+nginx giữ mỗi người dùng ở đúng một bản. Cần file `.env` (như trên) ở thư mục gốc dự án; `.env` không bao giờ được
+đóng vào image. Xem log: `docker logs -f tc-vibe-coding-1` (app), `docker logs -f tc-vibe-coding-nginx`.
 
 ## 2. Thêm một chức năng mới (ra lệnh cho AI, 3 lượt)
 
