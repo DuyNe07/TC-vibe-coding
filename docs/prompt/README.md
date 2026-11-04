@@ -15,7 +15,7 @@ Cursor...). Không cần sửa gì trong prompt. Nếu công cụ không cho dá
 | Khi nào | Prompt | Bạn làm gì | Kết quả |
 |---|---|---|---|
 | Có lỗi (màn hình báo lỗi, kết quả sai, app không chạy, không đăng nhập được) | [03-fix-error.md](03-fix-error.md) | Dán prompt kèm mô tả: bấm gì, màn hình hiện gì, hoặc ảnh chụp | AI tự tìm nguyên nhân thật (thư viện trên máy, file `.env`, cơ sở dữ liệu, hay lỗi trong chức năng), sửa phần được phép sửa, kiểm tra lại, và nói rõ ai cần làm gì nếu không phải lỗi của chức năng |
-| Gửi công việc lên server | [04-sync-to-server.md](04-sync-to-server.md) | Trả lời **một lượt**: tên nhánh, mô tả ngắn, cách đăng nhập GitHub | AI lưu công việc, lấy khung sườn mới nhất (`main`), đặt công việc của bạn lên trên, sửa chức năng cho hợp khung sườn mới, kiểm tra, đẩy lên và đưa link Pull Request |
+| Gửi công việc lên server | [04-sync-to-server.md](04-sync-to-server.md) | Trả lời **một lượt**: tên nhánh, mô tả ngắn. Lần đầu trên máy: AI mở trình duyệt để bạn đăng nhập GitHub (bấm **Authorize**), không cần mã hay mật khẩu | AI lưu công việc, lấy khung sườn mới nhất (`main`), đặt công việc của bạn lên trên, sửa chức năng cho hợp khung sườn mới, kiểm tra, đẩy lên và đưa link Pull Request |
 | Muốn thêm vào một chức năng đã xong | [05-extend-feature.md](05-extend-feature.md) | AI đọc chức năng cũ, kể lại nó đang làm gì, rồi hỏi bạn muốn thêm gì. Trả lời câu hỏi, "đồng ý" ở bản tóm tắt, một lượt về giao diện | Tài liệu được cập nhật, phần mới được làm ngay trong chức năng cũ; phần cũ và dữ liệu cũ giữ nguyên |
 | Chỉ muốn đổi giao diện | [02-implement-feature.md](02-implement-feature.md) | Gõ `Đổi giao diện chức năng <tên>` rồi dán prompt 2 trong cùng tin nhắn | Chỉ giao diện thay đổi, nghiệp vụ giữ nguyên |
 
