@@ -120,7 +120,7 @@ class PriceLineBusiness(BaseBusiness[Yarn]):
         if old is None:
             lines.append(line)
             # new line: "Tính lần đầu", except file import and UC-43 (BR-65) which keep their own event
-            keep = (PriceEvent.NHAP_TU_FILE, PriceEvent.TINH_LAI_CHUA_TINH)
+            keep = (PriceEvent.NHAP_TU_FILE, PriceEvent.TINH_LAI_CHUA_TINH, PriceEvent.BO_KHONG_SAN_XUAT)
             first_event = event if event in keep else PriceEvent.TINH_LAN_DAU
             history.append(self.history(yarn, line, first_event, None, **ctx))
             return

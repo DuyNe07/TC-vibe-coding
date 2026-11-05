@@ -124,6 +124,9 @@ class Yarn(BaseEntity):
     status: YarnStatus = YarnStatus.CHO_XUONG_XEM
     status_reasons: list[str] = Field(default_factory=list)
     reject_reason: str = ""
+    not_produced_reason: str = ""  # BR-72: lý do Không sản xuất (mã đang có: trống)
+    not_produced_by: str = ""
+    not_produced_at: datetime | None = None
     origin: YarnOrigin = YarnOrigin.YEU_CAU_SALES
     requested_by: str = ""
     requested_at: datetime = Field(default_factory=utc_now)

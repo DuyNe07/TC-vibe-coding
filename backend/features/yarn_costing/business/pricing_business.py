@@ -35,6 +35,10 @@ class PricingBusiness(BaseBusiness[Yarn]):
         return packaging is not None and packaging.active and packaging.code in data.rates
 
     def ensure_status(self, yarn: Yarn) -> None:
+        if yarn.status == YarnStatus.KHONG_SAN_XUAT:  # BR-73
+            raise YarnValidationError(
+                f"Mã {yarn.yarn_code} đang 'Không sản xuất'. Vui lòng bỏ đánh dấu trước khi thao tác."
+            )
         if yarn.status not in EDITABLE_STATUSES:
             raise YarnValidationError(
                 f"Mã {yarn.yarn_code} đang ở trạng thái '{yarn.status.value}' nên không nhập NSM được."

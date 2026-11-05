@@ -37,6 +37,7 @@ class ListPriceLinesService(BaseService[ListPriceLinesRequest, PriceLineListResp
             total_count=len(rows),
             with_accounting_code_count=sum(1 for r in rows if r.accounting_code),
             not_priced_count=sum(1 for y in scoped if y.status == YarnStatus.CHUA_TINH_DUOC),
+            not_produced_count=sum(1 for y in scoped if y.is_base and y.status == YarnStatus.KHONG_SAN_XUAT),
             waiting_count=sum(1 for y in scoped if y.status == YarnStatus.CHO_XUONG_XEM),
             exchange_rate=rate.rate if rate else None,
             exchange_rate_date=rate.effective_date if rate else None,

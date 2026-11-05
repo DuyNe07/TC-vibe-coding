@@ -70,7 +70,14 @@ class DashboardBusiness(BaseBusiness[Yarn]):
         date_to: date,
     ) -> DashboardStats:
         """BR-53 (1)-(6) cho khoảng ngày [từ, đến] (danh sách đã lọc theo xưởng)."""
-        quoted = [y for y in yarns if y.is_base and y.first_priced_at and date_from <= y.first_priced_at <= date_to]
+        quoted = [  # BR-53 (1): trừ mã Không sản xuất (sửa 2026-11-05)
+            y
+            for y in yarns
+            if y.is_base
+            and y.status != YarnStatus.KHONG_SAN_XUAT
+            and y.first_priced_at
+            and date_from <= y.first_priced_at <= date_to
+        ]
         ordered = [y for y in quoted if y.is_locked]
         requests = [
             y

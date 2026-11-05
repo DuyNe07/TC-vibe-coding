@@ -252,7 +252,12 @@ def yarn_dto(yarn: Yarn, rate: Decimal | None = None, packaging_name: str = "") 
 def summary_dto(yarn: Yarn, rate: Decimal | None = None) -> YarnSummaryDTO:
     regular = yarn.regular_line
     total = regular.total_vnd if regular else None
-    reason = yarn.reject_reason if yarn.status == YarnStatus.TU_CHOI else "; ".join(yarn.status_reasons)
+    if yarn.status == YarnStatus.TU_CHOI:
+        reason = yarn.reject_reason
+    elif yarn.status == YarnStatus.KHONG_SAN_XUAT:
+        reason = yarn.not_produced_reason
+    else:
+        reason = "; ".join(yarn.status_reasons)
     return YarnSummaryDTO(
         yarn_code=yarn.yarn_code,
         factory_code=yarn.factory_code,

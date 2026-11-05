@@ -6,7 +6,7 @@
 | Icon (Biểu tượng) | 🧵 |
 | Owner (Người phụ trách) | Phòng SO |
 | Status (Trạng thái) | Implemented |
-| Last updated | 2026-11-03 |
+| Last updated | 2026-11-05 |
 
 ## 1. Goal (Mục tiêu)
 Hiện nay giá sợi của Xưởng Sợi 1 (S1) và Sợi 4 (S4) được tính trên hai file Excel có macro: Sales gửi yêu cầu qua
@@ -38,6 +38,7 @@ vai trò). Một tài khoản có thể có nhiều vai trò. Quản trị viên
 | Xưởng | Xưởng Sợi 1 (mã S1) hoặc Xưởng Sợi 4 (mã S4); mỗi xưởng có dữ liệu nền, dãy mã và tiêu hao riêng |
 | Mã tính giá | Mã do app cấp cho mỗi sợi, dãy riêng từng xưởng, dạng `S4-2020`; khác mã kế toán |
 | Mã kế toán | Mã do kế toán (hoặc xưởng) nhập vào một dòng bảng giá khi có đơn hàng chính thức |
+| Không sản xuất | Trạng thái của mã sợi mà ngành xác nhận không sản xuất được (ví dụ mã không có giá trong file Excel định mức cũ); mã không có giá, không được tính, không vào số liệu kiểm soát; bỏ đánh dấu được (bổ sung 2026-11-05, BR-72..BR-75) |
 | Tên sợi | Tên đầy đủ, luôn có chi số dạng `<số>/1`, ví dụ `CVC 30/1 (60/40) MVS` |
 | Chi số | Số đứng ngay trước `/1` trong tên sợi, ví dụ 30 |
 | Nhóm sợi | Phần tên sợi đứng trước chi số, ví dụ `CVC` |
@@ -289,6 +290,8 @@ Mỗi yêu cầu của Sales tạo một mã sợi (bản NSM gốc). Mỗi ĐCN
 | effective_date | date | No | Ngày hiệu lực của giá hiện tại (lần tính lại toàn bộ gần nhất, hoặc ngày tính) | 2026-09-26 |
 | is_locked | yes-no (tính) | - | Có ít nhất một dòng giá (4.13) của bản NSM này có mã kế toán; mã kế toán chờ không làm khoá (BR-70) | Không |
 | pending_accounting_code | text ≤ 100 | No | Mã kế toán chờ (BR-70): đọc từ sheet `4. Bang gia da tinh` khi mã chưa có dòng Thường; xoá khi đã gán vào dòng Thường | S4260400001F900405 |
+| not_produced_reason | text ≤ 500 | Yes khi Không sản xuất | Lý do đánh dấu Không sản xuất (BR-72); mã đang có: trống | Excel không có giá - ngành xác nhận không sản xuất |
+| not_produced_by, not_produced_at | text, datetime | No | Người và lúc đánh dấu Không sản xuất; mã đang có: trống; bỏ đánh dấu → xoá trống (nhật ký giữ lại) | |
 
 #### 4.12.1 Thành phần nguyên liệu của sợi (Yarn component)
 | Field | Type | Required | Description | Example |
@@ -314,7 +317,10 @@ Mỗi yêu cầu của Sales tạo một mã sợi (bản NSM gốc). Mỗi ĐCN
 | (mới) | Đã tính giá / Chưa tính được | Tạo ĐCNSM (UC-24) hoặc nhập từ file (UC-34) |
 | (mới, nhập từ file) | Có mã kế toán | Dòng dữ liệu cũ có mã kế toán (UC-34) |
 | Chưa tính được | Có mã kế toán | Bản đang giữ mã kế toán chờ tính được giá lần đầu (UC-21, UC-43, tính lại): mã chờ gán vào dòng Thường (BR-70) |
-Đã huỷ và Từ chối là trạng thái cuối: không sửa, không dùng lại mã.
+| Đã tính giá / Chưa tính được | Không sản xuất | Xưởng của mã hoặc Phòng SO đánh dấu, có lý do (UC-47, UC-48; BR-72); áp cho mã gốc và mọi bản ĐCNSM |
+| Không sản xuất | Đã tính giá / Có mã kế toán / Chưa tính được | Bỏ đánh dấu, có lý do (UC-47; BR-74): app tính lại ngay |
+Đã huỷ và Từ chối là trạng thái cuối: không sửa, không dùng lại mã. "Không sản xuất" (bổ sung 2026-11-05) không phải trạng
+thái cuối: chỉ bỏ đánh dấu được, mọi thao tác khác trên mã bị từ chối (BR-73).
 
 ### 4.13 Dòng bảng giá (Price line)
 | Field | Type | Required | Description | Example |
@@ -360,7 +366,7 @@ Một dòng mỗi khi giá của một dòng bảng giá thay đổi (giữ giá
 | line_code | text | Dòng giá | S4-2020 |
 | changed_at | datetime | Lúc thay đổi | |
 | changed_by | text | Họ tên của tài khoản đăng nhập thực hiện ("Hệ thống" khi không có tài khoản) | Nguyễn Văn A |
-| event | list of values: Tính lần đầu / Sửa NSM / Đổi định mức / Đổi dữ liệu nền / Sửa tiêu hao / Đổi hệ số thí nghiệm / Nhập từ file / Tính lại mã chưa tính được | Nguyên nhân | Đổi định mức |
+| event | list of values: Tính lần đầu / Sửa NSM / Đổi định mức / Đổi dữ liệu nền / Sửa tiêu hao / Đổi hệ số thí nghiệm / Nhập từ file / Tính lại mã chưa tính được / Không sản xuất / Bỏ đánh dấu không sản xuất (2 giá trị cuối bổ sung 2026-11-05) | Nguyên nhân | Đổi định mức |
 | batch_id | text | Lần tính lại toàn bộ (nếu có) | TL-S4-005 |
 | effective_date | date | Ngày hiệu lực của giá mới | 2026-01-01 |
 | old_labor … old_overhead, old_total | decimal | Giá trước khi đổi (trống khi Tính lần đầu) | |
@@ -393,7 +399,7 @@ Giá đọc từ sheet "4. Bang gia da tinh" khi nhập file, để so với gi�
 |---|---|---|---|
 | id | text (tự sinh) | Mã lần nhập | NF-S4-001 |
 | factory_code | S1 / S4 | Xưởng | S4 |
-| mode | list of values: Chuyển dữ liệu ban đầu / Cập nhật hàng loạt / Khai báo thành phần sợi pha | Loại | Chuyển dữ liệu ban đầu |
+| mode | list of values: Chuyển dữ liệu ban đầu / Cập nhật hàng loạt / Khai báo thành phần sợi pha / Đánh dấu không sản xuất (bổ sung 2026-11-05) | Loại | Chuyển dữ liệu ban đầu |
 | cutoff_date | date | Ngày chốt dữ liệu (= ngày hiệu lực của giá sau khi nhập) | 2026-10-01 |
 | file_name | text | Tên file | 20250106 Bieu mau dinh muc soi 2025 (VIE) S4.xlsm |
 | imported_by, imported_at | text, datetime | Người, lúc | |
@@ -527,6 +533,21 @@ xưởng đó (để người dùng sửa rồi tải lên lại). Sheet "4. Ban
   `mau-khai-bao-thanh-phan-soi-pha-S1-20260929.xlsx` (đã gửi người dùng, có gợi ý) tải lên được vì có đủ các cột đọc.
 - **File kết quả:** như `ket-qua-nhap-file-<import_id>.xlsx` (5.5) với Sheet = "Khai bao thanh phan"; thêm các dòng "Mã sợi" cho
   các mã không ghép được thành phần (BR-68).
+
+### 5.8 File đánh dấu không sản xuất (UC-48 in, bổ sung 2026-11-05)
+- **Tên file mẫu:** `mau-danh-dau-khong-san-xuat-<S1|S4>.xlsx` (sheet "Khong san xuat" với 2 cột tiêu đề + sheet "Huong dan").
+  Định dạng tải lên: .xlsx / .xlsm / .xls, tối đa 60 MB, 10.000 dòng (BR-41). Mỗi file là của MỘT xưởng.
+- **Sheet đọc:** sheet đầu tiên của file. **Dòng tiêu đề:** dòng 1, cột đọc theo tên (không phân biệt hoa thường, dấu, khoảng trắng
+  thừa), thứ tự cột không quan trọng, các cột khác bỏ qua (ví dụ cột "Tên sợi", "Trạng thái trên app" của file danh sách mã
+  không có giá). Thiếu cột → "Sheet '<sheet>' thiếu cột bắt buộc: <danh sách>."
+
+| Cột | Bắt buộc | Dữ liệu | Ví dụ |
+|---|---|---|---|
+| Mã | Có | `yarn_code` của mã gốc hoặc bản ĐCNSM của xưởng (chuẩn hoá như BR-44: "S4 - 1731" = "S4-1731") | S4-1731 |
+| Lý do | Có | ≤ 500 ký tự | Excel không có giá - ngành xác nhận không sản xuất |
+
+- **Dòng bỏ qua (không báo lỗi):** ô Mã trống.
+- **File kết quả:** như 5.5 với Sheet = "Khong san xuat".
 
 ## 6. Use cases (Nghiệp vụ)
 Mọi UC làm thay đổi dữ liệu đều chạy bằng tài khoản đã đăng nhập (BR-46: thay bằng đăng nhập của ứng dụng) có vai trò phù hợp
@@ -956,6 +977,31 @@ thường - BR-70); lịch sử ghi event "Sửa NSM". Mã đã khoá: nút lưu
   do."
 - **Rules applied:** BR-14..BR-20, BR-24, BR-26, BR-27, BR-36, BR-41, BR-43, BR-47, BR-49, BR-64, BR-66, BR-67, BR-68, BR-69
 
+### UC-47: Đánh dấu / bỏ đánh dấu Không sản xuất (bổ sung 2026-11-05)
+- **Actor:** Xưởng (xưởng của mã), Phòng SO
+- **Trigger:** Screen 3, mở một mã, nhập Lý do, bấm "Đánh dấu không sản xuất" (hoặc, với mã đang Không sản xuất, "Bỏ đánh dấu
+  không sản xuất"), xác nhận.
+- **Preconditions:** vai trò phù hợp (BR-47, BR-48); lý do bắt buộc; đánh dấu: điều kiện BR-72; bỏ đánh dấu: mã đang Không sản xuất.
+- **Main flow (đánh dấu):** 1. Kiểm tra BR-72 trên mã gốc và mọi bản ĐCNSM. 2. Với từng bản: gỡ các dòng giá và chi tiết công
+  đoạn, ghi lịch sử giá, trạng thái → Không sản xuất, lưu lý do / người / lúc (BR-72). 3. Ghi nhật ký (BR-49).
+- **Main flow (bỏ đánh dấu):** tính lại mã gốc và mọi bản ĐCNSM theo BR-74; ghi nhật ký.
+- **Output:** "Đã đánh dấu Không sản xuất cho <mã> (<n> bản, gỡ <k> dòng giá)." / "Đã bỏ đánh dấu Không sản xuất cho <mã>: <a>
+  bản đã tính giá, <b> bản chưa tính được."
+- **Errors:** các thông báo của BR-72; "Vui lòng nhập lý do."; BR-47, BR-48.
+- **Rules applied:** BR-14..BR-20, BR-47, BR-48, BR-49, BR-70, BR-72, BR-73, BR-74
+
+### UC-48: Đánh dấu Không sản xuất hàng loạt bằng file (bổ sung 2026-11-05)
+- **Actor:** Xưởng (mã của xưởng mình), Phòng SO
+- **Trigger:** Screen 6, chọn xưởng, Loại tải "Đánh dấu không sản xuất", tải file (5.8), bấm "Kiểm tra file" (không lưu); xem
+  kết quả; bấm "Lưu N mã hợp lệ", xác nhận. Nút "Tải file mẫu" tải file mẫu 5.8.
+- **Main flow:** 1. Kiểm tra file (BR-41, 5.8). 2. Đọc từng dòng theo BR-75; dòng lỗi liệt kê với lý do (BR-43). 3. Kết quả kiểm
+  tra: số mã hợp lệ, số dòng giá sẽ gỡ, dòng bị loại, dòng bỏ qua. 4. Khi bấm Lưu: đánh dấu từng mã hợp lệ như UC-47 (mỗi mã lý do
+  của dòng đó), tạo một lần nhập file (4.18, loại "Đánh dấu không sản xuất"), ghi nhật ký.
+- **Output:** "Đã đánh dấu Không sản xuất cho N mã (gỡ K dòng giá), bị loại Z dòng." + nút "Tải kết quả nhập file" (5.8).
+- **Errors / alternative flows:** BR-41; thiếu cột → thông báo 5.8; không có dòng hợp lệ → nút Lưu tắt, "Không có mã hợp lệ để
+  lưu."
+- **Rules applied:** BR-41, BR-43, BR-47, BR-48, BR-49, BR-72, BR-75
+
 ## 7. Business rules (Quy tắc nghiệp vụ)
 | ID | Rule | Error message shown to user (VI) |
 |---|---|---|
@@ -964,7 +1010,7 @@ thường - BR-70); lịch sử ghi event "Sửa NSM". Mã đã khoá: nút lưu
 | BR-03 | `technology` = MVS nếu tên chứa "MVS" (không phân biệt hoa thường), ngược lại Ring. `is_compact` = Có nếu tên chứa "COMPACT" (không phân biệt hoa thường) | - |
 | BR-04 | `loss_group_key` = tên sợi bỏ đoạn "<chi số>/1" (nếu sau đó là khoảng trắng thì thay "<chi số>/1 " bằng một khoảng trắng), bỏ khoảng trắng hai đầu, viết hoa. Ví dụ "CVC 30/1 (60/40) recycle" → "CVC (60/40) RECYCLE" | - |
 | BR-05 | Mã tính giá mới = `code_prefix` của xưởng + (số lớn nhất N trong các mã gốc dạng "<xưởng>-N" đã từng có ở xưởng, kể cả Đã huỷ, Từ chối, mã nhập từ file) + 1. Khởi đầu: S4 lớn nhất 2019 → S4-2020; S1 lớn nhất 1316 → S1-1317. Mã không dùng lại. Mã không theo dạng "<xưởng>-N" (ví dụ mã kế toán dùng làm mã) không tính vào N | - |
-| BR-06 | Không cho tạo / sửa yêu cầu nếu cùng xưởng đã có mã gốc có tên sợi trùng (so sánh không phân biệt hoa thường, gộp khoảng trắng liên tiếp) và trạng thái khác Đã huỷ, Từ chối | Sợi '<tên>' đã có ở mã <mã> của xưởng <xưởng> (trạng thái: <trạng thái>). Không tạo yêu cầu mới. |
+| BR-06 | Không cho tạo / sửa yêu cầu nếu cùng xưởng đã có mã gốc có tên sợi trùng (so sánh không phân biệt hoa thường, gộp khoảng trắng liên tiếp) và trạng thái khác Đã huỷ, Từ chối, Không sản xuất (sửa 2026-11-05: trước đây chỉ Đã huỷ, Từ chối) | Sợi '<tên>' đã có ở mã <mã> của xưởng <xưởng> (trạng thái: <trạng thái>). Không tạo yêu cầu mới. |
 | BR-07 | Sales chỉ sửa / huỷ được yêu cầu đang "Chờ xưởng xem" | Chỉ sửa hoặc huỷ được yêu cầu đang 'Chờ xưởng xem'. Yêu cầu <mã> đang ở trạng thái '<trạng thái>'. |
 | BR-08 | Từ chối chỉ áp dụng cho yêu cầu "Chờ xưởng xem" và bắt buộc có lý do | Vui lòng nhập lý do. |
 | BR-09 | Tỷ lệ pha: mỗi thành phần nguyên liệu từ 0% đến 100%; tổng các thành phần = 100% (cho phép sai lệch ≤ 0,01%) | Tổng tỷ lệ pha phải bằng 100% (hiện là <x>%). |
@@ -1005,13 +1051,13 @@ thường - BR-70); lịch sử ghi event "Sửa NSM". Mã đã khoá: nút lưu
 | BR-44 | Đọc sheet "1. Input NSM": mã chuẩn hoá = bỏ khoảng trắng quanh "-" ("S4 - 586" → "S4-586"), hậu tố "(ĐCNSM…)" chuẩn hoá thành " (ĐCNSMn)" (không số → n = 1) và tạo bản ĐCNSM trỏ về mã gốc; mã trống → cấp mã mới theo BR-05; mã đã có trong app → cập nhật tên, thành phần nguyên liệu (BR-58), NSM, đóng gói nếu bản chưa khoá (đã khoá → loại dòng với thông báo BR-32); mã chưa có → tạo mới với mã đó. Mã trùng trong file → mọi dòng trùng bị loại. Tên không hợp lệ (BR-01) → loại dòng. Thiếu đóng gói / thiếu tiêu hao → vẫn tạo, trạng thái "Chưa tính được" (BR-16). Sheet "4. Bang gia da tinh": mã kế toán không trống → gán cho dòng Thường của mã đó (bản bị khoá); mã tính giá không dạng "<xưởng>-N" và không có ở sheet NSM → loại dòng "Không có dữ liệu NSM cho mã '<mã>'."; mã tính giá dạng mã kế toán (không theo "<xưởng>-N") có ở sheet NSM → giữ làm mã tính giá, đồng thời điền vào mã kế toán nếu cột mã kế toán trống; "Ngày tính giá" → `first_priced_at` (không đọc được → để trống). Tên trùng trong dữ liệu cũ không bị chặn | - |
 | BR-45 | Quyền theo sheet khi tải file: Phòng SO được mọi sheet và cả hai loại tải; Xưởng chỉ được "Cập nhật hàng loạt" với sheet "1. Input NSM" và "2. Input tieu hao" của xưởng mình; "Chuyển dữ liệu ban đầu" chỉ Phòng SO | Sheet '<sheet>' chỉ Phòng SO được cập nhật, đã bỏ qua. |
 | BR-46 | Thay bằng đăng nhập của ứng dụng (2026-10-13): mỗi người dùng app bằng tài khoản riêng; chức năng không còn khối chọn nhóm / nhập mã / chọn tên. Mã quy tắc giữ trống | - |
-| BR-47 | Quyền theo vai trò: tài khoản làm được một thao tác khi có ít nhất một vai trò cho phép thao tác đó. Sales → UC-15, UC-16, UC-17. Xưởng (XS1, XS4) → UC-11, UC-12, UC-13, UC-14, UC-18, UC-20, UC-21, UC-23, UC-24, UC-25, UC-26, UC-28, UC-34 (theo BR-45), UC-45 (theo BR-69). Kế toán → UC-28. Phòng SO → mọi UC thay đổi dữ liệu. Quản trị viên làm như Phòng SO. Tài khoản không có vai trò nào của chức năng chỉ xem được | Tài khoản của bạn chưa có vai trò cho thao tác '<thao tác>'. Hãy nhờ quản trị viên cấp vai trò ở trang /admin. |
+| BR-47 | Quyền theo vai trò: tài khoản làm được một thao tác khi có ít nhất một vai trò cho phép thao tác đó. Sales → UC-15, UC-16, UC-17. Xưởng (XS1, XS4) → UC-11, UC-12, UC-13, UC-14, UC-18, UC-20, UC-21, UC-23, UC-24, UC-25, UC-26, UC-28, UC-34 (theo BR-45), UC-45 (theo BR-69). Kế toán → UC-28. Xưởng còn được UC-47, UC-48 (sửa 2026-11-05: bổ sung). Phòng SO → mọi UC thay đổi dữ liệu. Quản trị viên làm như Phòng SO. Tài khoản không có vai trò nào của chức năng chỉ xem được | Tài khoản của bạn chưa có vai trò cho thao tác '<thao tác>'. Hãy nhờ quản trị viên cấp vai trò ở trang /admin. |
 | BR-48 | Vai trò Xưởng S1 / Xưởng S4 chỉ thao tác trên dữ liệu có `factory_code` bằng xưởng của vai trò: thao tác chỉ được phép khi có ít nhất một vai trò cho phép thao tác đó mà đúng xưởng (Sales, Kế toán, Phòng SO không giới hạn xưởng) | Bạn chỉ được thao tác dữ liệu của xưởng <xưởng>. |
 | BR-49 | Mọi thao tác làm thay đổi dữ liệu ghi một dòng nhật ký (4.19): lúc, tài khoản đăng nhập (tên đăng nhập + họ tên), thao tác, đối tượng, nội dung trước → sau, lý do. Các cột "người làm" khác (người tạo, người xử lý...) ghi họ tên của tài khoản. Khi không có tài khoản (chạy bằng mã hệ thống) ghi "system" / "Hệ thống" | - |
 | BR-50 | Cấu hình công đoạn: stage_code và sequence duy nhất trong xưởng; đúng một công đoạn `is_packaging` = Có; `cumulative_stages` chỉ gồm mã công đoạn có của xưởng và có `sequence` lớn hơn; `blend_slot` "Tỷ lệ dây chuyền X" với X là dây chuyền chải thô của xưởng; dây chuyền chải thô có `max_passes` từ 1 đến 3. Không xoá công đoạn đang có NSM hoặc tiêu hao khác 0 (chỉ đổi tên / cấu hình) | Cấu hình công đoạn không hợp lệ: <chi tiết>. |
 | BR-51 | Phiên bản định mức mới phải có đủ 5 khoản ≥ 0 cho mọi công đoạn không phải đóng gói và mọi loại đóng gói đang hoạt động; bắt buộc ngày hiệu lực và lý do | Thiếu định mức cho: <danh sách mã>. / Vui lòng chọn ngày hiệu lực và nhập lý do. |
 | BR-52 | Mã loại đóng gói duy nhất trong xưởng; phút/kg > 0; chỉ loại đang hoạt động và đã có định mức mới hiện cho Sales chọn | Mã đóng gói '<mã>' đã có ở xưởng <xưởng>. / Phút/kg phải lớn hơn 0. |
-| BR-53 | Chỉ số dashboard trong khoảng ngày [từ, đến] và xưởng chọn: (1) Số sợi báo giá = số bản NSM GỐC có `first_priced_at` trong khoảng; (2) Số sợi có đơn hàng = trong (1), số bản có ít nhất một dòng giá có mã kế toán; tỷ lệ = (2) ÷ (1) × 100%; (3) Số yêu cầu báo giá mới = số mã origin "Yêu cầu Sales" có `requested_at` trong khoảng (mọi trạng thái); (4) Khả năng đáp ứng = số yêu cầu của (3) đã được xưởng lưu NSM (trạng thái Đã tính giá, Có mã kế toán, Chưa tính được) ÷ (số đó + số yêu cầu của (3) bị Từ chối) × 100% (không có yêu cầu đã xử lý → hiển thị "-"); (5) Số yêu cầu đang chờ xưởng xem (hiện tại); (6) Lần tính lại gần nhất trong khoảng: số dòng tăng / giảm, chênh lệch % trung bình = trung bình của (Tổng sau − Tổng trước) ÷ Tổng trước × 100% các dòng Thường thay đổi | - |
+| BR-53 | Chỉ số dashboard trong khoảng ngày [từ, đến] và xưởng chọn: (1) Số sợi báo giá = số bản NSM GỐC có `first_priced_at` trong khoảng, trừ mã Không sản xuất (sửa 2026-11-05); (2) Số sợi có đơn hàng = trong (1), số bản có ít nhất một dòng giá có mã kế toán; tỷ lệ = (2) ÷ (1) × 100%; (3) Số yêu cầu báo giá mới = số mã origin "Yêu cầu Sales" có `requested_at` trong khoảng (mọi trạng thái); (4) Khả năng đáp ứng = số yêu cầu của (3) đã được xưởng lưu NSM (trạng thái Đã tính giá, Có mã kế toán, Chưa tính được) ÷ (số đó + số yêu cầu của (3) bị Từ chối) × 100% (không có yêu cầu đã xử lý → hiển thị "-"); (5) Số yêu cầu đang chờ xưởng xem (hiện tại); (6) Lần tính lại gần nhất trong khoảng: số dòng tăng / giảm, chênh lệch % trung bình = trung bình của (Tổng sau − Tổng trước) ÷ Tổng trước × 100% các dòng Thường thay đổi | - |
 | BR-54 | NSM bất thường: xét bản NSM gốc và ĐCNSM trạng thái Đã tính giá / Có mã kế toán; gom theo (xưởng, công nghệ, nhóm tiêu hao), chỉ nhóm có ≥ 2 mã; với mỗi công đoạn có `varies_with_count` = Không (dây chuyền chải thô: theo cặp dây chuyền + nguyên liệu): giá trị phổ biến = giá trị NSM xuất hiện nhiều nhất (bằng nhau: giá trị nhỏ nhất); mọi mã có NSM khác giá trị phổ biến được liệt kê | - |
 | BR-55 | Đối chiếu giá cũ: chênh lệch = Tổng app − Tổng cũ; "khớp" nếu |chênh lệch| ≤ 1 VND/kg; chênh lệch % = chênh lệch ÷ Tổng cũ × 100% (Tổng cũ = 0 → "-") | - |
 | BR-56 | Thành phần nguyên liệu của sợi: mỗi dây chuyền chải thô có tối đa `max_passes` thành phần (S4 C1: 1; S4 C2, C3 và S1 C1, C2: 3); lượt = thứ tự của thành phần trong các thành phần cùng dây chuyền (1, 2, 3), app tự đánh lại khi thêm / xoá / đổi dây chuyền; `material_label` không trùng trong cùng sợi | <Dây chuyền> chỉ chạy tối đa <n> nguyên liệu trong một sợi. / Nguyên liệu '<nguyên liệu>' bị nhập 2 lần. |
@@ -1020,7 +1066,7 @@ thường - BR-70); lịch sử ghi event "Sửa NSM". Mã đã khoá: nút lưu
 | BR-59 | Nhập tiêu hao S4 từ file cũ: tiêu hao C3 của một dòng = số khác 0 nhỏ nhất trong 3 cột C3.1 / C3.2 / C3.3 (không có → 0). Các dòng cùng `group_key` mà mọi cột khác giống nhau, chỉ khác các cột C3.x → gộp thành một nhóm, tiêu hao C3 = số khác 0 nhỏ nhất của các dòng; các dòng trùng `group_key` khác còn lại vẫn bị loại theo BR-42. Không tự điều chỉnh tiêu hao C2 | - |
 | BR-60 | Mỗi xưởng có tối đa một loại đóng gói mặc định, phải là loại đang hoạt động; khi Sales chọn xưởng ở Screen 2, ô Loại đóng gói tự điền loại mặc định nếu loại đó chọn được (BR-52), ngược lại để trống; Sales đổi được; loại mặc định không tự gán cho mã nhập từ file thiếu đóng gói | Mỗi xưởng chỉ được chọn một loại đóng gói mặc định. |
 | BR-61 | Dữ liệu chép từ app cũ (5.6) được đọc nguyên trạng: mọi mã, dòng giá, số tiền, trạng thái, mã kế toán, lịch sử, lần tính lại, lần nhập file, nhật ký giữ nguyên (dòng cũ có nhóm + tên được đọc thành họ tên "<nhóm> - <tên>", tên đăng nhập để trống), không tính lại giá. Dữ liệu lưu theo cách trước 2026-09-28 được chuyển khi đọc: công đoạn C3.1 / C3.2 / C3.3 của S4 gộp thành C3 (tối đa 3 lượt); tỷ lệ pha và NSM theo ô → thành phần nguyên liệu theo cách ghép ô của BR-58; tiêu hao C3 của nhóm = số khác 0 nhỏ nhất trong C3.1 / C3.2 / C3.3 (BR-59). Giá sau khi chuyển phải bằng giá đang lưu (ví dụ S4-2017 = 19.777,8356 VND/kg). Một file dữ liệu không đọc được → màn hình hiện thông báo, các dữ liệu khác vẫn dùng được | Không đọc được dữ liệu '<tên file>'. Vui lòng chép lại file này từ app cũ (thư mục data\yarn_costing). |
-| BR-62 | Loại đóng gói "đang được dùng" = có ít nhất một bản NSM của xưởng (trạng thái khác Đã huỷ, Từ chối) có `packaging_code` bằng mã loại. Khi lưu bảng Đóng gói (UC-05): chỉ tính lại toàn bộ xưởng khi ít nhất một loại đang được dùng có `minutes_per_kg` khác giá trị đang lưu; ngày hiệu lực và lý do chỉ bắt buộc trong trường hợp này. Hộp xác nhận: có tính lại → "Phút/kg của loại <danh sách mã> (đang có mã sợi dùng) thay đổi. App sẽ tính lại toàn bộ giá xưởng <xưởng> từ ngày <dd/mm/yyyy>."; không tính lại (chỉ đổi loại mặc định, tên, khối lượng, số công, còn hoạt động, thêm loại mới, đổi phút/kg của loại chưa có mã dùng) → "Giá các mã không thay đổi." | Vui lòng chọn ngày hiệu lực và nhập lý do. |
+| BR-62 | Loại đóng gói "đang được dùng" = có ít nhất một bản NSM của xưởng (trạng thái khác Đã huỷ, Từ chối, Không sản xuất - sửa 2026-11-05) có `packaging_code` bằng mã loại. Khi lưu bảng Đóng gói (UC-05): chỉ tính lại toàn bộ xưởng khi ít nhất một loại đang được dùng có `minutes_per_kg` khác giá trị đang lưu; ngày hiệu lực và lý do chỉ bắt buộc trong trường hợp này. Hộp xác nhận: có tính lại → "Phút/kg của loại <danh sách mã> (đang có mã sợi dùng) thay đổi. App sẽ tính lại toàn bộ giá xưởng <xưởng> từ ngày <dd/mm/yyyy>."; không tính lại (chỉ đổi loại mặc định, tên, khối lượng, số công, còn hoạt động, thêm loại mới, đổi phút/kg của loại chưa có mã dùng) → "Giá các mã không thay đổi." | Vui lòng chọn ngày hiệu lực và nhập lý do. |
 | BR-63 | Nút "Gửi yêu cầu" (Screen 2) bị khoá khi có ít nhất một lý do dưới đây; mọi lý do đang đúng hiện ngay cạnh nút, theo thứ tự: (1) tài khoản không có vai trò Sales hoặc Phòng SO (BR-47; quản trị viên được phép) → câu (a); (2) xưởng đang chọn không có loại đóng gói chọn được (BR-52) → câu (b). Hết lý do → nút bấm được | (a) Tài khoản của bạn chưa có vai trò cho thao tác này (quản trị viên cấp ở trang /admin). (b) Xưởng <xưởng> chưa có loại đóng gói chọn được. Vui lòng báo Phòng SO khai báo loại đóng gói và định mức. |
 | BR-64 | Dây chuyền tương đương (cố định theo xưởng): S4 C2 ↔ C3; S1 C1 ↔ C2; S4 C1 không có. Khi tính tiêu hao của một lượt chải thô (nguyên liệu chạy dây chuyền X, BR-58): lấy tiêu hao khai báo tại X của nhóm liên quan (nhóm thành phần của nguyên liệu, hoặc nhóm Sơ cấp / nhóm không có thành phần của sợi); nếu tiêu hao tại X = 0 hoặc để trống và X có dây chuyền tương đương Y với tiêu hao tại Y > 0 → dùng tiêu hao tại Y, ghi `loss_source_stage` = Y (4.14). Nếu tiêu hao tại X > 0 thì luôn dùng số của X, kể cả khi Y có số khác. Nếu cả X và Y đều = 0 → "Chưa tính được" với câu thứ hai của BR-16. Chỉ áp dụng cho tiêu hao của lượt chải thô khi tính giá (và kiểm tra khớp BR-15); không đổi số tiêu hao đã khai báo, không đổi bảng "Tiêu hao tính ra" của nhóm sợi pha (BR-26), không đổi so sánh NSM (BR-37, BR-38, BR-54) | - |
 | BR-65 | Tính lại các mã chưa tính được của một xưởng (UC-43): xét mọi bản NSM của xưởng trạng thái "Chưa tính được" (kể cả bản đã khoá hoặc đang giữ mã kế toán chờ); tính lại theo dữ liệu hiện tại (BR-14..BR-20, BR-64); đạt → tạo / cập nhật dòng Thường, Thí nghiệm, CK/PP, chi tiết công đoạn, `effective_date` = ngày hiệu lực, `first_priced_at` = ngày hiệu lực nếu chưa có, trạng thái "Đã tính giá" (hoặc "Có mã kế toán" nếu bản có mã kế toán), ghi lịch sử giá event "Tính lại mã chưa tính được"; không đạt → giữ "Chưa tính được", cập nhật lại `status_reasons`. Bắt buộc ngày hiệu lực và lý do; tạo một bản ghi 4.16 trigger "Tính lại mã chưa tính được". Các bản NSM trạng thái khác không bị tính lại | Xưởng <xưởng> không có mã nào đang 'Chưa tính được'. / Vui lòng chọn ngày hiệu lực và nhập lý do. |
@@ -1030,6 +1076,10 @@ thường - BR-70); lịch sử ghi event "Sửa NSM". Mã đã khoá: nút lưu
 | BR-69 | Quyền tải file khai báo thành phần: vai trò Xưởng chỉ tải cho xưởng mình, và chỉ được đổi nhóm không khoá (BR-24; dòng của nhóm đang khoá bị loại với thông báo BR-24) và tạo nhóm mới; Phòng SO tải cho cả hai xưởng, đổi được mọi nhóm kể cả nhóm đang khoá; Kế toán, Sales không được tải | Nhóm tiêu hao '<nhóm>' đang được dùng cho sợi đã có mã kế toán (<tối đa 5 mã>). Chỉ Phòng SO được sửa. / Tài khoản của bạn chưa có vai trò cho thao tác '<thao tác>'. Hãy nhờ quản trị viên cấp vai trò ở trang /admin. |
 | BR-70 | Mã kế toán chờ (bổ sung 2026-11-03): khi nhập sheet `4. Bang gia da tinh`, mã kế toán của một mã chưa có dòng Thường được lưu vào `pending_accounting_code`. Mã kế toán chờ KHÔNG làm khoá bản NSM (BR-32) và không làm nhóm tiêu hao "đang khoá" (BR-24): xưởng của mã và Phòng SO sửa tên, đóng gói, tỷ lệ pha, nguyên liệu, NSM như mã chưa khoá (UC-21, UC-23). Khi bản tính được giá lần đầu (UC-21, UC-43, mọi lần tính lại): tạo dòng Thường, gán mã kế toán chờ vào dòng Thường (người nhập = người thực hiện thao tác, lúc = lúc lưu), xoá mã chờ, trạng thái → "Có mã kế toán" (từ đó bản bị khoá theo BR-32). Tính không đạt → giữ mã chờ, trạng thái "Chưa tính được". Nút "Tạo bản ĐCNSM" (UC-24) chỉ hiện khi bản đang mở có ít nhất một dòng giá. Màn Nhập NSM hiện "Mã kế toán chờ: <mã>" (chỉ xem, không sửa / xoá trên màn hình) | - |
 | BR-71 | Siro / Compact bất thường (bổ sung 2026-11-05). **Loại sợi** từ tên (không phân biệt hoa thường): có "SIRO" và "COMPACT" → Siro Compact, hệ số 90%; chỉ có một trong hai chữ → Siro / Compact, 95%; không có → Thường, 100%. **Phạm vi:** bản NSM gốc trạng thái Đã tính giá / Có mã kế toán, công nghệ Ring; gom theo (xưởng, nhóm sợi, chi số) - mỗi xưởng so riêng, cùng một quy tắc cho S1 và S4; chỉ nhóm có ít nhất một mã Siro / Compact hoặc Siro Compact và ít nhất 2 mã. **NSM Con** của mã = NSM ở "S Compact" nếu > 0, ngược lại NSM ở "S"; mã có NSM Con = 0 không xét ở kiểm tra NSM. **(1) Kiểm tra NSM:** mốc thường = giá trị phổ biến (xuất hiện nhiều nhất; bằng nhau: nhỏ nhất) của NSM Con các mã Thường của nhóm; nhóm không có mã Thường (có NSM Con) → mốc = giá trị phổ biến của (NSM Con ÷ hệ số) các mã thuộc loại thấp nhất có trong nhóm (Siro / Compact, nếu không có thì Siro Compact), ghi "Quy đổi từ sợi Siro / Compact"; với mỗi mã Siro / Compact hoặc Siro Compact: NSM chuẩn = mốc × hệ số, Lệch (%) = (NSM Con − NSM chuẩn) ÷ NSM chuẩn × 100; |Lệch| > 1% → liệt kê. **(2) Kiểm tra giá** (Tổng của dòng Thường): thứ hạng Thường < Siro / Compact < Siro Compact; với mỗi mã X hạng trên Thường: mã so sánh = mã có Tổng cao nhất trong các mã hạng thấp hơn X của nhóm (bằng nhau: theo mã); Tổng X ≤ Tổng mã so sánh → liệt kê với lý do "Sợi <loại X> nhưng giá không cao hơn sợi <loại mã so sánh>". Chỉ đọc: không sửa NSM, không tính lại giá; không đổi BR-39, BR-54 | Sợi <loại> nhưng giá không cao hơn sợi <loại>. / Không có mã Siro / Compact bất thường. |
+| BR-72 | Đánh dấu Không sản xuất (bổ sung 2026-11-05). Chọn mã gốc hoặc một bản ĐCNSM → áp cho mã gốc và MỌI bản ĐCNSM của nó. Điều kiện, xét trên mọi bản: trạng thái Đã tính giá hoặc Chưa tính được (Chờ xưởng xem → từ chối, dùng Từ chối; Có mã kế toán hoặc có dòng giá có mã kế toán → từ chối; Đã huỷ / Từ chối → từ chối; đã Không sản xuất → báo đã đánh dấu); lý do bắt buộc ≤ 500 ký tự. Khi lưu, với từng bản: mỗi dòng giá (Thường, Thí nghiệm, CK, PP) có Tổng > 0 được ghi một dòng lịch sử giá (4.15) event "Không sản xuất", giá cũ = giá dòng, giá mới = 0, lý do = lý do đã nhập; gỡ mọi dòng giá và chi tiết công đoạn khỏi bản (số cũ chỉ còn trong lịch sử giá và nhật ký); trạng thái → Không sản xuất; `not_produced_reason`, `not_produced_by`, `not_produced_at` = lý do, người, lúc; `status_reasons` xoá; giữ nguyên tên, NSM, thành phần, đóng gói, `first_priced_at`, `pending_accounting_code` (BR-70) | Mã <mã> đang 'Chờ xưởng xem'. Hãy dùng Từ chối. / Mã <mã> có mã kế toán (<mã kế toán>) nên không đánh dấu Không sản xuất được. Vui lòng xoá mã kế toán trước. / Mã <mã> đang ở trạng thái '<trạng thái>' nên không đánh dấu Không sản xuất được. / Mã <mã> đã là 'Không sản xuất'. / Vui lòng nhập lý do. |
+| BR-73 | Mã Không sản xuất (bổ sung 2026-11-05): không có dòng giá nên không hiện ở Bảng giá (UC-27) và file xuất (UC-29); không được xét ở: tính lại toàn bộ (BR-36), tính lại mã chưa tính được (BR-65), tự tính khi thêm nhóm tiêu hao (BR-40), bản NSM bị ảnh hưởng và khoá nhóm tiêu hao (BR-24, UC-13, UC-45), sợi so sánh (BR-37), các kiểm tra BR-39, BR-54, BR-71, chỉ số dashboard BR-53 (1)(2) và số dòng theo trạng thái, loại đóng gói "đang được dùng" (BR-62); không chặn tạo yêu cầu cùng tên (BR-06); vẫn tính vào số lớn nhất N khi cấp mã (BR-05). Thao tác trên mã Không sản xuất (lưu NSM UC-21, UC-23, tạo ĐCNSM UC-24, CK/PP UC-25, mã kế toán UC-28, từ chối UC-18, cập nhật từ file UC-34) bị từ chối; chỉ bỏ đánh dấu (BR-74) | Mã <mã> đang 'Không sản xuất'. Vui lòng bỏ đánh dấu trước khi thao tác. |
+| BR-74 | Bỏ đánh dấu Không sản xuất (bổ sung 2026-11-05): lý do bắt buộc; áp cho mã gốc và mọi bản ĐCNSM đang Không sản xuất; với từng bản: xoá trống `not_produced_*`, tính lại ngay theo dữ liệu hiện tại (BR-14..BR-20, BR-64) với ngày hiệu lực = hôm nay; đạt → tạo dòng Thường và Thí nghiệm mới (dòng CK/PP cũ không khôi phục), chi tiết công đoạn, trạng thái Đã tính giá (hoặc Có mã kế toán khi gán mã kế toán chờ - BR-70), `first_priced_at` = hôm nay nếu chưa có, lịch sử giá event "Bỏ đánh dấu không sản xuất"; không đạt → Chưa tính được với lý do BR-16 | Mã <mã> không ở trạng thái 'Không sản xuất'. / Vui lòng nhập lý do. |
+| BR-75 | Đọc file đánh dấu không sản xuất (5.8), từng dòng: mã trùng trong file (sau chuẩn hoá, kể cả bản ĐCNSM và mã gốc của nó) → loại mọi dòng trùng ("Mã '<mã>' bị trùng trong file."); mã không có ở xưởng đã chọn → loại ("Không có mã '<mã>' ở xưởng <xưởng>."); lý do trống → loại ("Vui lòng nhập lý do."); lý do > 500 ký tự → loại ("Lý do tối đa 500 ký tự."); điều kiện BR-72 không đạt → loại với thông báo BR-72; mã đã Không sản xuất → bỏ qua với ghi chú "đã là Không sản xuất"; vai trò Xưởng chỉ tải cho xưởng mình (BR-48) | (các câu trong quy tắc) |
 
 ## 8. Screens (Màn hình)
 
@@ -1077,6 +1127,12 @@ thường - BR-70); lịch sử ghi event "Sửa NSM". Mã đã khoá: nút lưu
   và bảng kết quả từng sheet (đọc / tạo / cập nhật / bị loại) + bảng dòng bị loại có công tắc "Chỉ hiện dòng lỗi" → "Lưu N dòng
   hợp lệ", "Tải kết quả nhập file" → bảng các lần nhập (chọn dòng) → ô số liệu đối chiếu + bảng đối chiếu giá cũ + công tắc
   "Chỉ hiện mã lệch trên 1 VND/kg" + "Xuất Excel".
+- **Không sản xuất (bổ sung 2026-11-05, chốt "ok"):** Screen 3: khối "Từ chối / Không sản xuất" cuối form, ô Lý do dùng chung,
+  nút "Đánh dấu không sản xuất" (hỏi xác nhận); mã đang Không sản xuất: khung cảnh báo cam "🚫 Không sản xuất: <lý do> (<người>,
+  <ngày>)" ở đầu form + ô Lý do + nút "Bỏ đánh dấu không sản xuất", bảng NSM chỉ xem; bộ lọc trạng thái có "Không sản xuất" (mặc
+  định không chọn), ô số liệu "Không sản xuất: N". Screen 6: Loại tải thứ tư "Đánh dấu không sản xuất", ẩn Ngày chốt và Lý do;
+  5 ô số liệu, bảng mã hợp lệ, bảng dòng bị loại / bỏ qua, công tắc "Chỉ hiện dòng lỗi". Screen 1: thêm ô số liệu "Mã không sản
+  xuất: N".
 - **Screen 7 - Dashboard kiểm soát:** Xưởng (S1 / S4 / Cả hai), Từ ngày - Đến ngày → 5 ô số liệu (Sợi báo giá, Sợi có đơn
   hàng + tỷ lệ %, Yêu cầu mới, Khả năng đáp ứng %, Đang chờ xưởng xem) → biểu đồ cột "Yêu cầu mới theo tuần" và biểu đồ đường
   "Khả năng đáp ứng theo tuần" → số dòng giá theo trạng thái (ô số liệu) → khối chênh lệch lần tính lại gần nhất + nút xem chi
@@ -1140,6 +1196,10 @@ không có vai trò phù hợp (BR-47, BR-48); phía xử lý vẫn kiểm tra l
   báo); ô Lý do từ chối.
 - **Result block (sau "Kiểm tra và xem giá"):** kết quả kiểm tra khớp (đạt / danh sách lý do); bảng chi tiết công đoạn (4.14, có cột "Ghi chú tiêu hao" - BR-64);
   5 khoản, Tổng VND/kg, USD/kg, giá thí nghiệm.
+- **Không sản xuất (bổ sung 2026-11-05, UC-47):** cạnh nút Từ chối: ô Lý do + nút "Đánh dấu không sản xuất" (hiện với mã Đã tính
+  giá / Chưa tính được, hỏi xác nhận, ghi rõ số bản ĐCNSM và số dòng giá sẽ gỡ). Mã đang Không sản xuất: khối thông tin "Không
+  sản xuất: <lý do> (<người>, <ngày>)", form NSM chỉ xem, ô Lý do + nút "Bỏ đánh dấu không sản xuất" (hỏi xác nhận). Bộ lọc trạng
+  thái của danh sách mã có thêm "Không sản xuất" (không nằm trong mặc định).
 - **Buttons:** "Lấy NSM từ sợi cùng nhóm" → UC-20; "Kiểm tra và xem giá" → UC-21 (không lưu); "Lưu NSM và giá" → UC-21; "Từ
   chối" → UC-18; "Lưu NSM và giá" trên mã đã có giá chưa khoá → UC-23; "Tạo bản ĐCNSM" (chỉ hiện khi mã đã có dòng giá, BR-70) → UC-24 (form chuyển sang chế độ ĐCNSM, có ô Lý do điều chỉnh, nút "Lưu bản ĐCNSM");
   "Khai báo tiêu hao cho nhóm này" (hiện khi thiếu nhóm tiêu hao) → mở Screen 4 với nhóm điền sẵn.
@@ -1181,6 +1241,11 @@ không có vai trò phù hợp (BR-47, BR-48); phía xử lý vẫn kiểm tra l
   từng công đoạn (%), Số mã bị ảnh hưởng); bảng dòng bị loại (Dòng, Nhóm, Lý do); bảng mã không ghép được (Mã, Tên sợi, Thành
   phần, Dây chuyền, Nhóm). Nút "Tải file mẫu" → UC-44; "Kiểm tra file" → UC-45 (không lưu); "Lưu N nhóm hợp lệ" → UC-45 (hỏi
   xác nhận); sau khi lưu: thông báo UC-45, nút "Xem chênh lệch" (UC-37), "Tải kết quả nhập file".
+- **Đánh dấu không sản xuất (bổ sung 2026-11-05, UC-48):** Loại tải thứ tư "Đánh dấu không sản xuất" (không có ô ngày, lý do lấy
+  từ file); kết quả kiểm tra gồm ô số liệu (Mã hợp lệ, Bản ĐCNSM kèm theo, Dòng giá sẽ gỡ, Dòng bị loại, Dòng bỏ qua); bảng mã
+  hợp lệ (Mã, Tên sợi, Trạng thái hiện tại, Số bản, Số dòng giá sẽ gỡ, Lý do); bảng dòng bị loại / bỏ qua (Dòng, Mã, Lý do). Nút
+  "Tải file mẫu" (5.8); "Kiểm tra file" (không lưu); "Lưu N mã hợp lệ" (hỏi xác nhận); sau khi lưu: thông báo UC-48, "Tải kết quả
+  nhập file".
 - **Buttons:** "Tải file mẫu" → UC-33; "Kiểm tra file" → UC-34 (không lưu); "Lưu N dòng hợp lệ" → UC-34; "Tải kết quả nhập
   file" (5.5); danh sách lần nhập file (UC-41) → chọn một lần → "Đối chiếu giá cũ" → UC-35, "Xuất Excel" đối chiếu.
 - **After actions:** thông báo UC-34; lần nhập mới ở đầu danh sách.
@@ -1402,8 +1467,36 @@ không có vai trò phù hợp (BR-47, BR-48); phía xử lý vẫn kiểm tra l
   không có nhóm nào bất thường → "Không có mã Siro / Compact bất thường."
 - [ ] AC-94 (BR-39, BR-54 - giữ nguyên): Với cùng dữ liệu của AC-23 và AC-24, các khối "Sai lệch giá" và "NSM bất thường" cho kết
   quả như trước; tự điền NSM (UC-20) và cảnh báo NSM khi lưu (BR-38) không đổi; không dòng giá nào bị tính lại.
+- [ ] AC-95 (BR-72, UC-47): Mã S4 "Đã tính giá" có dòng Thường 20.000, Thí nghiệm 60.000, một dòng CK, một bản ĐCNSM "Chưa tính
+  được"; xưởng S4 nhập lý do, đánh dấu → cả 2 bản "Không sản xuất", không còn dòng giá nào, lịch sử giá có 3 dòng event "Không
+  sản xuất" (giá cũ 20.000 / 60.000 / giá CK → 0), nhật ký có 1 dòng; tên, NSM, thành phần giữ nguyên; thông báo "Đã đánh dấu
+  Không sản xuất cho <mã> (2 bản, gỡ 3 dòng giá)."
+- [ ] AC-96 (BR-72): Đánh dấu mã "Chờ xưởng xem" → "Mã <mã> đang 'Chờ xưởng xem'. Hãy dùng Từ chối."; mã có dòng giá có mã kế
+  toán → thông báo mã kế toán, không đổi gì; thiếu lý do → "Vui lòng nhập lý do."; tài khoản XS1 đánh dấu mã S4 → thông báo
+  BR-48; tài khoản Sales / Kế toán → thông báo BR-47.
+- [ ] AC-97 (BR-73): Sau AC-95: bảng giá và file xuất không có dòng nào của mã; tính lại toàn bộ S4, tính lại mã chưa tính được
+  và sửa nhóm tiêu hao của mã không làm đổi mã; Dashboard (số sợi báo giá, số dòng theo trạng thái) và BR-39, BR-54, BR-71
+  không xét mã; lưu NSM / tạo ĐCNSM / thêm CK/PP / nhập mã kế toán cho mã → "Mã <mã> đang 'Không sản xuất'. Vui lòng bỏ đánh dấu
+  trước khi thao tác."; Sales tạo yêu cầu cùng tên sợi được (BR-06); mã mới tiếp theo vẫn tính cả mã này (BR-05).
+- [ ] AC-98 (BR-74, UC-47): Bỏ đánh dấu mã của AC-95 với lý do → bản gốc tính lại đạt: dòng Thường và Thí nghiệm mới (không có
+  dòng CK), trạng thái "Đã tính giá", lịch sử event "Bỏ đánh dấu không sản xuất"; bản ĐCNSM không đạt → "Chưa tính được" với lý
+  do BR-16; `not_produced_*` trống.
+- [ ] AC-99 (BR-72, BR-74, BR-70): Mã "Chưa tính được" giữ mã kế toán chờ → đánh dấu được, mã chờ giữ nguyên; bỏ đánh dấu và tính
+  được giá → mã chờ gán vào dòng Thường, trạng thái "Có mã kế toán".
+- [ ] AC-100 (BR-75, UC-48): File S4 có các dòng: "S4 - 1731" + lý do (hợp lệ), mã S4 trùng 2 lần, mã không có ở S4, mã có mã kế
+  toán, dòng thiếu lý do, mã đã Không sản xuất, dòng mã trống → kiểm tra thử: 1 mã hợp lệ, 4 dòng bị loại đúng câu BR-75 / BR-72
+  (dòng trùng: cả 2 dòng), 1 dòng bỏ qua "đã là Không sản xuất", không lưu gì; bấm Lưu → chỉ "S4-1731" đổi, có lần nhập file loại
+  "Đánh dấu không sản xuất".
+- [ ] AC-101 (BR-75, BR-48): Tài khoản XS4 tải file cho xưởng S1 → bị từ chối (BR-48); Phòng SO tải được cho cả hai xưởng.
+- [ ] AC-102 (giữ nguyên): Huỷ yêu cầu (UC-17), Từ chối (UC-18), lưu NSM (UC-21), tính lại toàn bộ (BR-36), file cập nhật hàng
+  loạt (UC-34) và khai báo thành phần (UC-45) của các mã khác chạy như trước; mọi test cũ giữ xanh.
 
 ## 10. Open questions (Câu hỏi mở)
+- Mở rộng 2026-11-05 (lần 2): trạng thái "Không sản xuất" (UC-47, UC-48, BR-72..BR-75): xưởng của mã hoặc Phòng SO đánh dấu
+  từng mã (màn Nhập NSM) hoặc hàng loạt bằng file (màn Nhập dữ liệu từ Excel), bắt buộc lý do; giá của mã bị gỡ khỏi bảng giá
+  (còn trong lịch sử giá); mã không được tính lại, không vào số liệu kiểm soát; bỏ đánh dấu được, app tính lại ngay.
+- Giả định (2026-11-05, lần 2): đánh dấu / bỏ đánh dấu luôn áp cho mã gốc cùng mọi bản ĐCNSM; dòng CK/PP đã gỡ không tự khôi phục
+  khi bỏ đánh dấu (tạo lại nếu cần); app không tự đánh dấu các mã không có giá trong Excel cũ - người dùng tải file danh sách.
 - Mở rộng 2026-11-05: Dashboard có thêm khối "Siro / Compact bất thường" (UC-46, BR-71): kiểm tra NSM Con (Siro hoặc Compact
   = 95%, Siro Compact = 90% của sợi thường cùng nhóm sợi, cùng chi số, lệch > 1% thì báo) và kiểm tra giá (Siro / Compact
   phải đắt hơn sợi thường, Siro Compact đắt hơn Siro / Compact). Tự điền NSM, cảnh báo NSM khi lưu, BR-39, BR-54 giữ nguyên.
@@ -1612,6 +1705,7 @@ không có vai trò phù hợp (BR-47, BR-48); phía xử lý vẫn kiểm tra l
 | Khung sườn mới (2026-11-04) | App đăng ký ở `backend/app_registry.py` với tiền tố nhóm `soteam` do admin đặt trên nhánh `dev` (đường dẫn `/soteam-yarn-costing`; trước đây `xuan2894`); bảng có chọn dòng dùng lại `data_table` của khung sườn (bỏ `components/pick_table.py`); xoá dữ liệu là đặt cờ xoá của khung sườn (`repository.delete`), dữ liệu cũ vẫn đọc được |
 | Screen 7 | `pages/dashboard_page.py::DashboardPage` |
 | BR-71, UC-46 (Siro / Compact bất thường, 2026-11-05) | `business/siro_compact_business.py::SiroCompactBusiness` (loại sợi, NSM Con, 2 kiểm tra), `services/check_siro_anomalies_service.py`, `controllers/yarn_costing_controller.py::check_siro_anomalies` (`@cached_query`), `dto/dashboard_dto.py` (`CheckSiroAnomaliesRequest`, `SiroAnomalyResponse`), `pages/dashboard_page.py::DashboardPage._siro_compact`, `components/columns.py` (`siro_nsm_rows`, `siro_price_rows`); test `tests/test_siro_compact.py` (AC-90..AC-94). Biểu đồ của Dashboard chuyển sang `bar_chart` / `line_chart` của khung sườn |
+| BR-72..BR-75, UC-47, UC-48 (Không sản xuất, 2026-11-05) | `models/enums.py` (`YarnStatus.KHONG_SAN_XUAT`, `PriceEvent.KHONG_SAN_XUAT` / `BO_KHONG_SAN_XUAT`, `ImportMode.KHONG_SAN_XUAT`), `models/yarn.py` (`not_produced_reason/_by/_at`, mặc định trống - không cần migration), `business/not_produced_business.py::NotProducedBusiness` (family, mark_problem, mark, ensure_active, to_recalculate, plan_file), `services/set_not_produced_service.py` (UC-47), `services/import_not_produced_file_service.py` + `services/download_not_produced_template_service.py` (UC-48), `builders/not_produced_file_builder.py` (5.8, đọc bằng `ExcelReader`), `controllers/yarn_costing_controller.py` (`set_not_produced`, `download_not_produced_template` `@cached_query`, `import_not_produced_file`), quyền `models/access.py` (UC-47, UC-48). BR-73: `business/pricing_business.py::ensure_status` (UC-21, UC-23), `create_nsm_revision_service.py`, `create_adjustment_line_service.py`, `import_business.py` (UC-34), `request_business.py` (BR-06), `master_business.py` (BR-62), `dashboard_business.py` (BR-53 (1)); các danh sách trạng thái được tính lại (BR-24, BR-36, BR-40, BR-65) chỉ gồm Đã tính giá / Có mã kế toán / Chưa tính được nên tự bỏ qua mã Không sản xuất. Giao diện: `pages/nsm_pricing_page.py` (`_mark_not_produced`, `_not_produced_block`), `components/not_produced_import.py` + `pages/excel_import_page.py` (Loại tải thứ tư), `pages/price_list_page.py` (ô "Mã không sản xuất"), `components/labels.py`. Test `tests/test_not_produced.py` (AC-95..AC-101); AC-102 = toàn bộ test cũ |
 | Screen 8 | `pages/user_audit_page.py::UserAuditPage` (Nhật ký thao tác; UC-02) |
 | Menu theo vai trò | `manifest.py` (thứ tự) + `menu_group` của mỗi trang (menu bên trái gấp / mở của khung sườn); cảnh báo BR-61: `components/data_warnings.py` |
 | Quyền theo vai trò, hộp thoại | `frontend/features/yarn_costing/components/` (permissions: tắt nút theo vai trò, dialogs, flash, display, labels, columns, recalc_diff, factory_picker) |

@@ -81,6 +81,7 @@ class PriceLineListResponse(BaseResponseDTO):
     total_count: int = 0
     with_accounting_code_count: int = 0
     not_priced_count: int = 0
+    not_produced_count: int = 0  # BR-73: số mã Không sản xuất (bổ sung 2026-11-05)
     waiting_count: int = 0
     exchange_rate: Decimal | None = None
     exchange_rate_date: date | None = None

@@ -31,6 +31,8 @@ USE_CASE_PERMISSIONS: Final = {
     "UC-09": (_SO,),
     "UC-43": (_SO,),
     "UC-45": (_SO, *_FACTORY_ROLES),
+    "UC-47": (_SO, *_FACTORY_ROLES),  # bổ sung 2026-11-05
+    "UC-48": (_SO, *_FACTORY_ROLES),
     "UC-11": (_SO, *_FACTORY_ROLES),
     "UC-12": (_SO, *_FACTORY_ROLES),
     "UC-13": (_SO, *_FACTORY_ROLES),

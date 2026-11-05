@@ -120,6 +120,8 @@ USE_CASE_ACTIONS: Final = {
     "UC-09": "Cập nhật hệ số thí nghiệm",
     "UC-43": "Tính lại các mã chưa tính được",
     "UC-45": "Khai báo thành phần sợi pha từ file",
+    "UC-47": "Đánh dấu / bỏ đánh dấu Không sản xuất",
+    "UC-48": "Đánh dấu Không sản xuất từ file",
     "UC-11": "Thêm nhóm tiêu hao sơ cấp",
     "UC-12": "Thêm nhóm tiêu hao thứ cấp",
     "UC-13": "Sửa nhóm tiêu hao",

@@ -567,6 +567,8 @@ class ImportBusiness(BaseBusiness[ParsedWorkbook]):
                     reason = f"Mã '{code}' đã có ở xưởng {old.factory_code.value}."
                 elif old.is_locked:
                     reason = f"Mã {code} đã có mã kế toán nên không sửa được. Muốn điều chỉnh NSM, hãy tạo bản ĐCNSM."
+                elif old.status == YarnStatus.KHONG_SAN_XUAT:  # BR-73
+                    reason = f"Mã {code} đang 'Không sản xuất'. Vui lòng bỏ đánh dấu trước khi thao tác."
                 elif old.status in CLOSED:
                     reason = f"Mã {code} đang ở trạng thái '{old.status.value}', không cập nhật được."
             if reason:

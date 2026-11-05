@@ -22,10 +22,11 @@ from backend.features.yarn_costing.dto.request_dto import (
     AnalyzeYarnNameRequest,
     ListYarnsRequest,
     RejectYarnRequestRequest,
+    SetNotProducedRequest,
 )
 from frontend.core.base_page import BasePage
 from frontend.core.components import data_table, editable_table, panel, stat_row
-from frontend.core.formatting import format_number
+from frontend.core.formatting import format_datetime, format_number
 from frontend.features.yarn_costing.components.columns import (
     COMPONENT_CONFIG,
     NO_CARDING,
@@ -187,6 +188,9 @@ class NsmPricingPage(BasePage):
             if st.button("Đóng mã", type="tertiary", key=self.key("close")):
                 self.state.pop(OPEN_CODE_KEY)
                 st.rerun()
+            if y.status == YarnStatus.KHONG_SAN_XUAT:
+                self._not_produced_block(feature, detail)
+                return
             if y.status in FINAL_STATUSES:
                 st.info(f"Mã {y.yarn_code} ở trạng thái '{label_of(STATUS_LABELS, y.status)}' - không nhập NSM được.")
                 return
@@ -461,7 +465,89 @@ class NsmPricingPage(BasePage):
                         feature.reject_yarn_request(RejectYarnRequestRequest(yarn_code=code, reason=reason)).message
                     ),
                 )
+        if y.status in (YarnStatus.DA_TINH_GIA, YarnStatus.CHUA_TINH_DUOC) and not y.is_locked:
+            reasons.append(self._mark_not_produced(feature, detail))
         explain(*reasons)
+
+    # ---- UC-47 Không sản xuất (BR-72..BR-74) ----
+    def _mark_not_produced(self, feature: YarnCostingController, detail: YarnDetailResponse) -> str | None:
+        y = detail.yarn
+        code = y.yarn_code
+        disabled, why = action_state("UC-47", str(y.factory_code))
+        left, right = st.columns([4, 1], vertical_alignment="bottom")
+        reason = left.text_input(
+            "Lý do không sản xuất",
+            max_chars=500,
+            placeholder="Ví dụ: Excel không có giá - ngành xác nhận không sản xuất",
+            key=self.key(f"np_reason.{code}"),
+        )
+        if right.button(
+            "Đánh dấu không sản xuất",
+            icon="🚫",
+            key=self.key(f"np_mark.{code}"),
+            disabled=disabled or not reason.strip(),
+            help=why or ("Vui lòng nhập lý do." if not reason.strip() else None),
+        ):
+            revisions = [r.yarn_code for r in detail.revisions if r.yarn_code != code]
+            extra = f" cùng {len(revisions)} bản ĐCNSM ({', '.join(revisions)})" if revisions else ""
+            confirm_dialog(
+                self.state,
+                self.key(f"dlg.np_mark.{code}"),
+                "Xác nhận đánh dấu Không sản xuất",
+                f"Đánh dấu {y.base_code}{extra} là Không sản xuất? Các dòng giá ({len(detail.lines)} dòng của bản đang "
+                "mở) sẽ bị gỡ khỏi bảng giá; số cũ vẫn còn trong Lịch sử giá.",
+                "Đánh dấu",
+                lambda: feature.set_not_produced(SetNotProducedRequest(yarn_code=code, reason=reason)).message,
+            )
+        return why
+
+    def _not_produced_block(self, feature: YarnCostingController, detail: YarnDetailResponse) -> None:
+        y = detail.yarn
+        code = y.yarn_code
+        when = format_datetime(y.not_produced_at) if y.not_produced_at else "-"
+        st.warning(f"🚫 Không sản xuất: {y.not_produced_reason or '-'} ({y.not_produced_by or '-'}, {when})")
+        data_table(
+            [
+                {
+                    "Nguyên liệu": c.material_label,
+                    "Tỷ lệ %": pct(c.ratio),
+                    "Dây chuyền chải thô": c.carding_stage or "-",
+                    "NSM chải thô": plain(c.nsm_carding),
+                }
+                for c in y.components
+            ],
+            key=self.key(f"np_components.{code}"),
+            empty_message="Chưa có thành phần nguyên liệu.",
+        )
+        data_table(
+            [{"Công đoạn": stage, "NSM (kg/giờ)": plain(value)} for stage, value in y.nsm.items()],
+            key=self.key(f"np_nsm.{code}"),
+            empty_message="Chưa có NSM.",
+        )
+        disabled, why = action_state("UC-47", str(y.factory_code))
+        left, right = st.columns([4, 1], vertical_alignment="bottom")
+        reason = left.text_input("Lý do bỏ đánh dấu", max_chars=500, key=self.key(f"np_unmark_reason.{code}"))
+        if right.button(
+            "Bỏ đánh dấu không sản xuất",
+            icon="↩️",
+            key=self.key(f"np_unmark.{code}"),
+            disabled=disabled or not reason.strip(),
+            help=why or ("Vui lòng nhập lý do." if not reason.strip() else None),
+        ):
+            confirm_dialog(
+                self.state,
+                self.key(f"dlg.np_unmark.{code}"),
+                "Xác nhận bỏ đánh dấu Không sản xuất",
+                f"Bỏ đánh dấu {y.base_code} (cùng mọi bản ĐCNSM)? App sẽ tính lại giá ngay; dòng CK/PP cũ không tự "
+                "khôi phục.",
+                "Bỏ đánh dấu",
+                lambda: (
+                    feature.set_not_produced(
+                        SetNotProducedRequest(yarn_code=code, reason=reason, not_produced=False)
+                    ).message
+                ),
+            )
+        explain(why)
 
     def _revision_buttons(
         self,

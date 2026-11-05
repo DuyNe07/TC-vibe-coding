@@ -149,3 +149,38 @@ class ComponentImportResponse(BaseResponseDTO):
     import_id: str | None = None
     batch_id: str | None = None
     result_file: FileDownloadDTO | None = None
+
+
+# ---- UC-48 Đánh dấu Không sản xuất bằng file (5.8, bổ sung 2026-11-05) ----
+class DownloadNotProducedTemplateRequest(BaseRequestDTO):
+    factory_code: FactoryCode
+
+
+class ImportNotProducedFileRequest(BaseRequestDTO):
+    factory_code: FactoryCode
+    file: UploadedFileDTO
+    commit: bool = False
+
+
+class NotProducedRowDTO(BaseDTO):
+    excel_row: int
+    yarn_code: str
+    yarn_name: str = ""
+    status: str = ""
+    version_count: int = 1
+    line_count: int = 0
+    reason: str = ""
+
+
+class NotProducedImportResponse(BaseResponseDTO):
+    message: str
+    committed: bool = False
+    valid_count: int = 0
+    revision_count: int = 0
+    line_count: int = 0
+    rejected_count: int = 0
+    skipped_count: int = 0
+    valid_rows: list[NotProducedRowDTO] = []
+    rejected_rows: list[RejectedRowDTO] = []
+    import_id: str | None = None
+    result_file: FileDownloadDTO | None = None

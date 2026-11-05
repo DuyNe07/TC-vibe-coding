@@ -33,6 +33,9 @@ class YarnDTO(BaseDTO):
     status: YarnStatus
     status_reasons: list[str] = []
     reject_reason: str = ""
+    not_produced_reason: str = ""
+    not_produced_by: str = ""
+    not_produced_at: datetime | None = None
     origin: YarnOrigin
     requested_by: str = ""
     requested_at: datetime
@@ -87,6 +90,22 @@ class CancelYarnRequestRequest(BaseRequestDTO):
 class RejectYarnRequestRequest(BaseRequestDTO):
     yarn_code: str
     reason: str = ""
+
+
+class SetNotProducedRequest(BaseRequestDTO):
+    """UC-47: mark (not_produced=True) or unmark a base code and all its NSM revisions."""
+
+    yarn_code: str
+    reason: str = ""
+    not_produced: bool = True
+
+
+class NotProducedResponse(BaseResponseDTO):
+    message: str
+    yarn_codes: list[str] = []
+    removed_line_count: int = 0
+    priced_count: int = 0
+    failed_count: int = 0
 
 
 class YarnResponse(BaseResponseDTO):

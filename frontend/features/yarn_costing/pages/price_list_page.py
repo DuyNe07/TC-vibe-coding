@@ -91,6 +91,7 @@ class PriceListPage(BasePage):
                 ("Có mã kế toán", format_number(data.with_accounting_code_count)),
                 ("Chưa tính được", format_number(data.not_priced_count)),
                 ("Chờ xưởng xem", format_number(data.waiting_count)),
+                ("Mã không sản xuất", format_number(data.not_produced_count)),
             ]
         )
 

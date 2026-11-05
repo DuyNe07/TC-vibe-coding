@@ -25,6 +25,7 @@ class YarnStatus(StrEnum):
     DA_TINH_GIA = "Đã tính giá"
     CHUA_TINH_DUOC = "Chưa tính được"
     CO_MA_KE_TOAN = "Có mã kế toán"
+    KHONG_SAN_XUAT = "Không sản xuất"  # BR-72..BR-74 (bổ sung 2026-11-05)
 
 
 class LineType(StrEnum):
@@ -56,6 +57,7 @@ class ImportMode(StrEnum):
     BAN_DAU = "Chuyển dữ liệu ban đầu"
     HANG_LOAT = "Cập nhật hàng loạt"
     THANH_PHAN = "Khai báo thành phần sợi pha"
+    KHONG_SAN_XUAT = "Đánh dấu không sản xuất"  # UC-48 (bổ sung 2026-11-05)
 
 
 class NsmMode(StrEnum):
@@ -90,3 +92,5 @@ class PriceEvent(StrEnum):
     DOI_HE_SO_TN = "Đổi hệ số thí nghiệm"
     NHAP_TU_FILE = "Nhập từ file"
     TINH_LAI_CHUA_TINH = "Tính lại mã chưa tính được"
+    KHONG_SAN_XUAT = "Không sản xuất"  # BR-72
+    BO_KHONG_SAN_XUAT = "Bỏ đánh dấu không sản xuất"  # BR-74
