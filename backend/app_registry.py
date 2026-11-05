@@ -12,4 +12,5 @@ One line per app, so branches never conflict. `scripts/new_feature.py` adds the 
 APPS: tuple[tuple[str, str], ...] = (
     ("aiteam", "sample_product_import"),
     ("soteam", "yarn_costing"),
+    ("thynguyen", "sewing_productivity"),
 )
