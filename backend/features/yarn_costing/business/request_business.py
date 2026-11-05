@@ -11,7 +11,7 @@ from backend.features.yarn_costing.models.enums import FactoryCode, YarnStatus
 from backend.features.yarn_costing.models.yarn import Yarn
 
 REVISION_PATTERN = re.compile(r"\(\s*[ĐDđd]\s*C\s*N\s*S\s*M\s*(\d*)\s*\)", re.IGNORECASE)
-CLOSED_STATUSES = (YarnStatus.DA_HUY, YarnStatus.TU_CHOI)
+CLOSED_STATUSES = (YarnStatus.DA_HUY, YarnStatus.TU_CHOI, YarnStatus.KHONG_SAN_XUAT)  # BR-06 (sửa 2026-11-05)
 
 
 class DuplicateNameRule(BaseBusinessRule[Yarn]):

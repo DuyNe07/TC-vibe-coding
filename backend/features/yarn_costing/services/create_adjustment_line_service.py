@@ -8,6 +8,7 @@ from backend.features.yarn_costing.business.access_business import AccessBusines
 from backend.features.yarn_costing.business.costing_business import CostingBusiness
 from backend.features.yarn_costing.business.display_business import format_vnd
 from backend.features.yarn_costing.business.master_business import MasterBusiness
+from backend.features.yarn_costing.business.not_produced_business import NotProducedBusiness
 from backend.features.yarn_costing.business.price_line_business import ADJUSTMENT_TYPES, PriceLineBusiness
 from backend.features.yarn_costing.dto.price_dto import CreateAdjustmentLineRequest, PriceLineResponse
 from backend.features.yarn_costing.exceptions import YarnNotFoundError
@@ -33,6 +34,7 @@ class CreateAdjustmentLineService(BaseService[CreateAdjustmentLineRequest, Price
         if yarn is None:
             raise YarnNotFoundError(f"Không tìm thấy mã {request.yarn_code}.")
         self.access.ensure_allowed(self.current_user, "UC-25", yarn.factory_code.value)
+        NotProducedBusiness().ensure_active(yarn)  # BR-73
         self.master.require(request.line_type in ADJUSTMENT_TYPES, "Vui lòng chọn Chiết khấu hoặc Phụ phí.")
         self.master.require(
             yarn.regular_line is not None, f"Mã {yarn.yarn_code} chưa có giá, chưa tạo được dòng CK/PP."

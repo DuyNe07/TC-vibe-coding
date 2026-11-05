@@ -33,10 +33,11 @@ STATUS_ORDER = [
     YarnStatus.CHUA_TINH_DUOC,
     YarnStatus.DA_TINH_GIA,
     YarnStatus.CO_MA_KE_TOAN,
+    YarnStatus.KHONG_SAN_XUAT,
     YarnStatus.TU_CHOI,
     YarnStatus.DA_HUY,
 ]
-FINAL_STATUSES = (YarnStatus.DA_HUY, YarnStatus.TU_CHOI)
+FINAL_STATUSES = (YarnStatus.DA_HUY, YarnStatus.TU_CHOI, YarnStatus.KHONG_SAN_XUAT)  # không nhập NSM được
 ADJUSTMENT_TYPES = (LineType.CHIET_KHAU, LineType.PHU_PHI)
 SALES_ORIGIN = YarnOrigin.YEU_CAU_SALES.value
 

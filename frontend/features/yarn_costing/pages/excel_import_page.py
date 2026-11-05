@@ -1,4 +1,4 @@
-"""Screen 6 (`nhap-du-lieu-excel`) - Nhập dữ liệu từ Excel (UC-33..UC-35, UC-41, UC-44, UC-45)."""
+"""Screen 6 (`nhap-du-lieu-excel`) - Nhập dữ liệu từ Excel (UC-33..UC-35, UC-41, UC-44, UC-45, UC-48)."""
 
 from datetime import date
 from typing import Any
@@ -11,6 +11,7 @@ from backend.features.yarn_costing import YarnCostingController
 from backend.features.yarn_costing.dto.common_dto import ImportMode
 from backend.features.yarn_costing.dto.import_dto import (
     DownloadComponentTemplateRequest,
+    DownloadNotProducedTemplateRequest,
     DownloadTemplateRequest,
     GetLegacyComparisonRequest,
     ImportResultResponse,
@@ -29,6 +30,7 @@ from frontend.features.yarn_costing.components.display import fmt_date, percent_
 from frontend.features.yarn_costing.components.factory_picker import factory_segment
 from frontend.features.yarn_costing.components.flash import show_flash
 from frontend.features.yarn_costing.components.labels import IMPORT_MODE_LABELS, label_of
+from frontend.features.yarn_costing.components.not_produced_import import render_not_produced_import
 from frontend.features.yarn_costing.components.permissions import action_state, explain, is_so, own_factory
 
 PREVIEW_KEY = "import_preview"
@@ -84,7 +86,7 @@ class ExcelImportPage(BasePage):
                 return
             mode = c2.radio(
                 "Loại tải",
-                [ImportMode.BAN_DAU, ImportMode.HANG_LOAT, ImportMode.THANH_PHAN],
+                [ImportMode.BAN_DAU, ImportMode.HANG_LOAT, ImportMode.THANH_PHAN, ImportMode.KHONG_SAN_XUAT],
                 index=1,
                 horizontal=True,
                 format_func=lambda v: label_of(IMPORT_MODE_LABELS, v),
@@ -92,15 +94,23 @@ class ExcelImportPage(BasePage):
             )
             mode = mode or ImportMode.HANG_LOAT
             components = mode == ImportMode.THANH_PHAN
-            cutoff = c3.date_input(
-                "Ngày hiệu lực" if components else "Ngày chốt",
-                value=date.today(),
-                format="DD/MM/YYYY",
-                key=self.key("cutoff"),
-            )
-            template_key = f"template.{factory}.{'components' if components else 'workbook'}"
+            not_produced = mode == ImportMode.KHONG_SAN_XUAT  # UC-48: no date, reasons come from the file
+            cutoff = date.today()
+            if not not_produced:
+                cutoff = c3.date_input(
+                    "Ngày hiệu lực" if components else "Ngày chốt",
+                    value=date.today(),
+                    format="DD/MM/YYYY",
+                    key=self.key("cutoff"),
+                )
+            kind = "components" if components else "not_produced" if not_produced else "workbook"
+            template_key = f"template.{factory}.{kind}"
             if c4.button("Tải file mẫu", icon="📄", key=self.key("template")):
-                if components:  # UC-44
+                if not_produced:  # 5.8
+                    file = feature.download_not_produced_template(
+                        DownloadNotProducedTemplateRequest(factory_code=factory)
+                    )
+                elif components:  # UC-44
                     file = feature.download_component_template(DownloadComponentTemplateRequest(factory_code=factory))
                 else:  # UC-33
                     file = feature.download_template(DownloadTemplateRequest(factory_code=factory))
@@ -108,11 +118,18 @@ class ExcelImportPage(BasePage):
             template = self.state.get(template_key)
             if template is not None:
                 download_button(template, label="Tải file mẫu về máy", key=self.key(f"{template_key}.dl"))
-            if not is_so() and not components:
+            if not is_so() and not components and not not_produced:
                 st.caption(
                     "Xưởng chỉ được 'Cập nhật hàng loạt' sheet '1. Input NSM' và '2. Input tieu hao' của xưởng mình; "
                     "các sheet khác sẽ bị bỏ qua."
                 )
+
+        if not_produced:  # UC-48
+            render_not_produced_import(self, feature, factory)
+            import_id = self._import_list(feature, factory)
+            if import_id:
+                self._comparison(feature, import_id)
+            return
 
         if components:  # UC-45
             render_component_import(self, feature, factory, cutoff)

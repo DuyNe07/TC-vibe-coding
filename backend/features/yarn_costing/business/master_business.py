@@ -23,7 +23,7 @@ from backend.features.yarn_costing.models.yarn import Yarn
 
 DATE_REASON_MESSAGE = "Vui lòng chọn ngày hiệu lực và nhập lý do."
 PACKAGING_NO_RECALC_TEXT = "Giá các mã không thay đổi."
-CLOSED_STATUSES = (YarnStatus.DA_HUY, YarnStatus.TU_CHOI)
+CLOSED_STATUSES = (YarnStatus.DA_HUY, YarnStatus.TU_CHOI, YarnStatus.KHONG_SAN_XUAT)  # BR-62 (sửa 2026-11-05)
 
 
 class StageConfigRule(BaseBusinessRule[ConfigIssues]):

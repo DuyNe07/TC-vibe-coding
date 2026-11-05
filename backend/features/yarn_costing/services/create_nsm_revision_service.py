@@ -8,6 +8,7 @@ from backend.features.yarn_costing.builders.pricing_result_builder import Pricin
 from backend.features.yarn_costing.business.access_business import AccessBusiness
 from backend.features.yarn_costing.business.costing_business import CostingBusiness
 from backend.features.yarn_costing.business.display_business import format_vnd
+from backend.features.yarn_costing.business.not_produced_business import NotProducedBusiness
 from backend.features.yarn_costing.business.price_line_business import PriceLineBusiness
 from backend.features.yarn_costing.business.pricing_business import PricingBusiness
 from backend.features.yarn_costing.business.request_business import RequestBusiness
@@ -39,6 +40,7 @@ class CreateNsmRevisionService(BaseService[CreateNsmRevisionRequest, PricingResu
         if source is None:
             raise YarnNotFoundError(f"Không tìm thấy mã {request.source_yarn_code}.")
         self.access.ensure_allowed(self.current_user, "UC-24", source.factory_code.value)
+        NotProducedBusiness().ensure_active(source)  # BR-73
         if source.status not in SOURCE_STATUSES:
             raise YarnValidationError(
                 f"Mã {source.yarn_code} đang ở trạng thái '{source.status.value}', chưa tạo được bản ĐCNSM."

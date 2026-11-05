@@ -16,14 +16,17 @@ from backend.features.yarn_costing.dto.dashboard_dto import (
 from backend.features.yarn_costing.dto.import_dto import (
     ComponentImportResponse,
     DownloadComponentTemplateRequest,
+    DownloadNotProducedTemplateRequest,
     DownloadTemplateRequest,
     GetLegacyComparisonRequest,
     ImportBatchListResponse,
     ImportComponentFileRequest,
+    ImportNotProducedFileRequest,
     ImportResultResponse,
     ImportWorkbookRequest,
     LegacyComparisonResponse,
     ListImportBatchesRequest,
+    NotProducedImportResponse,
 )
 from backend.features.yarn_costing.dto.loss_dto import (
     CreatePrimaryLossGroupRequest,
@@ -74,8 +77,10 @@ from backend.features.yarn_costing.dto.request_dto import (
     CheckRequestSubmitRequest,
     CreateYarnRequestRequest,
     ListYarnsRequest,
+    NotProducedResponse,
     RejectYarnRequestRequest,
     RequestSubmitCheckResponse,
+    SetNotProducedRequest,
     UpdateYarnRequestRequest,
     YarnListResponse,
     YarnNameAnalysisResponse,
@@ -100,6 +105,9 @@ from backend.features.yarn_costing.services.delete_loss_group_service import Del
 from backend.features.yarn_costing.services.download_component_template_service import (
     DownloadComponentTemplateService,
 )
+from backend.features.yarn_costing.services.download_not_produced_template_service import (
+    DownloadNotProducedTemplateService,
+)
 from backend.features.yarn_costing.services.download_template_service import DownloadTemplateService
 from backend.features.yarn_costing.services.export_price_lines_service import ExportPriceLinesService
 from backend.features.yarn_costing.services.get_dashboard_service import GetDashboardService
@@ -108,6 +116,7 @@ from backend.features.yarn_costing.services.get_recalc_diff_service import GetRe
 from backend.features.yarn_costing.services.get_reference_data_service import GetReferenceDataService
 from backend.features.yarn_costing.services.get_yarn_detail_service import GetYarnDetailService
 from backend.features.yarn_costing.services.import_component_file_service import ImportComponentFileService
+from backend.features.yarn_costing.services.import_not_produced_file_service import ImportNotProducedFileService
 from backend.features.yarn_costing.services.import_workbook_service import ImportWorkbookService
 from backend.features.yarn_costing.services.list_audit_log_service import ListAuditLogService
 from backend.features.yarn_costing.services.list_import_batches_service import ListImportBatchesService
@@ -123,6 +132,7 @@ from backend.features.yarn_costing.services.save_recovery_rates_service import S
 from backend.features.yarn_costing.services.save_stage_config_service import SaveStageConfigService
 from backend.features.yarn_costing.services.save_yarn_nsm_service import SaveYarnNsmService
 from backend.features.yarn_costing.services.set_accounting_code_service import SetAccountingCodeService
+from backend.features.yarn_costing.services.set_not_produced_service import SetNotProducedService
 from backend.features.yarn_costing.services.suggest_nsm_service import SuggestNsmService
 from backend.features.yarn_costing.services.update_loss_group_service import UpdateLossGroupService
 from backend.features.yarn_costing.services.update_trial_factor_service import UpdateTrialFactorService
@@ -325,3 +335,16 @@ class YarnCostingController(BaseController):
     def import_component_file(self, request: ImportComponentFileRequest) -> ComponentImportResponse:
         """UC-45 Kiểm tra và lưu file khai báo thành phần sợi pha."""
         return ImportComponentFileService().handle(request)
+
+    def set_not_produced(self, request: SetNotProducedRequest) -> NotProducedResponse:
+        """UC-47 Đánh dấu / bỏ đánh dấu Không sản xuất."""
+        return SetNotProducedService().handle(request)
+
+    @cached_query
+    def download_not_produced_template(self, request: DownloadNotProducedTemplateRequest) -> FileDownloadDTO:
+        """UC-48 Tải file mẫu đánh dấu Không sản xuất."""
+        return DownloadNotProducedTemplateService().handle(request)
+
+    def import_not_produced_file(self, request: ImportNotProducedFileRequest) -> NotProducedImportResponse:
+        """UC-48 Kiểm tra và lưu file đánh dấu Không sản xuất."""
+        return ImportNotProducedFileService().handle(request)
