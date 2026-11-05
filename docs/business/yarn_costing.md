@@ -44,6 +44,7 @@ vai trò). Một tài khoản có thể có nhiều vai trò. Quản trị viên
 | Nhóm tiêu hao | Tên sợi bỏ phần `<chi số>/1`, viết hoa, ví dụ `CVC (60/40) MVS`; dùng để tìm bảng tiêu hao; đã phân biệt tỷ lệ pha và nguyên liệu đặc biệt |
 | Công nghệ | Ring hoặc MVS |
 | Sợi compact | Sợi có chữ "compact" trong tên; ở S4 công đoạn con dùng "S Compact" thay cho "S" |
+| Loại sợi Siro / Compact | (bổ sung 2026-11-05) Loại tính từ tên sợi cho kiểm tra BR-71: Thường (hệ số 100%), Siro / Compact - tên có "SIRO" hoặc "COMPACT" (95%), Siro Compact - tên có cả hai chữ (90%) |
 | Công đoạn | Một bước sản xuất có mã (C1, SBD, MD1, R, S, W, V...) và định mức chi phí/phút riêng |
 | Đóng gói | Công đoạn cuối, mã `F`; chi phí theo loại đóng gói (Type 1, Type 2...) |
 | NSM | Năng suất máy của một sợi ở một công đoạn, đơn vị kg/giờ; 0 hoặc để trống = sợi không chạy công đoạn đó |
@@ -817,6 +818,16 @@ thường - BR-70); lịch sử ghi event "Sửa NSM". Mã đã khoá: nút lưu
   do đã ghi (nếu có).
 - **Rules applied:** BR-54
 
+### UC-46: Kiểm tra Siro / Compact bất thường (bổ sung 2026-11-05)
+- **Actor:** Người xem
+- **Trigger:** Screen 7 khối "Siro / Compact bất thường", chọn xưởng (S1 / S4 / Cả hai; không theo khoảng ngày).
+- **Main flow:** app xét các bản NSM gốc đã có giá của xưởng đã chọn theo BR-71 (mỗi xưởng riêng) và hiện hai bảng.
+- **Output:** (1) "NSM Con lệch chuẩn": Xưởng, Nhóm sợi, Chi số, Mã, Tên sợi, Loại sợi, NSM Con, NSM chuẩn, Lệch (%), Mốc
+  (mã thường làm mốc, hoặc "Quy đổi từ sợi Siro / Compact"); (2) "Giá không cao hơn": Xưởng, Nhóm sợi, Chi số, Mã, Tên sợi,
+  Loại sợi, Giá, Mã so sánh, Loại sợi so sánh, Giá so sánh, Lý do; số dòng của mỗi bảng. Rỗng: "Không có mã Siro / Compact bất
+  thường."
+- **Rules applied:** BR-71
+
 ### UC-32: Xem dashboard
 - **Actor:** Người xem
 - **Trigger:** Screen 7, chọn xưởng (S1 / S4 / Cả hai), khoảng ngày (mặc định: từ ngày 1 tháng hiện tại đến hôm nay).
@@ -1018,6 +1029,7 @@ thường - BR-70); lịch sử ghi event "Sửa NSM". Mã đã khoá: nút lưu
 | BR-68 | Đổi thành phần của mã sợi khi nhóm tiêu hao của mã được khai báo lại bằng file (BR-67): với mỗi thành phần của mã có dây chuyền chải thô X: ứng viên = các thành phần của nhóm mà nhóm thành phần có tiêu hao chải thô > 0 ở X hoặc ở dây chuyền tương đương của X (BR-64); đúng 1 ứng viên → `material_label` = `material_tech_key` của ứng viên; nhiều ứng viên → chọn ứng viên có tỷ lệ trong nhóm bằng tỷ lệ của thành phần mã (sai lệch ≤ 0,01%), còn lại nhiều hơn 1 hoặc không có → không ghép được. Không đổi tỷ lệ, dây chuyền, NSM, lượt; thành phần "Không chải thô" giữ nguyên tên. Áp dụng cả mã đã khoá (chỉ đổi tên nguyên liệu). Mã có thành phần không ghép được → sau khi tính lại là "Chưa tính được" với lý do "Không ghép được thành phần '<tên>' (<dây chuyền>) của mã với thành phần của nhóm tiêu hao '<nhóm>'. Vui lòng chọn lại nguyên liệu ở màn Nhập NSM." và có tên trong file kết quả | Không ghép được thành phần '<tên>' (<dây chuyền>) của mã với thành phần của nhóm tiêu hao '<nhóm>'. Vui lòng chọn lại nguyên liệu ở màn Nhập NSM. |
 | BR-69 | Quyền tải file khai báo thành phần: vai trò Xưởng chỉ tải cho xưởng mình, và chỉ được đổi nhóm không khoá (BR-24; dòng của nhóm đang khoá bị loại với thông báo BR-24) và tạo nhóm mới; Phòng SO tải cho cả hai xưởng, đổi được mọi nhóm kể cả nhóm đang khoá; Kế toán, Sales không được tải | Nhóm tiêu hao '<nhóm>' đang được dùng cho sợi đã có mã kế toán (<tối đa 5 mã>). Chỉ Phòng SO được sửa. / Tài khoản của bạn chưa có vai trò cho thao tác '<thao tác>'. Hãy nhờ quản trị viên cấp vai trò ở trang /admin. |
 | BR-70 | Mã kế toán chờ (bổ sung 2026-11-03): khi nhập sheet `4. Bang gia da tinh`, mã kế toán của một mã chưa có dòng Thường được lưu vào `pending_accounting_code`. Mã kế toán chờ KHÔNG làm khoá bản NSM (BR-32) và không làm nhóm tiêu hao "đang khoá" (BR-24): xưởng của mã và Phòng SO sửa tên, đóng gói, tỷ lệ pha, nguyên liệu, NSM như mã chưa khoá (UC-21, UC-23). Khi bản tính được giá lần đầu (UC-21, UC-43, mọi lần tính lại): tạo dòng Thường, gán mã kế toán chờ vào dòng Thường (người nhập = người thực hiện thao tác, lúc = lúc lưu), xoá mã chờ, trạng thái → "Có mã kế toán" (từ đó bản bị khoá theo BR-32). Tính không đạt → giữ mã chờ, trạng thái "Chưa tính được". Nút "Tạo bản ĐCNSM" (UC-24) chỉ hiện khi bản đang mở có ít nhất một dòng giá. Màn Nhập NSM hiện "Mã kế toán chờ: <mã>" (chỉ xem, không sửa / xoá trên màn hình) | - |
+| BR-71 | Siro / Compact bất thường (bổ sung 2026-11-05). **Loại sợi** từ tên (không phân biệt hoa thường): có "SIRO" và "COMPACT" → Siro Compact, hệ số 90%; chỉ có một trong hai chữ → Siro / Compact, 95%; không có → Thường, 100%. **Phạm vi:** bản NSM gốc trạng thái Đã tính giá / Có mã kế toán, công nghệ Ring; gom theo (xưởng, nhóm sợi, chi số) - mỗi xưởng so riêng, cùng một quy tắc cho S1 và S4; chỉ nhóm có ít nhất một mã Siro / Compact hoặc Siro Compact và ít nhất 2 mã. **NSM Con** của mã = NSM ở "S Compact" nếu > 0, ngược lại NSM ở "S"; mã có NSM Con = 0 không xét ở kiểm tra NSM. **(1) Kiểm tra NSM:** mốc thường = giá trị phổ biến (xuất hiện nhiều nhất; bằng nhau: nhỏ nhất) của NSM Con các mã Thường của nhóm; nhóm không có mã Thường (có NSM Con) → mốc = giá trị phổ biến của (NSM Con ÷ hệ số) các mã thuộc loại thấp nhất có trong nhóm (Siro / Compact, nếu không có thì Siro Compact), ghi "Quy đổi từ sợi Siro / Compact"; với mỗi mã Siro / Compact hoặc Siro Compact: NSM chuẩn = mốc × hệ số, Lệch (%) = (NSM Con − NSM chuẩn) ÷ NSM chuẩn × 100; |Lệch| > 1% → liệt kê. **(2) Kiểm tra giá** (Tổng của dòng Thường): thứ hạng Thường < Siro / Compact < Siro Compact; với mỗi mã X hạng trên Thường: mã so sánh = mã có Tổng cao nhất trong các mã hạng thấp hơn X của nhóm (bằng nhau: theo mã); Tổng X ≤ Tổng mã so sánh → liệt kê với lý do "Sợi <loại X> nhưng giá không cao hơn sợi <loại mã so sánh>". Chỉ đọc: không sửa NSM, không tính lại giá; không đổi BR-39, BR-54 | Sợi <loại> nhưng giá không cao hơn sợi <loại>. / Không có mã Siro / Compact bất thường. |
 
 ## 8. Screens (Màn hình)
 
@@ -1068,7 +1080,12 @@ thường - BR-70); lịch sử ghi event "Sửa NSM". Mã đã khoá: nút lưu
 - **Screen 7 - Dashboard kiểm soát:** Xưởng (S1 / S4 / Cả hai), Từ ngày - Đến ngày → 5 ô số liệu (Sợi báo giá, Sợi có đơn
   hàng + tỷ lệ %, Yêu cầu mới, Khả năng đáp ứng %, Đang chờ xưởng xem) → biểu đồ cột "Yêu cầu mới theo tuần" và biểu đồ đường
   "Khả năng đáp ứng theo tuần" → số dòng giá theo trạng thái (ô số liệu) → khối chênh lệch lần tính lại gần nhất + nút xem chi
-  tiết → bảng "Sai lệch giá" → bảng "NSM bất thường".
+  tiết → bảng "Sai lệch giá" → bảng "NSM bất thường" → (bổ sung 2026-11-05) khối "Siro / Compact bất thường": dùng ô Xưởng của
+  trang, không theo khoảng ngày; lọc Nhóm sợi và Loại sợi (Siro / Compact, Siro Compact; mặc định tất cả); 2 ô số liệu "Mã lệch
+  NSM Con", "Mã giá không cao hơn"; hai bảng chỉ xem xếp trên dưới: "NSM Con lệch chuẩn" (Xưởng, Nhóm sợi, Chi số, Mã, Tên sợi,
+  Loại sợi, NSM Con, NSM chuẩn, Lệch (%), Mốc; sắp theo Xưởng, Nhóm sợi, Chi số, Mã) và "Giá không cao hơn" (Xưởng, Nhóm sợi,
+  Chi số, Mã, Tên sợi, Loại sợi, Giá, Mã so sánh, Loại sợi so sánh, Giá so sánh, Lý do; sắp theo Xưởng, Nhóm sợi, Chi số, Mã);
+  không có nút Xuất Excel riêng (nút tải của bảng).
 - **Screen 8 - Nhật ký thao tác:** bộ lọc (khoảng ngày, tài khoản, thao tác, từ khoá) → bảng nhật ký (Lúc, Tài khoản, Họ tên, Thao tác,
   Đối tượng, Nội dung, Lý do).
 - **Bổ sung 2026-09-29 (BR-64, UC-43)** - theo đúng cách giao diện đã chốt, không hỏi lại: bảng chi tiết công đoạn (Screen 1
@@ -1173,7 +1190,8 @@ không có vai trò phù hợp (BR-47, BR-48); phía xử lý vẫn kiểm tra l
 - **Inputs:** Xưởng (S1 / S4 / Cả hai, mặc định Cả hai); Từ ngày - Đến ngày (mặc định ngày 1 tháng hiện tại → hôm nay).
 - **Blocks (UC-32):** ô số liệu BR-53 (1)-(5); biểu đồ số yêu cầu mới theo tuần và khả năng đáp ứng theo tuần; số dòng giá theo trạng
   thái; chênh lệch lần tính lại gần nhất (BR-53 (6)) + nút xem chi tiết → UC-37; "Sai lệch giá" → UC-30; "NSM bất thường"
-  → UC-31. Rỗng: "Không có dữ liệu trong khoảng ngày đã chọn."
+  → UC-31; "Siro / Compact bất thường" (bổ sung 2026-11-05) → UC-46, hai bảng "NSM Con lệch chuẩn" và "Giá không cao hơn".
+  Rỗng: "Không có dữ liệu trong khoảng ngày đã chọn."
 - **Buttons:** không có thao tác thay đổi dữ liệu.
 
 ### Screen 8: Nhật ký thao tác
@@ -1371,8 +1389,26 @@ không có vai trò phù hợp (BR-47, BR-48); phía xử lý vẫn kiểm tra l
   sửa tiêu hao được, không cần Phòng SO.
 - [ ] AC-89 (BR-70, UC-24): Mã chưa có dòng giá (có hoặc không có mã kế toán chờ) → không có nút "Tạo bản ĐCNSM"; mã đã có
   dòng giá (khoá hoặc không) → có nút.
+- [ ] AC-90 (BR-71, UC-46): S1, nhóm sợi CM, chi số 30, Ring, đã có giá: "CM 30/1" NSM Con (S) 10,0; "CM 30/1 SIRO" 9,5;
+  "CM 30/1 COMPACT" 9,0; "CM 30/1 SIRO COMPACT" 9,0 → bảng "NSM Con lệch chuẩn" chỉ có "CM 30/1 COMPACT" (NSM chuẩn 9,5,
+  lệch −5,26%, mốc "CM 30/1"); SIRO (lệch 0%) và SIRO COMPACT (chuẩn 9,0) không có.
+- [ ] AC-91 (BR-71): S4, nhóm CVC, chi số 40, không có mã thường: "CVC 40/1 COMPACT" NSM S Compact 9,5 và "CVC 40/1 SIRO
+  COMPACT" 8,5 → mốc quy đổi 10,0 ("Quy đổi từ sợi Siro / Compact"); "CVC 40/1 SIRO COMPACT" được liệt kê (chuẩn 9,0, lệch
+  −5,56%); đổi 8,5 thành 8,95 → không còn dòng nào (lệch −0,56% ≤ 1%).
+- [ ] AC-92 (BR-71): Cùng nhóm, chi số: "TC 30/1" giá 20.000, "TC 30/1 SIRO" giá 19.800, "TC 30/1 SIRO COMPACT" giá 20.500
+  → bảng "Giá không cao hơn" có "TC 30/1 SIRO" với mã so sánh "TC 30/1", lý do "Sợi Siro / Compact nhưng giá không cao hơn
+  sợi Thường"; "TC 30/1 SIRO COMPACT" (so với mã đắt nhất hạng thấp hơn = "TC 30/1" 20.000) không có.
+- [ ] AC-93 (BR-71): Mã khác chi số, khác nhóm sợi, khác xưởng, sợi MVS, bản ĐCNSM, mã chưa có giá → không được so; xưởng
+  không có nhóm nào bất thường → "Không có mã Siro / Compact bất thường."
+- [ ] AC-94 (BR-39, BR-54 - giữ nguyên): Với cùng dữ liệu của AC-23 và AC-24, các khối "Sai lệch giá" và "NSM bất thường" cho kết
+  quả như trước; tự điền NSM (UC-20) và cảnh báo NSM khi lưu (BR-38) không đổi; không dòng giá nào bị tính lại.
 
 ## 10. Open questions (Câu hỏi mở)
+- Mở rộng 2026-11-05: Dashboard có thêm khối "Siro / Compact bất thường" (UC-46, BR-71): kiểm tra NSM Con (Siro hoặc Compact
+  = 95%, Siro Compact = 90% của sợi thường cùng nhóm sợi, cùng chi số, lệch > 1% thì báo) và kiểm tra giá (Siro / Compact
+  phải đắt hơn sợi thường, Siro Compact đắt hơn Siro / Compact). Tự điền NSM, cảnh báo NSM khi lưu, BR-39, BR-54 giữ nguyên.
+- Giả định (2026-11-05): chỉ xét bản NSM gốc (không xét ĐCNSM) và sợi Ring; loại sợi chỉ dựa vào chữ "SIRO" / "COMPACT" trong
+  tên (kể cả "SEMI SIRO COMPACT AA" = Siro Compact); kiểm tra không theo khoảng ngày của Dashboard.
 - Giả định: 5 vai trò cố định (SALES, XS1, XS4, KT, SO); quản trị viên tích vai trò cho từng tài khoản ở trang `/admin` trước khi dùng.
 - Giả định: Phòng SO làm được mọi thao tác của xưởng cho cả S1 và S4 (kể cả từ chối, nhập NSM, mã kế toán).
 - Giả định: mọi thay đổi dữ liệu nền có ảnh hưởng đến giá (cấu hình công đoạn, hồi phế, phút/kg đóng gói, định mức) đều tính lại
@@ -1575,6 +1611,7 @@ không có vai trò phù hợp (BR-47, BR-48); phía xử lý vẫn kiểm tra l
 | BR-70 (mã kế toán chờ, 2026-11-03) | `models/yarn.py::Yarn.is_locked` (chỉ dòng giá có mã kế toán mới khoá), `business/price_line_business.py::PriceLineBusiness.apply_result` (gán mã chờ vào dòng Thường), `dto/request_dto.py::YarnDTO.pending_accounting_code`, `pages/nsm_pricing_page.py` ("Mã kế toán chờ"); test `tests/test_waiting_accounting_code.py` (AC-86..AC-88), AC-89: nút ĐCNSM chỉ khi có dòng giá (đã có) |
 | Khung sườn mới (2026-11-04) | App đăng ký ở `backend/app_registry.py` với tiền tố `xuan2894` (đường dẫn `/xuan2894-yarn-costing`); bảng có chọn dòng dùng lại `data_table` của khung sườn (bỏ `components/pick_table.py`); xoá dữ liệu là đặt cờ xoá của khung sườn (`repository.delete`), dữ liệu cũ vẫn đọc được |
 | Screen 7 | `pages/dashboard_page.py::DashboardPage` |
+| BR-71, UC-46 (Siro / Compact bất thường, 2026-11-05) | `business/siro_compact_business.py::SiroCompactBusiness` (loại sợi, NSM Con, 2 kiểm tra), `services/check_siro_anomalies_service.py`, `controllers/yarn_costing_controller.py::check_siro_anomalies` (`@cached_query`), `dto/dashboard_dto.py` (`CheckSiroAnomaliesRequest`, `SiroAnomalyResponse`), `pages/dashboard_page.py::DashboardPage._siro_compact`, `components/columns.py` (`siro_nsm_rows`, `siro_price_rows`); test `tests/test_siro_compact.py` (AC-90..AC-94). Biểu đồ của Dashboard chuyển sang `bar_chart` / `line_chart` của khung sườn |
 | Screen 8 | `pages/user_audit_page.py::UserAuditPage` (Nhật ký thao tác; UC-02) |
 | Menu theo vai trò | `manifest.py` (thứ tự) + `menu_group` của mỗi trang (menu bên trái gấp / mở của khung sườn); cảnh báo BR-61: `components/data_warnings.py` |
 | Quyền theo vai trò, hộp thoại | `frontend/features/yarn_costing/components/` (permissions: tắt nút theo vai trò, dialogs, flash, display, labels, columns, recalc_diff, factory_picker) |

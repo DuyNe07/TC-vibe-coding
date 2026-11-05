@@ -6,7 +6,7 @@ from typing import Any
 import streamlit as st
 
 from backend.features.yarn_costing.dto.common_dto import RecalcBatchDTO, YarnComponentDTO
-from backend.features.yarn_costing.dto.dashboard_dto import PriceAnomalyDTO
+from backend.features.yarn_costing.dto.dashboard_dto import PriceAnomalyDTO, SiroNsmAnomalyDTO, SiroPriceAnomalyDTO
 from backend.features.yarn_costing.dto.price_dto import PriceLineRowDTO
 from backend.features.yarn_costing.dto.pricing_dto import PriceHistoryDTO, PriceLineDTO, StageCostDTO
 from backend.features.yarn_costing.dto.request_dto import YarnSummaryDTO
@@ -297,6 +297,59 @@ def price_anomaly_rows(items: Iterable[PriceAnomalyDTO]) -> list[dict[str, Any]]
             "Chi số sau": plain(a.next_count),
             "Giá sau": vnd(a.next_total),
             "Lý do sai": a.reason,
+        }
+        for a in items
+    ]
+
+
+# ---- Siro / Compact bất thường (UC-46, BR-71) ----
+SIRO_NSM_CONFIG = {
+    "Chi số": count_col("Chi số"),
+    "Tên sợi": COL.TextColumn("Tên sợi", width="large"),
+    "NSM Con": count_col("NSM Con"),
+    "NSM chuẩn": count_col("NSM chuẩn"),
+    "Lệch (%)": COL.NumberColumn("Lệch (%)", format="%.2f"),
+}
+SIRO_PRICE_CONFIG = {
+    "Chi số": count_col("Chi số"),
+    "Tên sợi": COL.TextColumn("Tên sợi", width="large"),
+    "Giá": money("Giá"),
+    "Giá so sánh": money("Giá so sánh"),
+}
+
+
+def siro_nsm_rows(items: Iterable[SiroNsmAnomalyDTO]) -> list[dict[str, Any]]:
+    return [
+        {
+            "Xưởng": a.factory_code,
+            "Nhóm sợi": a.yarn_group,
+            "Chi số": plain(a.count),
+            "Mã": a.yarn_code,
+            "Tên sợi": a.yarn_name,
+            "Loại sợi": a.kind,
+            "NSM Con": plain(a.nsm),
+            "NSM chuẩn": plain(a.standard_nsm),
+            "Lệch (%)": float(a.diff_percent),
+            "Mốc": a.baseline,
+        }
+        for a in items
+    ]
+
+
+def siro_price_rows(items: Iterable[SiroPriceAnomalyDTO]) -> list[dict[str, Any]]:
+    return [
+        {
+            "Xưởng": a.factory_code,
+            "Nhóm sợi": a.yarn_group,
+            "Chi số": plain(a.count),
+            "Mã": a.yarn_code,
+            "Tên sợi": a.yarn_name,
+            "Loại sợi": a.kind,
+            "Giá": vnd(a.total),
+            "Mã so sánh": a.compare_code,
+            "Loại sợi so sánh": a.compare_kind,
+            "Giá so sánh": vnd(a.compare_total),
+            "Lý do": a.reason,
         }
         for a in items
     ]

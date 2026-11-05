@@ -6,10 +6,12 @@ from backend.features.yarn_costing.dto.common_dto import RecalcResultResponse, S
 from backend.features.yarn_costing.dto.dashboard_dto import (
     CheckNsmAnomaliesRequest,
     CheckPriceAnomaliesRequest,
+    CheckSiroAnomaliesRequest,
     DashboardResponse,
     GetDashboardRequest,
     NsmAnomalyResponse,
     PriceAnomalyResponse,
+    SiroAnomalyResponse,
 )
 from backend.features.yarn_costing.dto.import_dto import (
     ComponentImportResponse,
@@ -86,6 +88,7 @@ from backend.features.yarn_costing.services.cancel_yarn_request_service import C
 from backend.features.yarn_costing.services.check_nsm_anomalies_service import CheckNsmAnomaliesService
 from backend.features.yarn_costing.services.check_price_anomalies_service import CheckPriceAnomaliesService
 from backend.features.yarn_costing.services.check_request_submit_service import CheckRequestSubmitService
+from backend.features.yarn_costing.services.check_siro_anomalies_service import CheckSiroAnomaliesService
 from backend.features.yarn_costing.services.correct_yarn_nsm_service import CorrectYarnNsmService
 from backend.features.yarn_costing.services.create_adjustment_line_service import CreateAdjustmentLineService
 from backend.features.yarn_costing.services.create_nsm_revision_service import CreateNsmRevisionService
@@ -255,6 +258,11 @@ class YarnCostingController(BaseController):
     def check_nsm_anomalies(self, request: CheckNsmAnomaliesRequest) -> NsmAnomalyResponse:
         """UC-31 Kiểm tra NSM bất thường."""
         return CheckNsmAnomaliesService().handle(request)
+
+    @cached_query
+    def check_siro_anomalies(self, request: CheckSiroAnomaliesRequest) -> SiroAnomalyResponse:
+        """UC-46 Kiểm tra Siro / Compact bất thường."""
+        return CheckSiroAnomaliesService().handle(request)
 
     @cached_query
     def get_dashboard(self, request: GetDashboardRequest) -> DashboardResponse:
