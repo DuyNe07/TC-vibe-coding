@@ -1,8 +1,7 @@
-"""Screen 7 (`dashboard`) - Dashboard kiểm soát (UC-30..UC-32, UC-37)."""
+"""Screen 7 (`dashboard`) - Dashboard kiểm soát (UC-30..UC-32, UC-37, UC-46)."""
 
 from datetime import date
 
-import pandas as pd
 import streamlit as st
 
 from backend.core.gateway import gateway
@@ -10,13 +9,24 @@ from backend.features.yarn_costing import YarnCostingController
 from backend.features.yarn_costing.dto.dashboard_dto import (
     CheckNsmAnomaliesRequest,
     CheckPriceAnomaliesRequest,
+    CheckSiroAnomaliesRequest,
     GetDashboardRequest,
+    SiroNsmAnomalyDTO,
+    SiroPriceAnomalyDTO,
 )
 from backend.features.yarn_costing.dto.reference_dto import GetReferenceDataRequest
 from frontend.core.base_page import BasePage
-from frontend.core.components import data_table, empty_state, panel, section_title, stat_row
+from frontend.core.components import bar_chart, data_table, empty_state, line_chart, panel, section_title, stat_row
 from frontend.core.formatting import format_datetime, format_number
-from frontend.features.yarn_costing.components.columns import ANOMALY_CONFIG, count_col, price_anomaly_rows
+from frontend.features.yarn_costing.components.columns import (
+    ANOMALY_CONFIG,
+    SIRO_NSM_CONFIG,
+    SIRO_PRICE_CONFIG,
+    count_col,
+    price_anomaly_rows,
+    siro_nsm_rows,
+    siro_price_rows,
+)
 from frontend.features.yarn_costing.components.data_warnings import show_data_warnings
 from frontend.features.yarn_costing.components.display import fmt_date, percent_text, percent_value, plain
 from frontend.features.yarn_costing.components.labels import (
@@ -30,7 +40,9 @@ from frontend.features.yarn_costing.components.labels import (
 from frontend.features.yarn_costing.components.recalc_diff import open_recalc_diff_dialog
 
 BOTH = "Cả hai"
+ALL = "Tất cả"
 NO_DATA = "Không có dữ liệu trong khoảng ngày đã chọn."
+SIRO_KINDS = ["Siro / Compact", "Siro Compact"]
 
 
 class DashboardPage(BasePage):
@@ -83,21 +95,21 @@ class DashboardPage(BasePage):
         if not has_chart:
             empty_state(d.empty_message or NO_DATA)
         else:
-            frame = pd.DataFrame(
-                [
-                    {
-                        "Tuần": w.week_start.isoformat(),
-                        "Yêu cầu mới": w.new_requests,
-                        "Khả năng đáp ứng (%)": percent_value(w.fulfilment_ratio),
-                    }
-                    for w in d.weekly
-                ]
-            )
+            rows = [
+                {
+                    "Tuần": w.week_start.isoformat(),
+                    "Yêu cầu mới": w.new_requests,
+                    "Khả năng đáp ứng (%)": percent_value(w.fulfilment_ratio),
+                }
+                for w in d.weekly
+            ]
             left, right = st.columns(2)
-            left.markdown("**Yêu cầu mới theo tuần**")
-            left.bar_chart(frame, x="Tuần", y="Yêu cầu mới", x_label="Tuần (ngày đầu tuần)", y_label="Số yêu cầu")
-            right.markdown("**Khả năng đáp ứng theo tuần**")
-            right.line_chart(frame, x="Tuần", y="Khả năng đáp ứng (%)", x_label="Tuần (ngày đầu tuần)", y_label="%")
+            with left:
+                st.markdown("**Yêu cầu mới theo tuần**")
+                bar_chart(rows, x="Tuần", y="Yêu cầu mới", key=self.key("chart_requests"))
+            with right:
+                st.markdown("**Khả năng đáp ứng theo tuần**")
+                line_chart(rows, x="Tuần", y="Khả năng đáp ứng (%)", key=self.key("chart_fulfilment"))
 
         section_title("Số dòng giá theo trạng thái")
         stat_row(
@@ -164,4 +176,48 @@ class DashboardPage(BasePage):
                 },
                 empty_message="Không có NSM bất thường.",
                 key=self.key("nsm_anomalies"),
+            )
+
+        self._siro_compact(feature, factory)
+
+    def _siro_compact(self, feature: YarnCostingController, factory: str | None) -> None:
+        """UC-46: hai bảng chỉ xem BR-71, lọc Nhóm sợi / Loại sợi; không theo khoảng ngày."""
+        with panel("Siro / Compact bất thường", icon="🧵"):
+            st.caption(
+                "So trong cùng xưởng, nhóm sợi, chi số (sợi Ring đã có giá): NSM Con của sợi Siro hoặc Compact = 95%, "
+                "Siro Compact = 90% NSM của sợi thường; sợi Siro / Compact phải đắt hơn sợi loại thấp hơn."
+            )
+            result = feature.check_siro_anomalies(CheckSiroAnomaliesRequest(factory_code=factory))
+            groups = sorted({i.yarn_group for i in [*result.nsm_items, *result.price_items]})
+            c1, c2 = st.columns(2)
+            group = c1.selectbox("Nhóm sợi", [ALL, *groups], key=self.key("siro_group"))
+            kind = c2.selectbox("Loại sợi", [ALL, *SIRO_KINDS], key=self.key("siro_kind"))
+
+            def keep(item: SiroNsmAnomalyDTO | SiroPriceAnomalyDTO) -> bool:
+                return (group == ALL or item.yarn_group == group) and (kind == ALL or item.kind == kind)
+
+            nsm_items = [i for i in result.nsm_items if keep(i)]
+            price_items = [i for i in result.price_items if keep(i)]
+            stat_row(
+                [
+                    ("Mã lệch NSM Con", format_number(len(nsm_items))),
+                    ("Mã giá không cao hơn", format_number(len(price_items))),
+                ]
+            )
+            if result.empty_message:
+                empty_state(result.empty_message)
+                return
+            section_title("NSM Con lệch chuẩn")
+            data_table(
+                siro_nsm_rows(nsm_items),
+                column_config=SIRO_NSM_CONFIG,
+                empty_message="Không có mã nào lệch NSM Con.",
+                key=self.key("siro_nsm"),
+            )
+            section_title("Giá không cao hơn")
+            data_table(
+                siro_price_rows(price_items),
+                column_config=SIRO_PRICE_CONFIG,
+                empty_message="Không có mã nào có giá không cao hơn.",
+                key=self.key("siro_price"),
             )

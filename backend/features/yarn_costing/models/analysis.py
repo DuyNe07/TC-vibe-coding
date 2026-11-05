@@ -33,6 +33,37 @@ class NsmAnomaly(BaseValueObject):
     reason: str = ""
 
 
+class SiroNsmAnomaly(BaseValueObject):
+    """BR-71 (1): mã Siro / Compact có NSM Con lệch NSM chuẩn > 1%."""
+
+    factory_code: str
+    yarn_group: str
+    count: Decimal | None
+    yarn_code: str
+    yarn_name: str
+    kind: str
+    nsm: Decimal
+    standard_nsm: Decimal
+    diff_percent: Decimal
+    baseline: str  # mã thường làm mốc, hoặc "Quy đổi từ sợi Siro / Compact"
+
+
+class SiroPriceAnomaly(BaseValueObject):
+    """BR-71 (2): mã Siro / Compact có giá không cao hơn mã loại thấp hơn cùng nhóm."""
+
+    factory_code: str
+    yarn_group: str
+    count: Decimal | None
+    yarn_code: str
+    yarn_name: str
+    kind: str
+    total: Decimal
+    compare_code: str
+    compare_kind: str
+    compare_total: Decimal
+    reason: str
+
+
 class WeeklyStat(BaseValueObject):
     week_start: date
     new_requests: int = 0

@@ -51,6 +51,45 @@ class NsmAnomalyResponse(BaseResponseDTO):
     items: list[NsmAnomalyDTO] = []
 
 
+class CheckSiroAnomaliesRequest(BaseRequestDTO):
+    """UC-46 (BR-71)."""
+
+    factory_code: FactoryCode | None = None
+
+
+class SiroNsmAnomalyDTO(BaseDTO):
+    factory_code: str
+    yarn_group: str
+    count: Decimal | None = None
+    yarn_code: str
+    yarn_name: str
+    kind: str
+    nsm: Decimal
+    standard_nsm: Decimal
+    diff_percent: Decimal
+    baseline: str
+
+
+class SiroPriceAnomalyDTO(BaseDTO):
+    factory_code: str
+    yarn_group: str
+    count: Decimal | None = None
+    yarn_code: str
+    yarn_name: str
+    kind: str
+    total: Decimal
+    compare_code: str
+    compare_kind: str
+    compare_total: Decimal
+    reason: str
+
+
+class SiroAnomalyResponse(BaseResponseDTO):
+    nsm_items: list[SiroNsmAnomalyDTO] = []
+    price_items: list[SiroPriceAnomalyDTO] = []
+    empty_message: str = ""
+
+
 class GetDashboardRequest(BaseRequestDTO):
     factory_code: FactoryCode | None = None
     date_from: date
