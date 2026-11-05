@@ -36,7 +36,9 @@ Rules of the gate:
 4. Mechanical guard: the `PreToolUse` hook `scripts/hooks/gate_guard.sh` refuses every write to code paths while the
    file `.gate-unlock` does not exist. Prompt 2 creates that file at its first step and deletes it at its last step.
    Never create it in phase 0 or 1, never disable or edit the hooks.
-5. Questions to the user are about the application only (never about code), and only in phase 0, phase 1, at Step 0 of
+5. Questions to the user are about the business and what they see on the screen / get out of the app (tables,
+   buttons, numbers, files, messages) - never about code or how the backend processes or stores anything
+   ([docs/rules/05-feature-workflow.md](docs/rules/05-feature-workflow.md) rule 1) - and only in phase 0, phase 1, at Step 0 of
    Prompt 2 (the UI concept), at Step 0 of Prompt 3 (what went wrong), in the single question round of Prompt 4, and in
    the analysis steps + UI round of Prompt 5. Never ask anything else while working.
    Permissions need no prompt: administrators grant them on `/admin`.
@@ -53,9 +55,14 @@ Rules of the gate:
 
 ## Essentials (details in the docs)
 - Branches: `main` = stable showcase, updated only by the framework owner from `dev`; `dev` = the team branch where
-  everyone's work is merged through Pull Requests. New work starts on an own `vibe/...` branch from the newest `dev`
-  (Prompts 2 and 5), Prompt 4 rebases on `dev` and opens a Pull Request into `dev`. Never commit or push to `main` or
-  `dev` directly. Someone outside the team branches from `main` instead.
+  everyone's work is merged through Pull Requests. ONE feature = ONE own `vibe/<prefix>-<key>-<ddmm>` branch created
+  from the newest `origin/dev` in THIS repository (Prompts 2 and 5; 10 apps = 10 branches) - never suggest forking the
+  repository, cloning it again or copying the folder. Prompt 4 rebases ALL the user's `vibe/...` branches on `dev` and
+  gives one Pull Request link into `dev` per branch: a Pull Request is REQUIRED to run on the company server, not needed
+  to run only locally. Never commit or push to `main` or `dev` directly. Someone outside the team branches from `main`.
+- Prefer solutions that STORE data in the shared database (the `.env` gives every feature its own tables): imported
+  rows, results, statuses, history, reusable master lists - stored lean, reused by later screens and months
+  ([docs/rules/05-feature-workflow.md](docs/rules/05-feature-workflow.md) rule 3).
 - ONE process: `run.ps1` (PowerShell) starts Streamlit only (no API/HTTP). Pages run business actions through
   `gateway.open(XxxController)`; each feature exposes ONE controller (top layer) from its package root.
 - Work from `docs/business/<feature_key>.md`. Never invent business rules.

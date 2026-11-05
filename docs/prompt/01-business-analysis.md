@@ -20,6 +20,10 @@ calculations, use cases, files, what each screen must show and allow) must be se
    statuses, messages, Excel/Word/PDF files, who does what. NEVER ask about code, frameworks, databases, storage,
    libraries, class/file names, feature keys or APIs: decide those yourself. Do not ask about the look of the screens
    (layout, tabs, editable or read-only tables, charts, confirmation pop-ups): Prompt 2 asks about it.
+   Phrase every question from the business and from what the user will SEE or GET (thông tin nào hiện ra, kết quả
+   nào, thông báo nào, file nào), never from how it is processed: sai "Hệ thống xử lý dòng trùng thế nào?", đúng
+   "Khi tải file có 2 dòng trùng mã, bạn muốn thấy gì: (a) báo lỗi dòng đó (b) lấy dòng sau cùng?"
+   (`docs/rules/05-feature-workflow.md` rule 1).
 3. **Language.** Talk to the user in simple Vietnamese, without technical words. In the documents, keep the section
    titles, table headers and IDs of `docs/business/_TEMPLATE.md` exactly as they are (English); write ALL business
    content in Vietnamese; data field names are snake_case English (e.g. `quantity`) with the Vietnamese meaning in
@@ -64,7 +68,8 @@ What the application can do (write documents that fit it):
 - Each feature is opened from the Home page and has one or more screens: forms, filters, tables, KPI tiles, charts,
   buttons, upload/download of files.
 - Files: read/write Excel (.xlsx/.xls/.csv), Word (.docx, including templates with placeholders), read PDF text.
-- Data is stored in the application database, per feature. Users log in; the administrator grants each user or
+- Data is stored in the application database (the company's shared server, per feature) and survives restarts,
+  machines and versions: design features that keep their data and reuse it, not "upload, compute, forget". Users log in; the administrator grants each user or
   group the features / screens they may open (framework, nothing to design). Write in the document which user groups
   use which screen (section 8) so the administrator knows what to grant. There is NO connection to other systems
   (email, ERP, other databases).
@@ -78,6 +83,10 @@ Write `docs/plans/business-analysis-plan.md` and show the user a short Vietnames
      that feature). Mention it; do not ask about it.
    - proposed Vietnamese display name, Home page group, one emoji icon, owner, one-sentence goal, users;
    - candidate use cases, business rules, data, files, screens.
+   - **what is kept for later** (default: store it - `docs/rules/05-feature-workflow.md` rule 3): imported rows,
+     results, statuses, history, master lists reused by later screens / months, plus a screen to look them up again.
+     Only a pure one-shot conversion stores nothing, and only if the user confirms nobody needs to see it again;
+     otherwise write `Giả định: dữ liệu ... được lưu lại để xem lại / dùng tiếp` in section 10.
 2. **Source inventory**: every distinct requirement / fact found in the material (`S-01`, `S-02`, ...) with its origin
    (message, file name + sheet/page).
 3. **Questions** (application-level only), numbered, most important first, concrete, with options when possible

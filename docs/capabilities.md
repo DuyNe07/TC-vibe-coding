@@ -23,6 +23,12 @@ Mỗi dòng "Làm được" đều đã có sẵn thư viện và lớp dùng ch
 | Không làm được: sửa trực tiếp PDF, đọc PDF chỉ là ảnh chụp (scan) | - |
 
 ## 3. Lưu dữ liệu trong ứng dụng
+**Nên dùng cho hầu hết chức năng.** Với file `.env` do người phụ trách khung sườn cấp, mỗi chức năng tự tạo bảng của
+mình trên cơ sở dữ liệu chung của công ty: dữ liệu còn nguyên khi tắt máy, đổi máy, cập nhật phiên bản; nhiều người
+cùng xem; tháng sau mở lại dùng tiếp, không phải tải lại file. AI ưu tiên giải pháp có lưu dữ liệu (dữ liệu đã nhập,
+kết quả tính, trạng thái, lịch sử, danh mục dùng lại) và lưu gọn: mỗi dòng nghiệp vụ lưu một lần, số tổng hợp tính lại
+từ dữ liệu đã lưu, phân kỳ bằng một trường kỳ / trạng thái thay vì nhân bản bảng.
+
 | Làm được | Ở đâu |
 |---|---|
 | Lưu danh sách/bản ghi lâu dài (thêm, sửa, xoá, tìm, lọc) trong cơ sở dữ liệu PostgreSQL của ứng dụng | `SqlRepository` -> bảng `<github người làm>__<chức_năng>__<tên>` (một cơ sở dữ liệu dùng chung cho mọi người) |

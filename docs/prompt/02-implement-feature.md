@@ -41,8 +41,11 @@ Candidate documents: `docs/business/*.md` except `_TEMPLATE.md`, `README.md`, `s
 Otherwise, for every in-scope feature:
 1. Read the document (sections 4-8 above all), `docs/rules/04-frontend-streamlit.md` (section "Excel-like UI") and the
    reference pages in `frontend/features/sample_product_import/pages/` to know what the app can show.
-2. Send ONE message in simple Vietnamese - no technical words, no code, no Streamlit names:
+2. Send ONE message in simple Vietnamese - no technical words, no code, no Streamlit names. Every question is about
+   what the user SEES and DOES on the screen (`docs/rules/05-feature-workflow.md` rule 1), never how it is processed:
    - One line: what will be built (feature name, number of screens).
+   - When the document stores data (it should, rule 3), propose the screens that make the saved data useful, e.g.
+     "Lịch sử / Danh sách đã lưu" with filters by period or status, and "mở lại kết quả lần trước".
    - For each screen of section 8, a proposal with a small text sketch (the users work in Excel every day: prefer one
      clear table per screen, filters above it, totals as tiles, "Xuất Excel" / "Nhập từ Excel" buttons), e.g.
      ```
@@ -181,7 +184,8 @@ and use that port in the health check and stop commands.
 11. **Existing feature** (`backend/features/<key>/` already exists): do NOT scaffold, do NOT delete folders. Update in
     place to match the document. Keep stored data readable: new model fields MUST have defaults; for a removed/renamed
     field add a small conversion in the repository (models use `extra="forbid"`). Never delete `data/<key>/` or database tables.
-12. Do not `git commit` / `git push`.
+12. Do not `git commit` / `git push` (only exception: Step 1 item 0b saving ANOTHER feature's work on its own branch).
+    Sending to the server is Prompt 4.
 13. **The sample feature disappears by itself.** As soon as the app has your feature, `sample_product_import` (manifest
     `sample=True`) is hidden from the menu, Home, URLs and the permission list. Do NOT delete or edit its folders: it is
     the reference implementation and the framework tests use it. Tell the user in the final report that the sample is
@@ -190,16 +194,27 @@ and use that port in the health check and stop commands.
 ## 5. Step 1 - Preflight
 0. Open the gate: write the in-scope feature keys into `.gate-unlock` (section 3). Without it every write to code is
    refused by `scripts/hooks/gate_guard.sh`. Do this only now, never before the user's Step 0 answer.
-0b. Own branch from the newest `dev`:
+0b. ONE own branch per feature, created from the newest `dev` of THIS repository (never a fork, never a new clone -
+   `docs/rules/05-feature-workflow.md` rule 2). Never tell the user to fork the repository on GitHub.
 ```
 git fetch origin --prune
 git branch --show-current
-git checkout -b vibe/<prefix>-<key>-<ddmm> origin/dev   # ONLY when the current branch is `main` or `dev`
+git status --short
+git branch --list "vibe/*<key>*"                          # does this feature already have its branch here?
 ```
-Work never happens directly on `main` or `dev`: on one of them, start the feature branch from the newest `dev` (the
-team branch) as above - uncommitted files (the business document) move with it. Already on an own branch: stay on it
-(Prompt 4 rebases it on `dev` later). The checkout refuses (conflicting local changes): stay where you are and say so
-in the final report. Never `git stash`, `reset` or `clean` here.
+   - The current branch is already this feature's branch (its name contains `<key>`, or its own commits
+     `git diff --stat origin/dev...HEAD -- backend/features` touch only `<key>`): stay on it.
+   - This feature has a branch on this machine: `git checkout <that branch>`.
+   - Otherwise (on `main`, `dev`, or ANOTHER feature's branch): `git checkout -b vibe/<prefix>-<key>-<ddmm> origin/dev`.
+     Uncommitted files of THIS feature (its business document, discovery note, plans) move with it.
+   - Leaving another feature's `vibe/...` branch that has uncommitted work of THAT feature: first save it there, so it
+     is not mixed into the new branch (the only commit this prompt makes):
+     `git add -A -- . ":!docs/business/<key>.md" ":!docs/plans/<key>-*" ":!docs/business/_sources"` then
+     `git commit -m "wip(<other key>): lưu công việc trước khi chuyển sang <key>"` (check that `git status --short`
+     shows no `.env`, `data/`, `logs/`, `.gate-unlock` before committing).
+   - One person building 10 apps = 10 branches from `dev`; Prompt 4 later rebases all of them on the newest `dev`.
+   - The checkout refuses (conflicting local changes): stay where you are and say so in the final report. Never
+     `git stash`, `reset` or `clean` here.
 1. If `.venv` is missing, create it (section 3). Run the quality gate once BEFORE changing anything (baseline).
    If it fails because of missing packages, install them and re-run. If it fails in code outside your scope, do not
    touch that code: note it as "pre-existing" for the final report.

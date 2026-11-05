@@ -14,8 +14,11 @@ write NO code and NO business document here: the business document is Prompt 1, 
    (`docs/prompt/02-implement-feature.md`). Bây giờ mình làm rõ nghiệp vụ trước đã."
 3. **Read-only commands are allowed** to understand the material: reading the repository, reading the sample files the
    user gives you, and the feasibility probe of Step 3.
-4. **Questions are about the business and the application only**, in simple Vietnamese, without technical words.
-   Never ask about code, libraries, file/class names, databases or APIs.
+4. **Questions are about the business and what the user will SEE on the screen / get out of the app** (bảng, cột,
+   nút, số tổng, file Excel, thông báo), in simple Vietnamese, without technical words. Never ask how anything is
+   processed or stored inside (code, libraries, file/class names, backend, databases, tables, APIs): you decide that.
+   Sai: "Backend xử lý trùng mã thế nào?" - Đúng: "Khi file có 2 dòng trùng mã, màn hình nên báo lỗi hay lấy dòng
+   sau?" (`docs/rules/05-feature-workflow.md` rule 1).
 5. **Never invent.** What you do not know, you ask. What the framework cannot do, you say so (Step 4).
 6. **Stop points.** At every `STOP`, end your message and wait for the user's answer. Never skip a STOP.
 7. If your tool is in a read-only / plan mode and cannot write files, say it in one Vietnamese sentence (the user
@@ -40,6 +43,8 @@ chỉ xem hoặc sửa trực tiếp, bộ lọc, ô số liệu, biểu đồ, 
 đối chiếu, tổng hợp), lấy dữ liệu từ trang web công khai (tải trang, lấy bảng, tải file trên mạng về), và những việc
 **không** làm được (gửi email, chạy tự động theo giờ, nối trực tiếp ERP/SQL, tìm kiếm Google tự
 động, trang cần đăng nhập hoặc chạy JavaScript, dữ liệu hàng triệu dòng).
+Stress the strongest point: dữ liệu được **lưu lại trên máy chủ của công ty** - tắt máy, đổi máy, tháng sau mở lại vẫn
+còn; nhiều người cùng xem; không phải tải lại cùng một file mỗi lần; xem lại lịch sử, so sánh với lần trước.
 End with: "Bạn kể cho tôi công việc hiện tại và mong muốn nhé - kể tự nhiên như nói với đồng nghiệp là được."
 **STOP** (unless the user already described their need: then go to Step 3).
 
@@ -55,6 +60,9 @@ asking the next round. Cover all of this:
    các trạng thái của một bản ghi.
 6. **Quy mô và tần suất:** bao nhiêu dòng mỗi lần / mỗi tháng, bao nhiêu người dùng, dùng khi nào.
 7. **Ai dùng, dùng ở đâu:** phòng ban, máy tính công ty, có cần nhiều người xem cùng lúc không.
+8. **Xem lại về sau** (the app stores data by default - `docs/rules/05-feature-workflow.md` rule 3): lần sau mở app
+   cần thấy lại gì (kết quả lần trước, danh sách đã nhập, lịch sử ai sửa lúc nào), có so sánh giữa các tháng / các lần
+   không, có danh mục dùng đi dùng lại (khách hàng, mã hàng, đơn giá...) để khỏi tải lại file mỗi lần không.
 
 When the user attaches or points to sample files, read them and repeat back what you see (sheet, các cột theo thứ tự,
 2-3 dòng ví dụ) so the user can confirm or correct:

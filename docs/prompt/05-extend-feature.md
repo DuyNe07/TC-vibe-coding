@@ -20,8 +20,9 @@ without losing a single stored row. The user is NOT a programmer: simple Vietnam
    `data/<key>/`.
 4. **Stay inside the feature and inside `docs/capabilities.md`.** Never edit the framework, another feature or the
    sample. A wish the app cannot do: say so and offer the closest supported way.
-5. **Stop points.** At every `STOP` end your message and wait. Questions are about the application only (what users
-   do, data, rules, calculations, files, screens), never about code.
+5. **Stop points.** At every `STOP` end your message and wait. Questions are about the business and what the user sees
+   on the screen or gets out of the app (bảng, nút, số, file, thông báo), never about how it is processed inside
+   (`docs/rules/05-feature-workflow.md` rule 1). New data the extension produces is stored by default (rule 3).
 
 ## 2. Step 1 - Which feature? (-> STOP only if unclear)
 List the features: every `docs/business/*.md` (except `_TEMPLATE.md`, `README.md`, `sample_product_import.md`) with its
@@ -74,16 +75,10 @@ Step 0, for the NEW or CHANGED parts only, with the current UI (`Giao diện đ�
 touched screens). No screen change: skip this step. From here on never ask anything again.
 
 ## 7. Step 6 - Build in place
-Open the gate: `echo <key> > .gate-unlock`. Then the branch:
-```
-git fetch origin --prune
-git branch --show-current
-git checkout -b vibe/<prefix>-<key>-<ddmm> origin/dev   # ONLY when the current branch is `main` or `dev`
-```
-Work never happens directly on `main` or `dev`: on one of them, start the feature branch from the newest `dev` (the
-team branch) as above - uncommitted files (the business document) move with it. Already on an own branch: stay on it
-(Prompt 4 rebases it on `dev` later). The checkout refuses (conflicting local changes): stay where you are and say so
-in the final report. Never `git stash`, `reset` or `clean` here.
+Open the gate: `echo <key> > .gate-unlock`. Then the branch, exactly as `docs/prompt/02-implement-feature.md` Step 1
+item 0b: this feature's own `vibe/...` branch if it exists on this machine, otherwise a NEW branch
+`vibe/<prefix>-<key>-<ddmm>` from `origin/dev` (the feature is already in `dev` once its Pull Request was merged).
+Never on `main` / `dev`, never on another feature's branch, never a fork or a new clone.
 Then follow `docs/prompt/02-implement-feature.md` sections 3 (commands),
 4 (rules), 7-13 (build, roles, pitfalls, verify) in **existing-feature mode**: never scaffold, never delete folders,
 update in place. In the plan of Step 4 add the traceability rows of the NEW / CHANGED items only, plus one row

@@ -15,7 +15,7 @@ Cursor...). Không cần sửa gì trong prompt. Nếu công cụ không cho dá
 | Khi nào | Prompt | Bạn làm gì | Kết quả |
 |---|---|---|---|
 | Có lỗi (màn hình báo lỗi, kết quả sai, app không chạy, không đăng nhập được) | [03-fix-error.md](03-fix-error.md) | Dán prompt kèm mô tả: bấm gì, màn hình hiện gì, hoặc ảnh chụp | AI tự tìm nguyên nhân thật (thư viện trên máy, file `.env`, cơ sở dữ liệu, hay lỗi trong chức năng), sửa phần được phép sửa, kiểm tra lại, và nói rõ ai cần làm gì nếu không phải lỗi của chức năng |
-| Gửi công việc lên server | [04-sync-to-server.md](04-sync-to-server.md) | Trả lời **một lượt**: tên nhánh, mô tả ngắn. Lần đầu trên máy: AI mở trình duyệt để bạn đăng nhập GitHub (bấm **Authorize**), không cần mã hay mật khẩu | AI lưu công việc, lấy bản chung mới nhất của nhóm (`dev`), đặt công việc của bạn lên trên, sửa chức năng cho hợp khung sườn mới, kiểm tra, đẩy lên và đưa link Pull Request |
+| Cập nhật bản mới nhất / gửi công việc lên server | [04-sync-to-server.md](04-sync-to-server.md) | Trả lời **một lượt**: các nhánh cần cập nhật (đề xuất: tất cả), mô tả ngắn, chạy trên server công ty hay chỉ trên máy mình. Lần đầu trên máy: AI mở trình duyệt để bạn đăng nhập GitHub (bấm **Authorize**), không cần mã hay mật khẩu | Với **từng** nhánh chức năng của bạn: AI lưu công việc, lấy bản chung mới nhất của nhóm (`dev`), đặt công việc lên trên, sửa cho hợp khung sườn mới, kiểm tra, đẩy lên và đưa link Pull Request. **Muốn chạy trên server công ty: bắt buộc bấm link tạo Pull Request**; chỉ chạy trên máy mình: không cần |
 | Muốn thêm vào một chức năng đã xong | [05-extend-feature.md](05-extend-feature.md) | AI đọc chức năng cũ, kể lại nó đang làm gì, rồi hỏi bạn muốn thêm gì. Trả lời câu hỏi, "đồng ý" ở bản tóm tắt, một lượt về giao diện | Tài liệu được cập nhật, phần mới được làm ngay trong chức năng cũ; phần cũ và dữ liệu cũ giữ nguyên |
 | Chỉ muốn đổi giao diện | [02-implement-feature.md](02-implement-feature.md) | Gõ `Đổi giao diện chức năng <tên>` rồi dán prompt 2 trong cùng tin nhắn | Chỉ giao diện thay đổi, nghiệp vụ giữ nguyên |
 
@@ -25,8 +25,13 @@ Cấp quyền cho người dùng không cần prompt: quản trị viên làm tr
 ## Các nhánh
 - `main`: bản ổn định để giới thiệu trên GitHub; chỉ người phụ trách khung sườn cập nhật (gộp từ `dev`).
 - `dev`: nhánh chung của nhóm, công việc của mọi người được gộp vào đây qua Pull Request.
-- Chức năng mới: AI tự tạo nhánh riêng `vibe/<tên-người-làm>-<chức-năng>-<ngàytháng>` từ `dev` mới nhất (bước 2),
-  và prompt 4 luôn lấy `dev` mới nhất rồi gửi Pull Request vào `dev`.
+- **Mỗi chức năng một nhánh riêng, tạo từ `dev` mới nhất ngay trong repo này** - không fork repo trên GitHub, không
+  clone lại, không chép thư mục. AI tự tạo nhánh `vibe/<tên-người-làm>-<chức-năng>-<ngàytháng>` ở bước 2; làm 10 ứng
+  dụng thì có 10 nhánh, mỗi nhánh đều tạo từ `dev`. Phát triển thêm một ứng dụng (prompt 5) thì làm tiếp trên nhánh
+  của ứng dụng đó.
+- Prompt 4 cập nhật **tất cả** các nhánh đó theo `dev` mới nhất, rồi đưa một link Pull Request vào `dev` cho từng
+  nhánh. **Muốn chạy trên server công ty: phải tạo Pull Request theo link**, người phụ trách duyệt rồi đưa lên server.
+  Chỉ chạy trên máy mình thì không cần Pull Request.
 - Người ngoài nhóm chỉ muốn làm riêng: tạo nhánh từ `main` và nói với AI ở prompt 4 "tôi làm riêng, không theo nhóm".
 
 ## Lần đầu cài trên máy
