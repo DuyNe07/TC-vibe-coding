@@ -43,7 +43,33 @@ def _user_box(router: "Router") -> None:
     st.divider()
     with st.container(horizontal=True, vertical_alignment="center"):
         st.markdown(f":material/account_circle: **{router.user.display_name}**  \n:gray[{router.user.username}]")
+        if st.button("Đổi mật khẩu", key="tc-change-password", icon=":material/key:", type="tertiary"):
+            _change_password_dialog(router.user.username)
         if st.button("Đăng xuất", key="tc-logout", icon=":material/logout:", type="tertiary"):
             from frontend.core.auth import logout
 
             logout()
+
+
+@st.dialog("Đổi mật khẩu")
+def _change_password_dialog(username: str) -> None:
+    from backend.core.access import AccessManager
+    from backend.core.exceptions import InvalidInputError
+
+    with st.form("tc-change-password-form"):
+        old = st.text_input("Mật khẩu hiện tại", type="password")
+        new = st.text_input("Mật khẩu mới", type="password")
+        again = st.text_input("Nhập lại mật khẩu mới", type="password")
+        if not st.form_submit_button("Lưu mật khẩu mới", type="primary", width="stretch"):
+            return
+    if not new:
+        st.error("Mật khẩu mới không được để trống.")
+    elif new != again:
+        st.error("Hai lần nhập mật khẩu mới không giống nhau.")
+    else:
+        try:
+            AccessManager().change_own_password(username, old, new)
+        except InvalidInputError:
+            st.error("Mật khẩu hiện tại không đúng.")
+        else:
+            st.success("Đã đổi mật khẩu. Lần đăng nhập sau dùng mật khẩu mới.")

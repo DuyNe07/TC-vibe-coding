@@ -152,6 +152,21 @@ class AccessManager:
         user = self.users.by_username(username)
         return self._session_of(user) if user and user.active else None
 
+    def change_own_password(self, username: str, old_password: str, new_password: str) -> None:
+        """A logged-in user changes their own password (the current one is required; no admin right needed)."""
+        actor = get_current_user()
+        if actor is not None and actor.username.lower() != username.strip().lower():
+            raise PermissionDeniedError("Users can only change their own password.")
+        user = self.users.by_username(username)
+        if user is None or not user.active or not verify_password(old_password, user.password_hash):
+            self.logger.warning("Password change refused for %r", username)
+            raise InvalidInputError("The current password is wrong.")
+        if not new_password:
+            raise InvalidInputError("The new password can not be empty.")
+        user.password_hash = hash_password(new_password)
+        self.users.update(user)
+        self.logger.info("User %s changed their password", user.username)
+
     # ---- sessions (stay logged in after a page reload) ----
     def start_session(self, username: str) -> str:
         """New session for a logged-in user; returns the token the browser keeps in a cookie."""

@@ -134,6 +134,25 @@ def test_login_session_survives_reload_until_logout_or_expiry() -> None:
     assert access.resume(expired) is None
 
 
+def test_user_changes_own_password_with_the_current_one() -> None:
+    access = AccessManager()
+    access.ensure_admin()
+    access.save_user(User(username="an"), "pw")
+    with pytest.raises(InvalidInputError):
+        access.change_own_password("an", "wrong", "pw2")
+    with pytest.raises(InvalidInputError):
+        access.change_own_password("an", "pw", "")
+    try:
+        set_current_user(CurrentUser("binh", "", False, frozenset()))
+        with pytest.raises(PermissionDeniedError):
+            access.change_own_password("an", "pw", "pw2")
+        set_current_user(CurrentUser("an", "", False, frozenset()))
+        access.change_own_password("an", "pw", "pw2")
+    finally:
+        set_current_user(None)
+    assert access.authenticate("an", "pw") is None and access.authenticate("an", "pw2") is not None
+
+
 def test_warm_up_reads_every_repository_into_ram() -> None:
     from backend.core import db
     from frontend.core.warm_up import _preload, _repository_classes
