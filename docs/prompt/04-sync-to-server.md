@@ -70,8 +70,8 @@ The app branches = every local `vibe/*` branch, plus the current branch if it is
 `backup/*`. For each one:
 - its OWN commits: `git log --oneline --no-merges <branch> --not origin/dev origin/main <L>` (leave out `<L>` when it
   does not exist yet). None = already in `dev` or in `<L>`: nothing to send, say so and skip it.
-- its apps: `git log --no-merges --name-only --format= <branch> --not origin/dev origin/main -- backend/features frontend/features`
-  (the folder names = feature keys), and each app's `docs/business/<key>.md` read from that branch
+- its apps: `git log --no-merges --name-only --format= <branch> --not origin/dev origin/main <L> -- backend/features frontend/features`
+  (same `<L>` rule; the folder names = feature keys), and each app's `docs/business/<key>.md` read from that branch
   (`git show <branch>:docs/business/<key>.md`): the header row `Run mode` gives the proposal (`Local` -> 1,
   `Server` or no row -> 2).
 - `<L>` with uncommitted changes (a repair made there): those are saved on `<L>` itself in Step 3.
