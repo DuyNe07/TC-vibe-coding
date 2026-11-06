@@ -11,11 +11,20 @@ and rule A.0 of `00-golden-rules.md`.
    - Sai: "Backend xử lý dữ liệu trùng thế nào?", "Lưu vào bảng riêng hay chung?", "Dùng cache không?"
    - Đúng: "Khi file có 2 dòng trùng mã, màn hình nên (a) báo lỗi dòng đó (b) lấy dòng sau cùng?",
      "Lần sau mở lại, bạn có muốn thấy kết quả lần trước trong bảng không?"
-2. **One feature = one own branch from the newest `dev`, in THIS repository.** Never suggest forking the repository on
-   GitHub, cloning it again or copying the folder. A new feature: `git fetch origin` then
-   `git checkout -b vibe/<prefix>-<key>-<ddmm> origin/dev`. Someone building 10 apps has 10 `vibe/...` branches, each
-   started from `dev`; extending an app continues on that app's branch. Prompt 4 brings ALL of them up to date with
-   the newest `dev` (rebase) and gives one Pull Request link per branch.
+2. **One feature = one own branch in THIS repository; its base follows the app's `Run mode`.** Never fork the
+   repository, never suggest forking, cloning it again or copying the folder. The business document header row
+   `Run mode` (asked in Prompt 1, changeable in Prompt 4; no row = `Server`) decides:
+   - `Server` (runs on the company server, many users): `git fetch origin`, then
+     `git checkout -b vibe/<prefix>-<key>-<ddmm> origin/dev`. Prompt 4 rebases it on the newest `dev`, pushes it and
+     gives the Pull Request LINK (`.../compare/dev...<branch>?expand=1`); the user opens it and clicks *Create pull
+     request*. The AI never creates a Pull Request, never opens that page itself.
+   - `Local` (runs only on the builder's machine): every person has ONE branch `<name>_local` (`<name>` = their GitHub
+     username in lower case, `a-z 0-9` only), built on `main`, that holds ALL their local apps and is pushed to GitHub
+     to keep the code safe. A new local app: `git checkout -b vibe/<prefix>-<key>-<ddmm> <name>_local` (no
+     `<name>_local` yet: create it first with `git checkout -b <name>_local origin/main`); when the app is built and
+     verified, Prompt 2 / 5 merges it into `<name>_local` (`git merge --no-ff`). Prompt 4 merges the newest `main` into
+     `<name>_local` and pushes it - never into `dev` / `main`, no Pull Request.
+   - Never push to `main` / `dev`; never push to another person's branch; never force-push `<name>_local`.
 3. **Store data by default (the shared database).** With the `.env` from the framework owner, every feature may create
    its own tables in the company PostgreSQL database (`SqlRepository`, tables prefixed by its `DEVELOPER`). Data kept
    there survives restarts, machines and versions - this is what makes an app worth opening every day. So when you
@@ -76,7 +85,8 @@ and rule A.0 of `00-golden-rules.md`.
 12. **Report** to the user in Vietnamese: what was built, how to use it, open questions; ask them to test.
 
 ## Changing a feature
-0. Work on the feature's own `vibe/...` branch (rule 2 above); none on this machine: a new one from `origin/dev`.
+0. Work on the feature's own `vibe/...` branch (rule 2 above); none on this machine: a new one from `origin/dev`
+   (`Server`) or from `<name>_local` (`Local`, merged back into it when done).
 1. Update the business doc first (rules, use cases, screens), then the code, then the tests.
 2. Keep the implementation map (section 11) up to date.
 3. `python scripts/check.py`, then `run.ps1`.

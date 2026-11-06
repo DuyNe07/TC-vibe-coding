@@ -91,6 +91,12 @@ Write `docs/plans/business-analysis-plan.md` and show the user a short Vietnames
    (message, file name + sheet/page).
 3. **Questions** (application-level only), numbered, most important first, concrete, with options when possible
    (e.g. "Làm tròn thành tiền: (a) đến đồng, (b) đến nghìn đồng?").
+   ALWAYS include, for each feature, the question **"Ứng dụng này chạy ở đâu?"** with its two answers explained:
+   (1) **chỉ trên máy của bạn** - chỉ bạn dùng, mở trên máy bạn, code được lưu trên GitHub ở nhánh riêng của bạn,
+   không cần ai duyệt; (2) **trên server công ty** - chạy liên tục, nhiều người mở được qua đường link, bạn tạo Pull
+   Request và người phụ trách duyệt trước khi lên server. The answer goes into the header row `Run mode`
+   (`Local` / `Server`): it decides from which branch Prompt 2 builds the app (`docs/rules/05-feature-workflow.md`
+   rule 2). It can be changed later in Prompt 4.
 **STOP**.
 
 ## 5. Step 4 - Clarify until nothing important is open -> STOP (repeat)
@@ -103,7 +109,7 @@ display name. Quality bar:
 
 | Section | What it MUST contain |
 |---|---|
-| Header table | feature key; Home group; icon (one emoji); owner; `Status` = `Draft` (changed in step 6); date `YYYY-MM-DD` |
+| Header table | feature key; Home group; icon (one emoji); owner; `Run mode` = `Local` or `Server` (the user's answer); `Status` = `Draft` (changed in step 6); date `YYYY-MM-DD` |
 | 1. Goal | the problem, who benefits, the expected result (2-5 sentences) |
 | 2. Actors | every role that uses the feature and what they do |
 | 3. Glossary | every business term / abbreviation used, one meaning each |
@@ -130,7 +136,7 @@ Self-review each document and fix until ALL are true:
    sections 1-10.
 6. A developer could build every screen and rule from the document alone, without asking anything.
 
-Then show the user, in simple Vietnamese, a readable summary per feature: display name and Home group; the screens and
+Then show the user, in simple Vietnamese, a readable summary per feature: display name and Home group; chạy ở đâu (máy bạn / server công ty); the screens and
 what each button does; the main rules and calculations; the files imported/exported; the `Giả định` list. Ask the user to
 confirm or correct. **STOP**.
 - If the user corrects something: update, self-review again, show the summary again, **STOP**.

@@ -87,7 +87,8 @@ Dán toàn bộ [docs/prompt/03-fix-error.md](docs/prompt/03-fix-error.md) vào 
 hoặc ảnh chụp màn hình. AI sẽ tự đọc file log `logs/app.log`, tìm nguyên nhân, sửa trong phạm vi chức năng đó, chạy lại
 toàn bộ kiểm tra rồi báo lại bằng tiếng Việt.
 
-Gửi công việc lên server: dán [docs/prompt/04-sync-to-server.md](docs/prompt/04-sync-to-server.md). Muốn thêm vào
+Lưu code lên GitHub (ứng dụng chỉ chạy trên máy bạn) hoặc gửi lên server công ty: dán
+[docs/prompt/04-sync-to-server.md](docs/prompt/04-sync-to-server.md). Muốn thêm vào
 một chức năng đã xong: dán [docs/prompt/05-extend-feature.md](docs/prompt/05-extend-feature.md) - AI đọc chức năng cũ
 rồi hỏi bạn muốn thêm gì. Danh sách đầy đủ: [docs/prompt/README.md](docs/prompt/README.md).
 

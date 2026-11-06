@@ -82,6 +82,32 @@ def test_framework_code_is_frozen_for_anyone_else() -> None:
     assert _guard({"command": "echo framework > .gate-unlock"}, "Bash").returncode == 2
 
 
+def test_no_fork_no_ai_pull_request_no_push_to_team_branches() -> None:
+    if shutil.which("bash") is None:
+        return
+    import os
+    import tempfile
+
+    stranger = {**os.environ, "GH_CONFIG_DIR": tempfile.mkdtemp(), "GIT_CONFIG_GLOBAL": os.devnull,
+                "GIT_CONFIG_NOSYSTEM": "1", "HOME": tempfile.mkdtemp()}  # fmt: skip
+    link = "https://github.com/o/r/compare/dev...vibe/a-b-0611?expand=1"
+    for tool, command in (
+        ("Bash", "gh pr create --base dev --fill"),
+        ("PowerShell", "gh pr create --web"),
+        ("Bash", "gh repo fork --clone"),
+        ("Bash", "gh api -X POST repos/o/r/pulls -f head=x"),
+        ("PowerShell", f"Start-Process '{link}'"),
+        ("Bash", "git push origin dev"),
+        ("PowerShell", "git push -u origin HEAD:main"),
+    ):
+        assert _guard({"command": command}, tool, env=stranger).returncode == 2, command
+    assert _guard({"url": link}, "mcp__chrome-devtools__navigate_page", env=stranger).returncode == 2
+    assert _guard({"element": "Create pull request button"}, "mcp__plugin_playwright_playwright__browser_click").returncode == 2
+    for command in ("git push --force-with-lease -u origin vibe/tenban-dev-tools-0611", "git push -u origin tenban_local"):
+        assert _guard({"command": command, "description": "push, never to dev"}, "Bash", stranger).returncode == 0
+    assert _guard({"file_path": "docs/business/x.md", "content": "never gh pr create"}).returncode == 0
+
+
 def test_powershell_is_guarded_too() -> None:
     hooks = json.loads((ROOT / ".claude" / "settings.json").read_text(encoding="utf-8"))["hooks"]
     assert any("PowerShell" in group.get("matcher", "") for group in hooks["PreToolUse"])

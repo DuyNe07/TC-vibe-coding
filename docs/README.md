@@ -38,7 +38,7 @@ is not. The only allowed path has 3 steps, each started by the user pasting a pr
 | 1 Business analysis | [prompt/01-business-analysis.md](prompt/01-business-analysis.md) (key `TC-UNLOCK-ANALYSIS`) | + `business/<key>.md`, `plans/business-analysis-plan.md` |
 | 2 Implementation | [prompt/02-implement-feature.md](prompt/02-implement-feature.md) (key `TC-UNLOCK-IMPLEMENT`, document `Status: Ready for implementation`) | + the feature's code in `backend/features/<key>/` and `frontend/features/<key>/` |
 | 2b Repair (when needed) | [prompt/03-fix-error.md](prompt/03-fix-error.md) (same key) | the broken feature's folders, once the diagnosis puts the cause there |
-| 2c Sync to the server | [prompt/04-sync-to-server.md](prompt/04-sync-to-server.md) (same key) | the user's features, rebased on `dev` (the team branch) and refactored to the newest framework |
+| 2c Sync to the server | [prompt/04-sync-to-server.md](prompt/04-sync-to-server.md) (same key) | the user's features, refactored to the newest framework: local apps merged into the person's `<name>_local` branch (built on `main`), server apps rebased on `dev` with a Pull Request link |
 | 2d Extend a feature | [prompt/05-extend-feature.md](prompt/05-extend-feature.md) (same key) | the feature's document first, its code after the user confirms |
 
 Details and the mechanical guard (`scripts/hooks/gate_guard.sh`, file `.gate-unlock`): [CLAUDE.md](../CLAUDE.md) and

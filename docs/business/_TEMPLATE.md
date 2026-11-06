@@ -5,6 +5,7 @@
 | Home group (Nhóm trên Trang chủ) | <Home group, e.g. Kế hoạch sản xuất> |
 | Icon (Biểu tượng) | <one emoji, e.g. 📋> |
 | Owner (Người phụ trách) | <Owner> |
+| Run mode (Chạy ở đâu) | <Local = chỉ chạy trên máy người làm / Server = chạy trên server công ty> |
 | Status (Trạng thái) | Draft |
 | Last updated | YYYY-MM-DD |
 

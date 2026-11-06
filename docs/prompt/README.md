@@ -15,7 +15,7 @@ Cursor...). Không cần sửa gì trong prompt. Nếu công cụ không cho dá
 | Khi nào | Prompt | Bạn làm gì | Kết quả |
 |---|---|---|---|
 | Có lỗi (màn hình báo lỗi, kết quả sai, app không chạy, không đăng nhập được) | [03-fix-error.md](03-fix-error.md) | Dán prompt kèm mô tả: bấm gì, màn hình hiện gì, hoặc ảnh chụp | AI tự tìm nguyên nhân thật (thư viện trên máy, file `.env`, cơ sở dữ liệu, hay lỗi trong chức năng), sửa phần được phép sửa, kiểm tra lại, và nói rõ ai cần làm gì nếu không phải lỗi của chức năng |
-| Cập nhật bản mới nhất / gửi công việc lên server | [04-sync-to-server.md](04-sync-to-server.md) | Trả lời **một lượt**: các nhánh cần cập nhật (đề xuất: tất cả), mô tả ngắn, chạy trên server công ty hay chỉ trên máy mình. Lần đầu trên máy: AI mở trình duyệt để bạn đăng nhập GitHub (bấm **Authorize**), không cần mã hay mật khẩu | Với **từng** nhánh chức năng của bạn: AI lưu công việc, lấy bản chung mới nhất của nhóm (`dev`), đặt công việc lên trên, sửa cho hợp khung sườn mới, kiểm tra, đẩy lên và đưa link Pull Request. **Muốn chạy trên server công ty: bắt buộc bấm link tạo Pull Request**; chỉ chạy trên máy mình: không cần |
+| Lưu code lên GitHub, cập nhật bản mới nhất, gửi lên server | [04-sync-to-server.md](04-sync-to-server.md) | Trả lời **một lượt**: mỗi ứng dụng **(1) chỉ chạy trên máy bạn** hay **(2) chạy trên server công ty** (chạy liên tục, nhiều người dùng), mô tả ngắn, cách đăng nhập GitHub (đăng nhập sẵn trên máy, mã truy cập, hoặc tự push) | (1) AI gom mọi ứng dụng chạy trên máy của bạn vào nhánh riêng `<tên-github>_local`, lấy bản chung mới nhất (`main`), kiểm tra rồi lưu nhánh đó lên GitHub - không cần Pull Request. (2) Với từng ứng dụng: AI đặt lên bản mới nhất của nhóm (`dev`), sửa cho hợp khung sườn mới, kiểm tra, đẩy lên và **đưa link tạo Pull Request: bạn tự bấm link rồi bấm *Create pull request*** (AI không tự tạo) |
 | Muốn thêm vào một chức năng đã xong | [05-extend-feature.md](05-extend-feature.md) | AI đọc chức năng cũ, kể lại nó đang làm gì, rồi hỏi bạn muốn thêm gì. Trả lời câu hỏi, "đồng ý" ở bản tóm tắt, một lượt về giao diện | Tài liệu được cập nhật, phần mới được làm ngay trong chức năng cũ; phần cũ và dữ liệu cũ giữ nguyên |
 | Chỉ muốn đổi giao diện | [02-implement-feature.md](02-implement-feature.md) | Gõ `Đổi giao diện chức năng <tên>` rồi dán prompt 2 trong cùng tin nhắn | Chỉ giao diện thay đổi, nghiệp vụ giữ nguyên |
 
@@ -24,14 +24,16 @@ Cấp quyền cho người dùng không cần prompt: quản trị viên làm tr
 
 ## Các nhánh
 - `main`: bản ổn định để giới thiệu trên GitHub; chỉ người phụ trách khung sườn cập nhật (gộp từ `dev`).
-- `dev`: nhánh chung của nhóm, công việc của mọi người được gộp vào đây qua Pull Request.
-- **Mỗi chức năng một nhánh riêng, tạo từ `dev` mới nhất ngay trong repo này** - không fork repo trên GitHub, không
-  clone lại, không chép thư mục. AI tự tạo nhánh `vibe/<tên-người-làm>-<chức-năng>-<ngàytháng>` ở bước 2; làm 10 ứng
-  dụng thì có 10 nhánh, mỗi nhánh đều tạo từ `dev`. Phát triển thêm một ứng dụng (prompt 5) thì làm tiếp trên nhánh
-  của ứng dụng đó.
-- Prompt 4 cập nhật **tất cả** các nhánh đó theo `dev` mới nhất, rồi đưa một link Pull Request vào `dev` cho từng
-  nhánh. **Muốn chạy trên server công ty: phải tạo Pull Request theo link**, người phụ trách duyệt rồi đưa lên server.
-  Chỉ chạy trên máy mình thì không cần Pull Request.
+- `dev`: nhánh chung của nhóm = mọi ứng dụng chạy trên server công ty, gộp vào qua Pull Request.
+- `<tên-github>_local` (ví dụ `xuan2894_local`): nhánh riêng của mỗi người, dựa trên `main`, gom **mọi ứng dụng chỉ
+  chạy trên máy người đó** để lưu code trên GitHub. Không bao giờ gộp vào `dev`, không cần Pull Request.
+- **Mỗi chức năng một nhánh riêng ngay trong repo này** - không fork repo trên GitHub, không clone lại, không chép thư
+  mục. Ở bước 1 bạn chọn ứng dụng chạy ở đâu; ở bước 2 AI tự tạo nhánh `vibe/<tên-người-làm>-<chức-năng>-<ngàytháng>`:
+  chạy trên server -> tạo từ `dev`; chỉ chạy trên máy bạn -> tạo từ nhánh `<tên-github>_local` của bạn và làm xong thì
+  AI gộp lại vào đó (mở app ở nhánh đó là thấy mọi ứng dụng của bạn). Phát triển thêm (prompt 5) theo cùng cách.
+- Prompt 4: ứng dụng chạy trên máy -> AI lưu nhánh `<tên-github>_local` lên GitHub; ứng dụng chạy trên server -> AI
+  đưa **link** tạo Pull Request vào `dev`. **Bạn tự bấm link rồi bấm *Create pull request*** (AI không tự tạo Pull
+  Request); người phụ trách duyệt rồi đưa lên server.
 - Người ngoài nhóm chỉ muốn làm riêng: tạo nhánh từ `main` và nói với AI ở prompt 4 "tôi làm riêng, không theo nhóm".
 
 ## Lần đầu cài trên máy

@@ -24,14 +24,51 @@ EOF
   exit 2
 }
 
-framework_open() {
-  [ "$UNLOCK" = "framework" ] || return 1
+is_owner() {
   local who
   for who in "$(gh config get -h github.com user 2>/dev/null)" "$(git config user.name 2>/dev/null)"; do
     [ "$(printf '%s' "$who" | tr -d '\r' | tr '[:upper:]' '[:lower:]')" = "duyne07" ] && return 0
   done
   return 1
 }
+
+framework_open() { [ "$UNLOCK" = "framework" ] && is_owner; }
+
+# Git rules of docs/rules/05-feature-workflow.md rule 2 (shell commands and browser tools only, never file contents):
+# no fork, no Pull Request created by the AI (the user clicks the compare link), no push to main / dev / master.
+no_pr() {
+  cat >&2 <<'EOF'
+BLOCKED (docs/rules/05-feature-workflow.md rule 2): the AI never forks the repository, never creates a Pull Request
+and never opens the Pull Request page. Give the user the link as text:
+  https://github.com/<owner>/<repo>/compare/dev...<branch>?expand=1
+The user opens it and clicks "Create pull request". A refused push (no permission) is solved by the framework owner
+adding the user's GitHub account to the repository - never by a fork.
+EOF
+  exit 2
+}
+TOOL="$(printf '%s' "$FLAT" | sed -n 's/.*"tool_name"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p')"
+case "$TOOL" in
+  Bash | PowerShell | mcp__*)
+    case "$LOWER_FLAT" in
+      *"gh pr create"* | *"gh pr new"* | *"gh repo fork"* | *"hub pull-request"* | *"gh api"*/pulls* | \
+      *"gh api"*/forks* | *api.github.com/repos/*/pulls* | *api.github.com/repos/*/forks*) no_pr ;;
+      *github.com/*/compare/* | *github.com/*/pull/new/*)
+        case "$TOOL" in mcp__*) no_pr ;; esac
+        case "$LOWER_FLAT" in
+          *start* | *xdg-open* | *"open "* | *explorer* | *invoke-item* | *chrome* | *msedge* | *firefox*) no_pr ;;
+        esac
+        ;;
+    esac
+    case "$TOOL" in
+      mcp__*) case "$LOWER_FLAT" in *"create pull request"* | *"compare & pull request"* | *github.com/*/fork*) no_pr ;; esac ;;
+    esac
+    if printf '%s' "$LOWER_FLAT" | grep -Eq 'git push([^;&|"\\]|\\.)*[ :/](dev|main|master)([ ;&|"\\]|$)' && ! is_owner; then
+      echo "BLOCKED (docs/rules/05-feature-workflow.md rule 2): never push to main / dev / master. Push only the" >&2
+      echo "user's own branch (vibe/... or <name>_local); dev changes only through a Pull Request the user creates." >&2
+      exit 2
+    fi
+    ;;
+esac
 
 # Path of the file the tool wants to write (JSON -> plain path, Windows backslashes included)
 RAW="$(printf '%s' "$FLAT" | sed -n 's/.*"file_path"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p')"

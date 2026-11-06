@@ -184,8 +184,9 @@ and use that port in the health check and stop commands.
 11. **Existing feature** (`backend/features/<key>/` already exists): do NOT scaffold, do NOT delete folders. Update in
     place to match the document. Keep stored data readable: new model fields MUST have defaults; for a removed/renamed
     field add a small conversion in the repository (models use `extra="forbid"`). Never delete `data/<key>/` or database tables.
-12. Do not `git commit` / `git push` (only exception: Step 1 item 0b saving ANOTHER feature's work on its own branch).
-    Sending to the server is Prompt 4.
+12. Never `git push`, never create a Pull Request, never fork. Commit only in Step 1 item 0b (saving ANOTHER feature's
+    work on its own branch) and, for a `Local` app, in Step 6 item 0 (commit + merge into `<name>_local` on this
+    machine - pasting this prompt is the user's request for it). Saving on GitHub / sending to the server is Prompt 4.
 13. **The sample feature disappears by itself.** As soon as the app has your feature, `sample_product_import` (manifest
     `sample=True`) is hidden from the menu, Home, URLs and the permission list. Do NOT delete or edit its folders: it is
     the reference implementation and the framework tests use it. Tell the user in the final report that the sample is
@@ -194,25 +195,32 @@ and use that port in the health check and stop commands.
 ## 5. Step 1 - Preflight
 0. Open the gate: write the in-scope feature keys into `.gate-unlock` (section 3). Without it every write to code is
    refused by `scripts/hooks/gate_guard.sh`. Do this only now, never before the user's Step 0 answer.
-0b. ONE own branch per feature, created from the newest `dev` of THIS repository (never a fork, never a new clone -
-   `docs/rules/05-feature-workflow.md` rule 2). Never tell the user to fork the repository on GitHub.
+0b. ONE own branch per feature in THIS repository (never a fork, never a new clone - `docs/rules/05-feature-workflow.md`
+   rule 2). Never tell the user to fork the repository on GitHub. Its base = the document's header row `Run mode`
+   (no row = `Server`): `Server` -> `<base>` = `origin/dev`; `Local` -> `<base>` = `<name>_local` (`<name>` = GitHub
+   username in lower case, `a-z 0-9` only, from `gh config get -h github.com user`, else `git config user.name`).
 ```
 git fetch origin --prune
 git branch --show-current
 git status --short
-git branch --list "vibe/*<key>*"                          # does this feature already have its branch here?
+git branch --list "vibe/*<key>*" "*_local"                # this feature's branch? the person's local branch?
+git branch -r --list "origin/*_local"
 ```
+   - `Local` and `<name>_local` does not exist on this machine: `git branch <name>_local origin/<name>_local` if it is
+     on GitHub, otherwise `git branch <name>_local origin/main`.
    - The current branch is already this feature's branch (its name contains `<key>`, or its own commits
-     `git diff --stat origin/dev...HEAD -- backend/features` touch only `<key>`): stay on it.
+     `git diff --stat <base>...HEAD -- backend/features` touch only `<key>`): stay on it.
    - This feature has a branch on this machine: `git checkout <that branch>`.
-   - Otherwise (on `main`, `dev`, or ANOTHER feature's branch): `git checkout -b vibe/<prefix>-<key>-<ddmm> origin/dev`.
+   - Otherwise (on `main`, `dev`, `<name>_local` or ANOTHER feature's branch):
+     `git checkout -b vibe/<prefix>-<key>-<ddmm> <base>`.
      Uncommitted files of THIS feature (its business document, discovery note, plans) move with it.
    - Leaving another feature's `vibe/...` branch that has uncommitted work of THAT feature: first save it there, so it
      is not mixed into the new branch (the only commit this prompt makes):
      `git add -A -- . ":!docs/business/<key>.md" ":!docs/plans/<key>-*" ":!docs/business/_sources"` then
      `git commit -m "wip(<other key>): lưu công việc trước khi chuyển sang <key>"` (check that `git status --short`
      shows no `.env`, `data/`, `logs/`, `.gate-unlock` before committing).
-   - One person building 10 apps = 10 branches from `dev`; Prompt 4 later rebases all of them on the newest `dev`.
+   - One person building 10 apps = 10 branches; `Server` ones are rebased on `dev` by Prompt 4, `Local` ones are
+     merged into `<name>_local` (Step 6 item 0) so that branch runs all the person's local apps together.
    - The checkout refuses (conflicting local changes): stay where you are and say so in the final report. Never
      `git stash`, `reset` or `clean` here.
 1. If `.venv` is missing, create it (section 3). Run the quality gate once BEFORE changing anything (baseline).
@@ -443,7 +451,11 @@ Read first: `CLAUDE.md`, `docs/rules/00`-`03`, `06`, `07`, `09`, the business do
    quality gate.
 
 ## 14. Step 6 - Final report (Vietnamese, simple words, no questions)
-0. Close the gate again: delete `.gate-unlock` (section 3), so the repository is locked for the next session.
+0. `Local` app only, once both checks are green: `git add -A`, `git status --short` (no `.env`, `data/`, `logs/`,
+   `.gate-unlock`), `git commit -m "feat(<key>): <tên chức năng>"`, then `git checkout <name>_local` and
+   `git merge --no-ff --no-edit vibe/<prefix>-<key>-<ddmm>` (conflict in `backend/app_registry.py`: keep every line);
+   stay on `<name>_local` (it runs all the person's local apps). Never push here. `Server` app: no commit.
+   Then close the gate again: delete `.gate-unlock` (section 3), so the repository is locked for the next session.
 1. Đã làm gì: each screen (where it is in the menu) and what each button does; how the chosen UI was applied.
 2. Cách dùng: `powershell -ExecutionPolicy Bypass -File .\run.ps1`, open the feature from the Home page or the left
    menu, then click-by-click steps for each main scenario (how to get the Excel template if any).
@@ -452,4 +464,5 @@ Read first: `CLAUDE.md`, `docs/rules/00`-`03`, `06`, `07`, `09`, the business do
 4. Giả định khi triển khai (from section 10), in plain words; pre-existing problems outside the scope, if any.
 5. Muốn thay đổi: thêm vào chức năng -> `docs/prompt/05-extend-feature.md`; chỉ giao diện -> write "Đổi giao diện chức
    năng <tên>" and paste Prompt 2 in the same message (the UI questions come back with the current UI as the
-   proposal). The feature is updated in place and existing data is kept. Gửi lên server -> `docs/prompt/04-sync-to-server.md`.
+   proposal). The feature is updated in place and existing data is kept. Lưu code lên GitHub (ứng dụng chạy trên máy)
+   hoặc gửi lên server công ty -> `docs/prompt/04-sync-to-server.md`.

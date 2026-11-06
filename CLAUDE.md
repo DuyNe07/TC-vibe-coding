@@ -23,7 +23,7 @@ lines which phase we are in and what the next step is.
 | 1. Business analysis | the user pastes [docs/prompt/01-business-analysis.md](docs/prompt/01-business-analysis.md) (key `TC-UNLOCK-ANALYSIS`) | + `docs/business/<key>.md`, `docs/plans/business-analysis-plan.md` |
 | 2. Implementation | the user pastes [docs/prompt/02-implement-feature.md](docs/prompt/02-implement-feature.md) (key `TC-UNLOCK-IMPLEMENT`) **and** the document's `Status` is `Ready for implementation` | + `backend/features/<key>/`, `frontend/features/<key>/`, the app's ONE line in `backend/app_registry.py`, `docs/plans/<key>-*.md`, and in the document: section 8 UI block, new UCs of Step 0, sections 10-11, `Status` |
 | 2b. Repair | the user pastes [docs/prompt/03-fix-error.md](docs/prompt/03-fix-error.md) (key `TC-UNLOCK-IMPLEMENT`) because something does not work | the broken feature's folders, only when the diagnosis puts the cause there (environment, `.env`, shared database and framework causes are reported, not edited) |
-| 2c. Sync to the server | the user pastes [docs/prompt/04-sync-to-server.md](docs/prompt/04-sync-to-server.md) (key `TC-UNLOCK-IMPLEMENT`) | the folders of the user's features (rebased on `dev`, refactored to the newest framework; framework files always come from `dev`) |
+| 2c. Sync to the server | the user pastes [docs/prompt/04-sync-to-server.md](docs/prompt/04-sync-to-server.md) (key `TC-UNLOCK-IMPLEMENT`) | the folders of the user's features, refactored to the newest framework: local apps merged into `<name>_local` (framework from `main`), server apps rebased on `dev` (framework from `dev`) |
 | 2d. Extend a feature | the user pastes [docs/prompt/05-extend-feature.md](docs/prompt/05-extend-feature.md) (key `TC-UNLOCK-IMPLEMENT`) | first only `docs/business/<key>.md` + `docs/plans/<key>-extension-*.md`; after the user confirms the updated document, the same as phase 2 for that feature |
 
 Rules of the gate:
@@ -55,11 +55,15 @@ Rules of the gate:
 
 ## Essentials (details in the docs)
 - Branches: `main` = stable showcase, updated only by the framework owner from `dev`; `dev` = the team branch where
-  everyone's work is merged through Pull Requests. ONE feature = ONE own `vibe/<prefix>-<key>-<ddmm>` branch created
-  from the newest `origin/dev` in THIS repository (Prompts 2 and 5; 10 apps = 10 branches) - never suggest forking the
-  repository, cloning it again or copying the folder. Prompt 4 rebases ALL the user's `vibe/...` branches on `dev` and
-  gives one Pull Request link into `dev` per branch: a Pull Request is REQUIRED to run on the company server, not needed
-  to run only locally. Never commit or push to `main` or `dev` directly. Someone outside the team branches from `main`.
+  everything that runs on the company server is merged through Pull Requests. ONE feature = ONE own
+  `vibe/<prefix>-<key>-<ddmm>` branch in THIS repository; its base follows the document's `Run mode` (asked in
+  Prompt 1): `Server` -> from `origin/dev`; `Local` (only on the builder's machine) -> from the person's ONE branch
+  `<github-username>_local` (built on `main`, holds all their local apps, merged back into it when the app is done).
+  Never fork, never suggest forking, cloning again or copying the folder. Prompt 4 asks local or server per app:
+  local -> merge into `<name>_local`, merge the newest `main` into it, push it (no Pull Request); server -> rebase on
+  `dev`, push, give the Pull Request LINK `.../compare/dev...<branch>?expand=1` - the user opens it and clicks
+  *Create pull request*; the AI never creates a Pull Request (`gh pr create`) or opens that page. Never commit or push
+  to `main` or `dev` directly. Rules: [docs/rules/05-feature-workflow.md](docs/rules/05-feature-workflow.md) rule 2.
 - Prefer solutions that STORE data in the shared database (the `.env` gives every feature its own tables): imported
   rows, results, statuses, history, reusable master lists - stored lean, reused by later screens and months
   ([docs/rules/05-feature-workflow.md](docs/rules/05-feature-workflow.md) rule 3).

@@ -76,9 +76,11 @@ touched screens). No screen change: skip this step. From here on never ask anyth
 
 ## 7. Step 6 - Build in place
 Open the gate: `echo <key> > .gate-unlock`. Then the branch, exactly as `docs/prompt/02-implement-feature.md` Step 1
-item 0b: this feature's own `vibe/...` branch if it exists on this machine, otherwise a NEW branch
-`vibe/<prefix>-<key>-<ddmm>` from `origin/dev` (the feature is already in `dev` once its Pull Request was merged).
-Never on `main` / `dev`, never on another feature's branch, never a fork or a new clone.
+item 0b: this feature's own `vibe/...` branch if it exists on this machine and is not merged yet, otherwise a NEW
+branch `vibe/<prefix>-<key>-<ddmm>` from the base of its `Run mode`: `origin/dev` for `Server` (the feature is in
+`dev` once its Pull Request was merged), `<name>_local` for `Local` (merged back into it at the end, Prompt 2 Step 6
+item 0). Never on `main` / `dev` / `<name>_local` directly, never on another feature's branch, never a fork or a new
+clone, never push, never create a Pull Request.
 Then follow `docs/prompt/02-implement-feature.md` sections 3 (commands),
 4 (rules), 7-13 (build, roles, pitfalls, verify) in **existing-feature mode**: never scaffold, never delete folders,
 update in place. In the plan of Step 4 add the traceability rows of the NEW / CHANGED items only, plus one row
@@ -87,11 +89,12 @@ changes -> business (+ tests) -> repositories -> builders -> dto -> services (+ 
 read-only) -> pages / manifest. Run the full quality gate early (baseline) and after each layer.
 Done = `scripts/check.py` -> `ALL CHECKS PASSED` (old AND new tests), `scripts/migrate.py status` -> up to date,
 `scripts/doctor.py` -> `APP IS HEALTHY`, and with a browser tool: the old main scenario still works and every new AC
-passes. Then fill section 11, set `Status` = `Implemented`, `rm .gate-unlock`.
+passes. Then fill section 11, set `Status` = `Implemented`; `Local` app: commit and merge into `<name>_local` exactly
+as Prompt 2 Step 6 item 0; then `rm .gate-unlock`.
 
 ## 8. Step 7 - Final report (Vietnamese, simple words, no questions)
 1. Đã thêm / thay đổi gì: per screen, where it is and what the new buttons / columns / files do.
 2. Những gì giữ nguyên và đã kiểm tra lại (các chức năng cũ vẫn chạy); dữ liệu cũ được xử lý thế nào.
 3. Cách dùng phần mới: `powershell -ExecutionPolicy Bypass -File .\run.ps1`, then click-by-click.
 4. Kết quả kiểm tra: last lines of `scripts/check.py` and `scripts/doctor.py`; numbers of new UC / BR / AC tested.
-5. Giả định khi triển khai, if any. Gửi lên server: `docs/prompt/04-sync-to-server.md`.
+5. Giả định khi triển khai, if any. Lưu lên GitHub / gửi lên server: `docs/prompt/04-sync-to-server.md`.
