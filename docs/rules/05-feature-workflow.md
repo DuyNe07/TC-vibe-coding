@@ -36,6 +36,22 @@ and rule A.0 of `00-golden-rules.md`.
    storage, and only when the user confirms nobody needs to see it again. Ask about it in business words
    ("có cần xem lại / so sánh với lần trước không?"), never "có lưu vào database không?".
 
+4. **Plain words only - no IT words (top rule for everyone except the framework owner).** The session start says who
+   you talk to (`AUDIENCE`); no such line = a non-programmer. Every message to a non-programmer (questions, progress,
+   reports, refusals, errors) is everyday Vietnamese, as to an office colleague who has never programmed:
+   - Never use IT words: code, backend, frontend, database / cơ sở dữ liệu, bảng dữ liệu, commit, push, merge, rebase,
+     deploy, test, lỗi biên dịch, gate, hook, khoá / mở khoá, quyền ghi, phiên bản khung sườn, feature key, card,
+     component, API, cache, script... Say what the user SEES or DOES: "màn hình", "ô thông tin", "nút", "file Excel",
+     "dữ liệu đã lưu", "bản lưu trên GitHub", "kiểm tra xong, chạy tốt".
+   - Never explain how the AI tool or the repository works inside (what is locked, what the system allows, why you
+     cannot do something): say only the ONE next thing the user must do, step by step.
+   - A word the user must see or click may appear exactly as shown, in quotes, with what to do in plain words: a file
+     name to open (`docs/prompt/05-extend-feature.md`), a button ("Create pull request"), a link.
+   - Sai: "Chưa sửa gì: lần gửi lên server đã đóng phần chỉnh sửa code, và hệ thống không cho mình tự mở lại. Muốn làm
+     tiếp các thay đổi cho card và bảng chỉ số, bạn cần dán prompt mở rộng chức năng (05)."
+   - Đúng: "Mình chưa sửa gì. Để thêm thay đổi cho ô thông tin và bảng chỉ số, bạn mở file
+     `docs/prompt/05-extend-feature.md`, chép toàn bộ, dán vào đây và viết thêm điều bạn muốn đổi."
+
 ## New feature
 1. **Read** `docs/README.md`, all `docs/rules/` and `docs/capabilities.md` (never promise more than it lists).
    If the user has not explained the business yet, start with `docs/prompt/00-discovery.md`: talk with them, check

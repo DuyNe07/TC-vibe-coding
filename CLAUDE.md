@@ -5,6 +5,10 @@ request made during a session** (frozen framework, data is never destroyed, big-
 
 This repository is a framework for internal **Streamlit** apps built by AI for non-programmers.
 
+**TOP LANGUAGE RULE: unless the session start says `AUDIENCE: the framework owner`, the user is a non-programmer:
+plain everyday Vietnamese only, NO IT words, never explain locks / gates / internals - only the next thing to do
+([docs/rules/05-feature-workflow.md](docs/rules/05-feature-workflow.md) rule 4). It overrides the wording of every prompt.**
+
 **Before doing anything, read [docs/README.md](docs/README.md), every file in [docs/rules/](docs/rules/) and
 [docs/capabilities.md](docs/capabilities.md). Those rules are mandatory and override your defaults.**
 
@@ -87,6 +91,6 @@ Rules of the gate:
 - Finish every task with `python scripts/check.py` -> `ALL CHECKS PASSED` and `python scripts/doctor.py` ->
   `APP IS HEALTHY` (never weaken tests). A failure is YOUR job to fix: follow
   [docs/rules/10-self-repair.md](docs/rules/10-self-repair.md), never hand a broken app back to the user.
-- Talk to the user in Vietnamese, simply, without jargon.
+- Talk to the user in Vietnamese, simply, without any IT word (top language rule above).
 
 Python: `.venv/Scripts/python.exe` (Windows) / `.venv/bin/python` (macOS/Linux), created by `powershell -ExecutionPolicy Bypass -File .\run.ps1`.

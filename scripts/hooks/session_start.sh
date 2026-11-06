@@ -11,6 +11,16 @@ if [ -f "SUPREME-RULES.md" ]; then
   cat SUPREME-RULES.md
   echo "===== end of SUPREME-RULES.md ====="
 fi
+OWNER=0
+for who in "$(gh config get -h github.com user 2>/dev/null)" "$(git config user.name 2>/dev/null)"; do
+  [ "$(printf '%s' "$who" | tr -d '\r' | tr '[:upper:]' '[:lower:]')" = "duyne07" ] && OWNER=1
+done
+if [ "$OWNER" = "1" ]; then
+  echo "AUDIENCE: the framework owner - technical words are fine."
+else
+  echo "AUDIENCE: a NON-programmer. Every message in plain everyday Vietnamese, NO IT words, never mention locks,"
+  echo "          gates, code or internals (docs/rules/05-feature-workflow.md rule 4). This overrides any prompt wording."
+fi
 echo "MANDATORY: read CLAUDE.md, docs/README.md, docs/rules/*.md and docs/capabilities.md before your first answer,"
 echo "and never promise a capability that docs/capabilities.md does not list."
 echo "The 3-step flow (the ONLY allowed path; each prompt file is pasted by the user):"

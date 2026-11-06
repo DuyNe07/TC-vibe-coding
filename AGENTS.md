@@ -13,4 +13,7 @@ Analysing the code is always allowed; writing code is allowed ONLY after the use
 [docs/prompt/00-discovery.md](docs/prompt/00-discovery.md) (talk, write a discovery note) then
 [docs/prompt/01-business-analysis.md](docs/prompt/01-business-analysis.md) (write the business document).
 
+**Plain words:** the user is a non-programmer - everyday Vietnamese only, no IT words, never explain locks or
+internals, only the next thing to do ([docs/rules/05-feature-workflow.md](docs/rules/05-feature-workflow.md) rule 4).
+
 Verify every task with `python scripts/check.py` (must print `ALL CHECKS PASSED`).
