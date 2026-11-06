@@ -1,10 +1,10 @@
-# Năng suất xưởng may
+# Sewing Performance (trước đây: Năng suất xưởng may)
 
 | Feature key | `sewing_productivity` (= folder name in `backend/features/` and `frontend/features/`) |
 |---|---|
-| Home group (Nhóm trên Trang chủ) | Sản xuất |
+| Home group (Nhóm trên Trang chủ) | Production |
 | Icon (Biểu tượng) | 🧵 |
-| Owner (Người phụ trách) | Nhóm PI - SO |
+| Owner (Người phụ trách) | PI - SO team |
 | Status (Trạng thái) | Implemented |
 | Last updated | 2026-11-05 |
 
@@ -73,6 +73,7 @@ Mỗi dòng của sheet `Production data`. Một dòng được nhận diện b�
 | sewers | decimal > 0 | Yes | Số người, từ `REVISE MO` | 24 |
 | smv | decimal > 0 | No | SMV | 10.79 |
 | standard_output | decimal ≥ 0 | No | Mục tiêu B, từ `Standard output of SMV (have efficiency ratio)` | 315.14 |
+| standard_output_no_ratio | decimal ≥ 0 | No | Mục tiêu không tỉ lệ, từ `Standard output of SMV (no efficiency ratio)` (thêm 2026-11-05; dòng đã lưu trước đó để trống đến khi tải lại file) | 608.70 |
 | is_mismatched | yes-no | Yes | Có khi `Match line strength` = `Trái sở trường` | Không |
 
 ### 4.2 Dòng mục tiêu (TargetRecord)
@@ -198,7 +199,7 @@ Duy nhất theo style. Người cập nhật bổ sung cho các style chưa tra 
 
 | Sheet | Dòng tiêu đề | Cột bắt buộc | Cột không bắt buộc |
 |---|---|---|---|
-| `Production data` | Dòng 2 | `adj Date`, `Factory` (cột đầu tiên có tên này), `Customer Name`, `Style`, `PO#`, `Line`, `Product Inline Quantiy` (chấp nhận thêm `Product Inline Quantity`), `Price`, `REVISE MO`, `Revised OT 2` | `Product Name`, `Color`, `SMV`, `Standard output of SMV (have efficiency ratio)`, `Match line strength` |
+| `Production data` | Dòng 2 | `adj Date`, `Factory` (cột đầu tiên có tên này), `Customer Name`, `Style`, `PO#`, `Line`, `Product Inline Quantiy` (chấp nhận thêm `Product Inline Quantity`), `Price`, `REVISE MO`, `Revised OT 2` | `Product Name`, `Color`, `SMV`, `Standard output of SMV (have efficiency ratio)`, `Standard output of SMV (no efficiency ratio)`, `Match line strength` |
 | `Target system` | Dòng 1 | `Line`, `Daily Target (SMV)`, `Date` | `Items`, `Style`, `Daily Target (CM)`, `Expertise`, `PO` |
 | `Worker` | Dòng 2 | Cột C (ngày, không có tiêu đề); cột đầu tiên có tiêu đề `SF2`, `SF3`, `SF5`, `SFVL` | |
 
@@ -220,7 +221,7 @@ Khi file sai: xem BR-01 đến BR-06. Dữ liệu đã lưu giữ nguyên khi fi
 ## 6. Use cases (Nghiệp vụ) - each UC becomes ONE controller method + ONE service
 ### UC-01: Kiểm tra file dữ liệu
 - **Actor:** Người cập nhật dữ liệu
-- **Trigger:** Chọn file ở Screen 7 rồi bấm "Kiểm tra file"
+- **Trigger:** Chọn file ở Screen 7 rồi bấm "Check & save" (sửa 2026-11-06: trước đây nút "Kiểm tra file", BR-57)
 - **Preconditions:** Có vai trò `UPDATER`
 - **Input:** File Excel
 - **Main flow:**
@@ -234,7 +235,7 @@ Khi file sai: xem BR-01 đến BR-06. Dữ liệu đã lưu giữ nguyên khi fi
 
 ### UC-02: Lưu dữ liệu từ file
 - **Actor:** Người cập nhật dữ liệu
-- **Trigger:** Bấm "Lưu dữ liệu" sau khi kiểm tra
+- **Trigger:** Ngay sau UC-01 khi file không bị từ chối, trong cùng một lần bấm "Check & save" (sửa 2026-11-06: trước đây bấm "Lưu dữ liệu" rồi xác nhận, BR-57)
 - **Preconditions:** File đã qua UC-01 và không bị từ chối
 - **Input:** File đã kiểm tra
 - **Main flow:**
@@ -506,6 +507,18 @@ Khi file sai: xem BR-01 đến BR-06. Dữ liệu đã lưu giữ nguyên khi fi
 - **Errors / alternative flows:** Chưa có dữ liệu thì mọi báo cáo hiện "Chưa có dữ liệu. Người cập nhật cần tải file ở màn hình Cập nhật dữ liệu."
 - **Rules applied:** BR-31
 
+### UC-27: Xem cột tổng hợp HCM (thêm 2026-11-05)
+- **Actor:** Người xem, Người cập nhật dữ liệu
+- **Trigger:** Xem Screen 1, Screen 3, hoặc tải Excel của hai màn hình đó
+- **Input:** Như UC-04, UC-05, UC-07
+- **Main flow:**
+  1. Lấy các xưởng HCM đã chọn trong Fac 2, Fac 3, Fac 5.
+  2. Tính cột HCM theo BR-51.
+  3. Hiện cột HCM cạnh các xưởng, thêm đường HCM vào biểu đồ theo ngày và cột HCM vào biểu đồ sản lượng.
+- **Output:** Cột HCM trong bảng chỉ số và file Excel; đường và cột HCM trong biểu đồ; khối Summary ở Screen 1.
+- **Errors / alternative flows:** Chọn ít hơn 2 xưởng HCM thì không hiện HCM.
+- **Rules applied:** BR-51, BR-54
+
 ## 7. Business rules (Quy tắc nghiệp vụ)
 | ID | Rule | Error message shown to user (VI) |
 |---|---|---|
@@ -559,6 +572,15 @@ Khi file sai: xem BR-01 đến BR-06. Dữ liệu đã lưu giữ nguyên khi fi
 | BR-48 | Dòng Tổng báo cáo tháng theo xưởng: tổng tiền CM, tổng sản lượng, tổng mục tiêu B, hiệu suất B = sản lượng / mục tiêu B, MO 8h theo BR-23. Dòng Tổng màn hình MO theo chuyền: trong ngày MO 8h = tổng tiền CM các chuyền / tổng số người các chuyền × 8 / giờ làm xưởng; cả kỳ dùng tổng của các ngày và giờ làm trung bình các ngày | - |
 | BR-49 | File Excel xuất: mỗi báo cáo một sheet; tiêu đề in đậm, có nền màu, luôn hiện khi kéo xuống; cột tự giãn; không tô màu theo ngưỡng; có cột hoặc dòng Đánh giá theo BR-28 ở các báo cáo ghi trong mục 5.2; số "-" được ghi là "-" | - |
 | BR-50 | Hiển thị: sản lượng và mục tiêu là số nguyên; hiệu suất và các tỷ lệ theo % có 1 chữ số lẻ; tiền CM, giá CM, MO, MO 8h, giờ làm có 2 chữ số lẻ; KPI đổi mã hàng có 3 chữ số lẻ. Chỉ làm tròn khi hiển thị và xuất file | - |
+| BR-51 | Cột HCM (thêm 2026-11-05) gộp Fac 2, Fac 3, Fac 5 đã chọn như một xưởng, tính lại từ các con số tổng, không lấy trung bình các tỷ lệ: mục tiêu, sản lượng, tiền CM là tổng; hiệu suất = tổng sản lượng / tổng mục tiêu; MO 8h = tổng tiền CM × 8 / (tổng số thợ × giờ làm trung bình), chỉ trên các ngày của xưởng có số thợ; giờ làm là trung bình các ngày của từng xưởng. Mục tiêu và ngưỡng của HCM là mức chung khi cả 3 xưởng cùng mức, nếu khác nhau thì hiện "-". Số đổi mã hàng tuần chỉ có khi mọi xưởng đã chọn đều có số. Chỉ hiện khi chọn từ 2 xưởng HCM trở lên | - |
+| BR-52 | Tên trên màn hình và trong file Excel bằng tiếng Anh (thêm 2026-11-05): tên ứng dụng "Sewing Performance", "Đổi mã hàng" thành "Changeover", "Hiệu suất" thành "%Efficiency" theo BR-56, Fac 1 hiển thị là "Fac Vinh Long". Dữ liệu đã lưu không đổi, vẫn ghi Fac 1. Các câu thông báo do hệ thống kiểm tra trả về vẫn bằng tiếng Việt, chỉ đổi các tên trên trong câu | - |
+| BR-53 | Hàng và cột của 3 loại %Efficiency (BR-56) và MO 8h trong bảng trên màn hình được in đậm (thêm 2026-11-05) | - |
+| BR-54 | Biểu đồ có nhãn số (thêm 2026-11-05): biểu đồ theo ngày ghi số cả kỳ cạnh tên xưởng ở chú thích; biểu đồ sản lượng ghi sản lượng / mục tiêu A dưới tên xưởng; biểu đồ xếp hạng là cột ngang, ghi số cạnh tên chuyền. Screen 1 có bảng Summary với Output, 3 loại %Efficiency, MO 8h của Fac Vinh Long và HCM | - |
+| BR-55 | Hiệu suất không tỉ lệ (thêm 2026-11-05) = tổng sản lượng / tổng cột `Standard output of SMV (no efficiency ratio)`, bỏ các dòng thiếu cột này khỏi cả tử số và mẫu số, không còn dòng nào thì hiện "-". Cách tính theo chuyền, ngày, xưởng, HCM và bộ lọc khách hàng, sản phẩm giống hiệu suất B của BR-19. Không so với mục tiêu và ngưỡng, không có dấu 🔴 | - |
+| BR-56 | Tên 3 loại hiệu suất (thêm 2026-11-05): nhóm có tỉ lệ gồm "%Efficiency (with ratio - system)" là hiệu suất A của BR-18, mục tiêu lấy từ sheet `Target system`, và "%Efficiency (with ratio - sum)" là hiệu suất B của BR-19, mục tiêu là tổng cột `have efficiency ratio`; loại không tỉ lệ là "%Efficiency B (no ratio)" của BR-55. Trong tài liệu này, "hiệu suất A" và "hiệu suất B" vẫn theo nghĩa BR-18, BR-19 | - |
+| BR-57 | Tải file bằng một nút "Check & save" (thêm 2026-11-06): file qua kiểm tra BR-01 đến BR-05 thì lưu ngay, không hỏi lại; các dòng bị bỏ qua không được lưu và được liệt kê sau khi lưu. File bị từ chối thì không lưu gì và hiện lý do | - |
+| BR-58 | Khu vực "Vinh Long - HCM" ở Screen 1 (thêm 2026-11-06, thay bảng Summary của BR-54): 5 card Revenue (tiền CM), Output, Avg CM price (Revenue / Output, BR-24), MO 8h, %Efficiency (with ratio - sum). Mỗi card ghi số Total lớn, dưới là Fac Vinh Long và HCM. Total gộp mọi xưởng đã chọn, tính từ số tổng như BR-51; không có mức mục tiêu chung nên Total không có dấu 🔴. (sửa 2026-11-06: các card cao bằng nhau; mỗi card có màu, biểu tượng và đơn vị riêng: Revenue (USD) xanh lá, Output (pcs) xanh dương, Avg CM price (USD/pc) tím, MO 8h (USD) cam, %Efficiency đỏ; dưới số Total có cột nhỏ so sánh Vinh Long và HCM; Revenue và Output không có số lẻ, các số khác giữ số lẻ của BR-50) | - |
+| BR-59 | Bảng chỉ số ở Screen 1 (thêm 2026-11-06): mặc định ẩn 3 dòng của loại with ratio - system (Target, %Efficiency, % so với mục tiêu); nút gạt "Show %Efficiency (with ratio - system)" ở đầu bảng mở lại, app nhớ lựa chọn trong phiên làm việc. File Excel không đổi | - |
 
 ## 8. Screens (Màn hình) - each screen becomes ONE page
 ### Giao diện đã chốt (UI concept)
@@ -570,9 +592,13 @@ Khi file sai: xem BR-01 đến BR-06. Dữ liệu đã lưu giữ nguyên khi fi
 - **Báo cáo tháng:** bộ lọc (Từ ngày, Đến ngày, Xưởng); mỗi xưởng một bảng: Ngày | MO | Giờ làm | MO 8h | Mục tiêu B | Sản lượng | Hiệu suất B | Tiền CM | Số thợ, dòng cuối là Tổng; nút "Tải Excel".
 - **MO theo chuyền:** bộ lọc (Từ ngày, Đến ngày, Xưởng, Chuyền); 5 thẻ: MO 8h, Tiền CM, Giờ làm, Số người, Hiệu suất B; mỗi thẻ một bảng: Chuyền | các cột ngày | Cả kỳ, dòng cuối là Tổng; nút "Tải Excel".
 - **Đổi mã hàng:** bộ lọc (Từ ngày, Đến ngày, Xưởng, Chuyền); 4 thẻ: Theo xưởng, Theo tháng, Theo chuyền, Chi tiết; nút "Tải Excel".
-- **Cập nhật dữ liệu:** từ trên xuống: khối Bước 1 chọn file và nút "Kiểm tra file"; khối Bước 2 kết quả kiểm tra, bảng dòng bị bỏ qua, bảng cảnh báo, nút "Lưu dữ liệu" có hỏi lại trước khi lưu; khối đổi mã hàng tuần dạng form (Từ ngày, Đến ngày, 4 ô số, nút "Lưu số đổi mã hàng", không hỏi lại); bảng chọn một dòng đã nhập và nút "Xoá dòng đã chọn" có hỏi lại; bảng lịch sử tải file chỉ xem.
+- **Cập nhật dữ liệu:** từ trên xuống: khối Bước 1 chọn file và nút "Kiểm tra file"; khối Bước 2 kết quả kiểm tra, bảng dòng bị bỏ qua, bảng cảnh báo, nút "Lưu dữ liệu" có hỏi lại trước khi lưu (sửa 2026-11-06: một nút "Check & save" kiểm tra và lưu luôn, BR-57); khối đổi mã hàng tuần dạng form (Từ ngày, Đến ngày, 4 ô số, nút "Lưu số đổi mã hàng", không hỏi lại); bảng chọn một dòng đã nhập và nút "Xoá dòng đã chọn" có hỏi lại; bảng lịch sử tải file chỉ xem.
 - **Mục tiêu và ngưỡng:** bảng đang áp dụng chỉ xem; form thêm mức mới (Xưởng, Ngày hiệu lực, 4 ô số, nút "Lưu mức mới", không hỏi lại); bảng lịch sử chỉ xem.
 - **Danh mục:** 4 thẻ: Nhóm sản phẩm, Nhóm khách hàng, Số chuyền Fac 1, Tên sản phẩm theo style; mỗi thẻ một bảng sửa trực tiếp trong ô, thêm và bớt được dòng, nút lưu tương ứng, không hỏi lại; dưới bảng là danh sách còn thiếu, chỉ xem.
+
+**Sửa 2026-11-05 (BR-51 đến BR-54):** tên trên màn hình đổi sang tiếng Anh. Menu "Reports": Overview, Line Detail, Daily Report, Monthly Report, MO by Line, Changeover. Menu "Data management": Data Update, Targets & Thresholds, Catalogs. Bảng chỉ số ở Screen 1 và Screen 3 thêm cột HCM sau Fac 5. Screen 1 thêm khối Summary trên bảng chỉ số (trước đây không có ô số liệu tổng hợp). Biểu đồ xếp hạng đổi từ cột đứng sang cột ngang. Các mô tả tiếng Việt ở trên giữ để đối chiếu với mục 5, 6, 7.
+
+**Sửa 2026-11-05 (BR-55, BR-56):** Screen 1, 2, 3, 4 và file Excel thêm %Efficiency B (no ratio), Screen 1 và 2, 4 thêm Target B (no ratio). Screen 1 thêm biểu đồ theo ngày của loại này, biểu đồ Output xuống một hàng riêng, xếp hạng chuyền có thêm lựa chọn no ratio. Screen 5 có thêm thẻ thứ 6.
 
 Screen 1 đến 6 cấp cho mọi người xem. Screen 7 đến 9 chỉ cấp cho người có vai trò `UPDATER`. Mọi báo cáo hiện ngày dữ liệu mới nhất và thời điểm tải file gần nhất (UC-26).
 
@@ -626,7 +652,7 @@ Screen 1 đến 6 cấp cho mọi người xem. Screen 7 đến 9 chỉ cấp ch
 
 ### Screen 7: Cập nhật dữ liệu
 - **Purpose:** Tải file dữ liệu và nhập đổi mã hàng tuần.
-- **Khối tải file:** Chọn file (.xlsx, bắt buộc). Nút "Kiểm tra file" → UC-01. Sau khi kiểm tra hiện: số dòng đọc được, hợp lệ, bị bỏ qua; ngày đầu, ngày cuối; so sánh số dòng với dữ liệu đang lưu; bảng dòng bị bỏ qua (Sheet, Dòng, Lý do); bảng cảnh báo (Loại, Ngày, Số lượng). Nút "Lưu dữ liệu" → UC-02, chỉ hiện khi file không bị từ chối. Sau khi lưu hiện thông báo của UC-02.
+- **Khối tải file:** Chọn file (.xlsx, bắt buộc). Nút "Kiểm tra file" → UC-01. Sau khi kiểm tra hiện: số dòng đọc được, hợp lệ, bị bỏ qua; ngày đầu, ngày cuối; so sánh số dòng với dữ liệu đang lưu; bảng dòng bị bỏ qua (Sheet, Dòng, Lý do); bảng cảnh báo (Loại, Ngày, Số lượng). Nút "Lưu dữ liệu" → UC-02, chỉ hiện khi file không bị từ chối. Sau khi lưu hiện thông báo của UC-02. (sửa 2026-11-06: một nút "Check & save" làm cả UC-01 và UC-02; kết quả kiểm tra, dòng bị bỏ qua và cảnh báo hiện sau khi lưu, BR-57.)
 - **Khối lịch sử tải file (UC-03):** Thời điểm, Người tải, Tên file, Từ ngày, Đến ngày, Số dòng lưu, Số dòng bỏ qua.
 - **Khối đổi mã hàng tuần:** Từ ngày, Đến ngày (mặc định tuần của BR-31); Số lần của Fac 1, Fac 2, Fac 3, Fac 5 (số nguyên, để trống là không lưu). Nút "Lưu số đổi mã hàng" → UC-19.
 - **Danh sách đã nhập (UC-18):** Xưởng, Từ ngày, Đến ngày, Số lần, Người lưu. Chọn một dòng rồi bấm "Xoá dòng đã chọn" → UC-20.
@@ -653,7 +679,7 @@ Số liệu dưới đây lấy từ các file mẫu; số có thể đổi nế
 - [ ] AC-04: Given file chưa có kết quả công thức, When kiểm tra, Then thấy thông báo BR-04.
 - [ ] AC-05: Given file có một dòng thiếu mã đơn, When kiểm tra, Then dòng đó được liệt kê với số dòng và lý do, các dòng khác vẫn hợp lệ, có nút Lưu.
 - [ ] AC-06: Given file có xưởng lạ, When kiểm tra, Then dòng đó được liệt kê với thông báo BR-06.
-- [ ] AC-07: Given file `Data sewing 2026.xlsx` đúng mẫu, When bấm "Kiểm tra file", Then chưa có gì được lưu và thấy số dòng, ngày đầu, ngày cuối, cảnh báo.
+- [ ] AC-07 (sửa 2026-11-06: trước đây bấm "Kiểm tra file" thì chưa lưu): Given file `Data sewing 2026.xlsx` đúng mẫu, When bấm "Check & save", Then dữ liệu được lưu, thấy thông báo của UC-02 và kết quả kiểm tra gồm số dòng, ngày đầu, ngày cuối, dòng bị bỏ qua, cảnh báo.
 - [ ] AC-08: Given đã lưu file đến ngày 04/11, When tải file có giá CM ngày cũ đã đổi, Then báo cáo ngày cũ dùng giá mới và số dòng hiện trên báo cáo không tăng thêm với các dòng đã có.
 - [ ] AC-09: Given đã có dữ liệu 2026, When lưu file chỉ có các ngày năm 2027, Then dữ liệu 2026 giữ nguyên.
 - [ ] AC-10: Given một dòng có trong file trước nhưng không còn trong file mới, cùng khoảng ngày, When lưu, Then dòng đó không còn tính vào báo cáo và vẫn được giữ lại có đánh dấu đã xoá.
@@ -699,6 +725,19 @@ Số liệu dưới đây lấy từ các file mẫu; số có thể đổi nế
 - [ ] AC-50: Given mở Screen 8, When xem, Then thấy mức đang áp dụng của 4 xưởng và lịch sử. Given lưu mức mới trùng xưởng và ngày hiệu lực, Then mức mới thay mức cũ, không thêm dòng.
 - [ ] AC-51: Given chọn 24/10/2026–30/10/2026, When xem Screen 1, Then giá CM trung bình của mỗi xưởng = tiền CM / sản lượng của xưởng đó.
 - [ ] AC-52: Given dữ liệu mới nhất ngày 04/11/2026, When mở Screen 3, Then ngày mặc định là 04/11/2026. When mở Screen 4, 5 hoặc 6, Then khoảng mặc định là 01/11/2026–04/11/2026.
+- [ ] AC-53: Given Fac 2 sản lượng 400, mục tiêu B 500 và Fac 3 sản lượng 100, mục tiêu B 100, When xem Screen 1, Then %Efficiency B của HCM là 83,3%, không phải trung bình của 80% và 100%.
+- [ ] AC-54: Given có cột HCM, When xem các cột Fac 2, Fac 3, Fac 5, Then số của từng xưởng không đổi so với khi chưa có cột HCM.
+- [ ] AC-55: Given chỉ chọn Fac 2, hoặc chọn Fac Vinh Long và Fac 3, When xem Screen 1, Then không có cột HCM. Given chọn Fac 2 và Fac 3, Then có cột HCM.
+- [ ] AC-56: Given có dữ liệu ngày 24/10/2026, When xem Screen 3 và biểu đồ Screen 1, Then bảng có cột HCM, biểu đồ theo ngày có đường HCM, biểu đồ sản lượng có cột HCM.
+- [ ] AC-57: Given tải Excel báo cáo tuần hoặc báo cáo ngày trên màn hình, When mở file, Then tên sheet, tên cột, tên chỉ số và kết quả đánh giá bằng tiếng Anh, có cột HCM và cột Fac Vinh Long.
+- [ ] AC-58: Given đã đổi tên hiển thị, When mở app với dữ liệu đã lưu trước đó, Then báo cáo vẫn đủ số; dữ liệu đã lưu vẫn ghi Fac 1, trên màn hình hiện Fac Vinh Long.
+- [ ] AC-59: Given sản lượng 400, mục tiêu `Target system` 1000, cột `have efficiency ratio` 500, cột `no efficiency ratio` 800, When xem Screen 1, Then %Efficiency (with ratio - system) là 40%, %Efficiency (with ratio - sum) là 80%, %Efficiency B (no ratio) là 50%.
+- [ ] AC-60: Given Fac 2 sản lượng 400, cột no ratio 800 và Fac 3 sản lượng 100, cột no ratio 200, When xem cột HCM, Then %Efficiency B (no ratio) là 50%, Target B (no ratio) là 1.000.
+- [ ] AC-61: Given %Efficiency B (no ratio) dưới ngưỡng 90%, When xem bảng, Then ô đó không có dấu 🔴.
+- [ ] AC-62: Given có cột no ratio, When xem biểu đồ, xếp hạng, Screen 2, Screen 4, Screen 5 và tải Excel, Then đều có số no ratio.
+- [ ] AC-63: Given file hoặc dữ liệu đã lưu không có cột no ratio, When xem báo cáo, Then %Efficiency B (no ratio) hiện "-", các chỉ số khác không đổi.
+- [ ] AC-64: Given Fac 2 tiền CM 400, sản lượng 400 và Fac 3 tiền CM 300, sản lượng 100, When xem Screen 1, Then card Total ghi Revenue 700, Output 500, Avg CM price 1,40; chỉ chọn Fac 2 thì Total bằng Fac 2.
+- [ ] AC-65: Given mở Screen 1, When chưa bật nút gạt, Then bảng chỉ số không có 3 dòng with ratio - system; When bật, Then 3 dòng hiện lại.
 
 ## 10. Open questions (Câu hỏi mở)
 Phạm vi: đợt 2 (bảng dấu màu theo khách hàng, tiền CM theo khách hàng và sản phẩm, sản lượng order trung bình) và đợt 3 (dữ liệu 2025) không thuộc tài liệu này. Không làm: phần Cutting; tự đọc file từ SharePoint hoặc máy cá nhân; sửa file nguồn; tô màu trong file Excel xuất; hiệu suất A trước 03/10/2026.
@@ -729,6 +768,17 @@ Phạm vi: đợt 2 (bảng dấu màu theo khách hàng, tiền CM theo khách 
 - Giả định (triển khai): Nút Tải Excel ẩn khi không có dữ liệu hoặc khoảng ngày sai. Tải Excel ở Screen 2 theo xưởng đang chọn và không theo bộ lọc Chuyền; màn hình có ghi chú việc này.
 - Giả định (triển khai): Bỏ chọn hết xưởng được hiểu là chọn tất cả. Bảng Screen 1 chỉ hiện các xưởng đã chọn.
 - Giả định (triển khai): Trục ngày của biểu đồ hiện tiếng Anh, ví dụ "Oct 24", do khung sườn quy định.
+- Mở rộng 2026-11-05: đổi tên app thành Sewing Performance, tên trên màn hình và Excel sang tiếng Anh, thêm cột HCM, nhãn số cho biểu đồ, khối Summary, in đậm %Efficiency và MO 8h. Xem `docs/plans/sewing_productivity-extension-20261105.md`.
+- Giả định: Đường dẫn app giữ `/thynguyen-sewing-productivity` và mã `sewing_productivity`, để không ảnh hưởng dữ liệu và quyền đã cấp.
+- Giả định: Cột HCM chỉ thêm ở bảng có cột theo xưởng (Screen 1, Screen 3 và Excel của chúng). Screen 2, 4, 5, 6 giữ theo từng xưởng.
+- Giả định: Biểu đồ dùng chung không ghi số trên từng điểm, nên nhãn số đặt ở chú thích và tên cột (BR-54).
+- Giả định: In đậm chỉ áp dụng trên màn hình, file Excel không đổi cách trình bày (BR-49).
+- Mở rộng 2026-11-05: thêm %Efficiency B (no ratio) và đặt lại tên 3 loại hiệu suất (BR-55, BR-56). Dữ liệu đã lưu trước đó cần tải lại file để có số này.
+- Mở rộng 2026-11-06: gộp kiểm tra và lưu file thành một nút (BR-57). App không đọc file theo đường dẫn trên máy người dùng: app chạy trên server, không thấy thư mục OneDrive của từng người (xem `docs/capabilities.md`).
+- Mở rộng 2026-11-06: 5 card Vinh Long - HCM có dòng Total ở Screen 1 (BR-58, UC-27). Total chỉ hiện ở card, không thêm vào bảng chỉ số và file Excel.
+- Giả định: Người dùng nói "4 card ... 5 chỉ số"; làm 5 card, mỗi chỉ số một card.
+- Giả định: File hằng ngày luôn có vài dòng cuối chưa có ngày (16 dòng ở file ngày 06/11/2026), nên nút vẫn lưu khi có dòng bị bỏ qua và chỉ dừng khi file bị từ chối.
+- Giả định: Mục tiêu và ngưỡng hiện có chỉ dùng cho 2 loại có tỉ lệ. %Efficiency B (no ratio) không có dấu 🔴 và không có dòng so với mục tiêu, vì chưa có mức riêng.
 
 ## 11. Implementation map (filled by the AI)
 | Spec item | Code |
@@ -762,6 +812,16 @@ Phạm vi: đợt 2 (bảng dấu màu theo khách hàng, tiền CM theo khách 
 | UC-24 | `save_line_mappings` -> `SaveLineMappingsService` |
 | UC-25 | `save_style_products` -> `SaveStyleProductsService` |
 | UC-26 | `get_filter_options` -> `GetFilterOptionsService` |
+| UC-27 | `get_overview`, `get_charts`, `get_daily_report`, `export_weekly_report`, `export_daily_report` -> `ReportBusiness.hcm_summary`, `hcm_daily_summary`, `hcm_days` |
+| BR-51 | `business/report_business.py::ReportBusiness.hcm_members`, `_common_goal`, `_members_mo8h` |
+| BR-52 | `dto/display_names.py`, `builders/display.py::file_sheets`, frontend pages |
+| BR-53 | `frontend/features/sewing_productivity/components/report_cells.py` |
+| BR-54 | `frontend/features/sewing_productivity/components/overview_charts.py` |
+| BR-55 | `business/productivity_business.py::ProductivityBusiness.target_no_ratio`, `efficiency_no_ratio` |
+| BR-56 | `dto/display_names.py` |
+| BR-58 | `business/report_business.py::ReportBusiness.total_summary`, `components/overview_charts.py::group_summary` |
+| BR-59 | `frontend/features/sewing_productivity/pages/overview_page.py` (`SYSTEM_METRICS`) |
+| BR-57 | `frontend/features/sewing_productivity/components/upload_blocks.py::_check_and_save` |
 | BR-01 | `exceptions.py::UploadFileError` |
 | BR-02 | `business/upload_business.py::UploadBusiness.ensure_sheets` |
 | BR-03 | `builders/upload_read_builders.py::RawWorkbookBuilder._missing` |

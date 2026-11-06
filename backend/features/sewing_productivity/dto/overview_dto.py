@@ -85,3 +85,10 @@ class ChartsResponse(BaseResponseDTO):
     bottom_lines: list[RankedLineDTO]
     not_applicable_message: str = ""
     has_data: bool
+    efficiency_no_ratio: list[ChartPointDTO] = []  # BR-55
+    # BR-51: the HCM line and bar, apart from the factories; empty when the HCM column is not shown
+    hcm_efficiency_a: list[ChartPointDTO] = []
+    hcm_efficiency_b: list[ChartPointDTO] = []
+    hcm_efficiency_no_ratio: list[ChartPointDTO] = []
+    hcm_mo8h: list[ChartPointDTO] = []
+    hcm_output: FactoryOutputDTO | None = None

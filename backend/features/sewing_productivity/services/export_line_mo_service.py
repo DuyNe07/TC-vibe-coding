@@ -24,4 +24,6 @@ class ExportLineMoService(BaseService[LineMoRequest, FileDownloadDTO]):
         facts = self.reports.facts(self.loader(), request.from_date, request.to_date, [request.factory])
         dates, tables = self.lines.mo_tables(facts, request.factory, request.lines)
         self.logger.info("Export line MO %s %s..%s", request.factory, request.from_date, request.to_date)
-        return LineMoFileBuilder(request.factory, request.from_date, request.to_date, dates, tables).build()
+        return LineMoFileBuilder(
+            request.factory, request.from_date, request.to_date, dates, tables, request.english
+        ).build()

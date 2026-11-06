@@ -3,6 +3,7 @@
 from datetime import date
 from decimal import ROUND_HALF_UP, Decimal
 
+from backend.features.sewing_productivity.dto.display_names import english_name
 from backend.features.sewing_productivity.models.enums import Assessment, NumberKind
 
 NOT_AVAILABLE = "-"
@@ -46,3 +47,16 @@ def excel_date(day: date | None, label: str = NOT_AVAILABLE) -> str:
 def with_header(rows: list[dict[str, object]], headers: tuple[str, ...]) -> list[dict[str, object]]:
     """An empty table still writes its header row (the writer reads the header from the first row)."""
     return rows or [dict.fromkeys(headers)]
+
+
+def file_sheets(sheets: dict[str, list[dict[str, object]]], english: bool) -> dict[str, list[dict[str, object]]]:
+    """BR-52: sheet names, column names and text cells of an Excel file in English when asked."""
+    if not english:
+        return sheets
+    return {
+        english_name(sheet): [
+            {english_name(column): english_name(cell) if isinstance(cell, str) else cell for column, cell in row.items()}
+            for row in rows
+        ]
+        for sheet, rows in sheets.items()
+    }

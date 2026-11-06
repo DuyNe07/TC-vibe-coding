@@ -175,6 +175,7 @@ class RawWorkbookBuilder(BaseBuilder[RawWorkbook]):
                 color=cell_text(value(raw, "color")) or None,
                 smv=parse_decimal(value(raw, "smv")),
                 standard_output=parse_decimal(value(raw, "standard_output")),
+                standard_output_no_ratio=parse_decimal(value(raw, "standard_output_no_ratio")),
                 match_text=cell_text(value(raw, "match_text")),
             )
             for index, raw in enumerate(rows)

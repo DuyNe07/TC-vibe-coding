@@ -10,7 +10,15 @@ from backend.features.sewing_productivity.business.changeover_business import Ch
 from backend.features.sewing_productivity.business.cleaning_business import CleaningBusiness
 from backend.features.sewing_productivity.business.filter_business import FilterBusiness
 from backend.features.sewing_productivity.business.productivity_business import ProductivityBusiness, total
-from backend.features.sewing_productivity.constants import ALL_FACTORIES, HOURS_PER_SHIFT, RANKING_SIZE
+from backend.features.sewing_productivity.constants import (
+    ALL_FACTORIES,
+    HCM_COLUMN,
+    HCM_FACTORIES,
+    HOURS_PER_SHIFT,
+    MIN_HCM_FACTORIES,
+    RANKING_SIZE,
+    TOTAL_COLUMN,
+)
 from backend.features.sewing_productivity.models.clean_values import CleanRow, ReportSource
 from backend.features.sewing_productivity.models.enums import Factory, RankingMetric
 from backend.features.sewing_productivity.models.report_values import (
@@ -20,6 +28,7 @@ from backend.features.sewing_productivity.models.report_values import (
     RankedLine,
     ReportFacts,
 )
+from backend.features.sewing_productivity.models.settings_records import FactoryGoal
 
 
 class ReportBusiness(BaseBusiness[CleanRow]):
@@ -109,38 +118,85 @@ class ReportBusiness(BaseBusiness[CleanRow]):
 
     def period_mo8h(self, facts: ReportFacts, factory: Factory) -> tuple[Decimal | None, Decimal | None]:
         """BR-23 (MO, MO 8h) of a factory over the period, only on the days that have a number of sewers."""
-        days = self._days_with_workers(facts, factory)
-        if not days:
+        return self._members_mo8h(facts, (factory,))
+
+    def _members_mo8h(self, facts: ReportFacts, members: tuple[Factory, ...]) -> tuple[Decimal | None, Decimal | None]:
+        """BR-23 over one factory or a group (BR-51): the factory-days with sewers, hours = average of those days."""
+        pairs = [(factory, day) for factory in members for day in self._days_with_workers(facts, factory)]
+        if not pairs:
             return None, None
-        kept = set(days)
-        cm = total(row.cm_earning for row in facts.rows.get(factory, ()) if row.production_date in kept)
-        workers = total(facts.workers[(factory, day)] for day in days)
-        hours = self.calc.factory_period_hours(facts.factory_hours[(factory, day)] for day in days)
+        kept = set(pairs)
+        cm = total(
+            row.cm_earning
+            for factory in members
+            for row in facts.rows.get(factory, ())
+            if (factory, row.production_date) in kept
+        )
+        workers = total(facts.workers[pair] for pair in pairs)
+        hours = self.calc.factory_period_hours(facts.factory_hours[pair] for pair in pairs)
         return self.calc.factory_mo(cm, workers), self.calc.factory_mo8h(cm, workers, hours)
+
+    def hcm_members(self, facts: ReportFacts) -> tuple[Factory, ...]:
+        """BR-51 the chosen HCM factories; empty when fewer than 2 are chosen."""
+        members = tuple(factory for factory in HCM_FACTORIES if factory in facts.factories)
+        return members if len(members) >= MIN_HCM_FACTORIES else ()
+
+    def _common_goal(self, facts: ReportFacts, members: tuple[Factory, ...], day: date) -> FactoryGoal | None:
+        """BR-26 for a group (BR-51): its level only when every member has the same 4 numbers, otherwise none."""
+        goals = [self.calc.goal_on(facts.goals.get(factory, []), day) for factory in members]
+        levels = {
+            (goal.efficiency_target, goal.mo8h_target, goal.efficiency_threshold, goal.mo8h_threshold) if goal else None
+            for goal in goals
+        }
+        return goals[0] if len(levels) == 1 else None
+
+    def _weekly_changeover(self, facts: ReportFacts, members: tuple[Factory, ...]) -> tuple[int | None, int]:
+        """BR-38, BR-34 over one factory or a group: a group has a weekly number only when every member has one."""
+        counts = [
+            self.changeover.weekly_count(facts.weekly, factory, facts.from_date, facts.to_date) for factory in members
+        ]
+        lines = sum(self.changeover.line_count(facts.rows.get(factory, [])) for factory in members)
+        known = [count for count in counts if count is not None]
+        return (sum(known) if len(known) == len(counts) else None), lines
 
     def factory_summary(self, facts: ReportFacts, factory: Factory) -> FactorySummary:
         """UC-04 one column of the overview table (BR-17 to BR-28, BR-38, BR-41), BR-29 applied."""
         if factory not in facts.factories:
             return FactorySummary(factory=factory)
-        goal = self.calc.goal_on(facts.goals.get(factory, []), facts.to_date)
+        return self._summary(facts, (factory,), factory=factory)
+
+    def hcm_summary(self, facts: ReportFacts) -> FactorySummary | None:
+        """UC-27 the HCM column of the overview table (BR-51); None when it is not shown."""
+        members = self.hcm_members(facts)
+        return self._summary(facts, members, group_name=HCM_COLUMN) if members else None
+
+    def total_summary(self, facts: ReportFacts) -> FactorySummary:
+        """BR-58 every chosen factory together (Vinh Long + HCM), with the same formulas as one factory."""
+        return self._summary(facts, tuple(facts.factories), group_name=TOTAL_COLUMN)
+
+    def _summary(
+        self, facts: ReportFacts, members: tuple[Factory, ...], factory: Factory | None = None, group_name: str = ""
+    ) -> FactorySummary:
+        goal = self._common_goal(facts, members, facts.to_date)
         efficiency_target = goal.efficiency_target if goal else None
         mo8h_target = goal.mo8h_target if goal else None
-        shown = facts.shown.get(factory, [])
-        rows = facts.rows.get(factory, [])
-        target_map = self._factory_target_map(facts, factory)
+        shown = [row for member in members for row in facts.shown.get(member, ())]
+        rows = [row for member in members for row in facts.rows.get(member, ())]
+        target_map = {key: value for key, value in facts.target_map.items() if key[0] in members}
         target_a = total(target_map.values()) if target_map and not facts.filtered else None
         efficiency_a = None
         if target_a:
             efficiency_a = self.calc.efficiency_a(self.calc.output_in_target_scope(rows, target_map), target_a)
         efficiency_b = self.calc.efficiency_b(shown)
-        mo8h = None if facts.filtered else self.period_mo8h(facts, factory)[1]
+        mo8h = None if facts.filtered else self._members_mo8h(facts, members)[1]
         output = total(row.quantity for row in shown) if shown else None
         cm = total(row.cm_earning for row in shown) if shown else None
-        hours = [value for key, value in facts.factory_hours.items() if key[0] == factory]
-        weekly = self.changeover.weekly_count(facts.weekly, factory, facts.from_date, facts.to_date)
-        lines = self.changeover.line_count(rows)
+        hours = [value for key, value in facts.factory_hours.items() if key[0] in members]
+        weekly, lines = self._weekly_changeover(facts, members)
+        targets = [target for member in members for target in facts.targets.get(member, ())]
         return FactorySummary(
             factory=factory,
+            group_name=group_name,
             target_a=target_a,
             output=output,
             efficiency_target=efficiency_target,
@@ -149,13 +205,15 @@ class ReportBusiness(BaseBusiness[CleanRow]):
             target_b=self.calc.target_b(shown),
             efficiency_b=efficiency_b,
             efficiency_b_vs_target=self.calc.percent_of_target(efficiency_b, efficiency_target),
+            target_no_ratio=self.calc.target_no_ratio(shown),
+            efficiency_no_ratio=self.calc.efficiency_no_ratio(shown),
             cm_earning=cm,
             mo8h_target=mo8h_target,
             mo8h=mo8h,
             mo8h_vs_target=self.calc.percent_of_target(mo8h, mo8h_target),
             average_cm_price=self.calc.average_cm_price(cm, output) if cm is not None else None,
             average_hours=self.calc.factory_period_hours(hours),
-            strength_match=None if facts.filtered else self.calc.strength_match(facts.targets.get(factory, [])),
+            strength_match=None if facts.filtered else self.calc.strength_match(targets),
             weekly_changeover=None if weekly is None else Decimal(weekly),
             weekly_changeover_per_line=self.changeover.weekly_per_line(weekly, lines),
             efficiency_a_assessment=self.calc.assess_efficiency(efficiency_a, goal),
@@ -179,6 +237,56 @@ class ReportBusiness(BaseBusiness[CleanRow]):
             self._factory_day(facts, factory, day, shown_by_day[day], rows_by_day[day], target_by_day.get(day, {}))
             for day in sorted(shown_by_day)
         ]
+
+    def hcm_days(self, facts: ReportFacts) -> list[FactoryDayStat]:
+        """UC-27 the HCM points of the daily charts (BR-51): the 3 formulas on the factories together, day by day."""
+        members = self.hcm_members(facts)
+        shown_by_day: defaultdict[date, list[CleanRow]] = defaultdict(list)
+        rows_by_day: defaultdict[date, list[CleanRow]] = defaultdict(list)
+        targets_by_day: defaultdict[date, dict] = defaultdict(dict)
+        for member in members:
+            for row in facts.shown.get(member, ()):
+                shown_by_day[row.production_date].append(row)
+            for row in facts.rows.get(member, ()):
+                rows_by_day[row.production_date].append(row)
+        for key, value in facts.target_map.items():
+            if key[0] in members:
+                targets_by_day[key[2]][key] = value
+        return [
+            self._hcm_day(facts, members, day, shown_by_day[day], rows_by_day[day], targets_by_day.get(day, {}))
+            for day in sorted(shown_by_day)
+        ]
+
+    def _hcm_day(
+        self,
+        facts: ReportFacts,
+        members: tuple[Factory, ...],
+        day: date,
+        shown: list[CleanRow],
+        rows: list[CleanRow],
+        targets: dict,
+    ) -> FactoryDayStat:
+        target_a = total(targets.values()) if targets and not facts.filtered else None
+        efficiency_a = None
+        if target_a:
+            efficiency_a = self.calc.efficiency_a(self.calc.output_in_target_scope(rows, targets), target_a)
+        mo8h = None
+        with_workers = [factory for factory in members if (factory, day) in facts.workers]
+        if with_workers and not facts.filtered:
+            cm = total(row.cm_earning for row in shown if row.factory in with_workers)
+            workers = total(facts.workers[(factory, day)] for factory in with_workers)
+            hours = self.calc.factory_period_hours(
+                facts.factory_hours[(factory, day)] for factory in with_workers if (factory, day) in facts.factory_hours
+            )
+            mo8h = self.calc.factory_mo8h(cm, workers, hours)
+        return FactoryDayStat(
+            group_name=HCM_COLUMN,
+            day=day,
+            mo8h=mo8h,
+            efficiency_a=efficiency_a,
+            efficiency_b=self.calc.efficiency_b(shown),
+            efficiency_no_ratio=self.calc.efficiency_no_ratio(shown),
+        )
 
     def _factory_day(
         self,
@@ -211,6 +319,8 @@ class ReportBusiness(BaseBusiness[CleanRow]):
             target_b=self.calc.target_b(shown),
             output=total(row.quantity for row in shown),
             efficiency_b=efficiency_b,
+            target_no_ratio=self.calc.target_no_ratio(shown),
+            efficiency_no_ratio=self.calc.efficiency_no_ratio(shown),
             cm_earning=cm,
             workers=workers,
             efficiency_b_assessment=self.calc.assess_efficiency(efficiency_b, goal),
@@ -234,6 +344,8 @@ class ReportBusiness(BaseBusiness[CleanRow]):
             target_b=self.calc.target_b(shown),
             output=total(row.quantity for row in shown),
             efficiency_b=efficiency_b,
+            target_no_ratio=self.calc.target_no_ratio(shown),
+            efficiency_no_ratio=self.calc.efficiency_no_ratio(shown),
             cm_earning=total(row.cm_earning for row in shown),
             workers=workers,
             efficiency_b_assessment=self.calc.assess_efficiency(efficiency_b, goal),
@@ -242,17 +354,33 @@ class ReportBusiness(BaseBusiness[CleanRow]):
 
     def daily_summary(self, facts: ReportFacts, factory: Factory) -> DailyFactorySummary:
         """UC-07 one column of the daily report (BR-17 to BR-20, BR-23, BR-25, BR-42)."""
+        return self._daily(facts, (factory,), factory=factory)
+
+    def hcm_daily_summary(self, facts: ReportFacts) -> DailyFactorySummary | None:
+        """UC-27 the HCM column of the daily report (BR-51); None when it is not shown."""
+        members = self.hcm_members(facts)
+        return self._daily(facts, members, group_name=HCM_COLUMN) if members else None
+
+    def _daily(
+        self, facts: ReportFacts, members: tuple[Factory, ...], factory: Factory | None = None, group_name: str = ""
+    ) -> DailyFactorySummary:
         day = facts.from_date
-        goal = self.calc.goal_on(facts.goals.get(factory, []), day)
-        rows = facts.rows.get(factory, [])
-        targets = facts.targets.get(factory, [])
-        target_map = self._factory_target_map(facts, factory)
-        hours = facts.factory_hours.get((factory, day))
-        workers = facts.workers.get((factory, day))
-        cm = total(row.cm_earning for row in rows)
-        mo = self.calc.factory_mo(cm, workers) if rows else None
-        mo8h = self.calc.factory_mo8h(cm, workers, hours) if rows else None
-        target_mo8h = self.target_mo8h(targets, workers, hours)
+        goal = self._common_goal(facts, members, day)
+        rows = [row for member in members for row in facts.rows.get(member, ())]
+        targets = [target for member in members for target in facts.targets.get(member, ())]
+        target_map = {key: value for key, value in facts.target_map.items() if key[0] in members}
+        hours = self.calc.factory_period_hours(
+            facts.factory_hours[(member, day)] for member in members if (member, day) in facts.factory_hours
+        )
+        with_workers = [member for member in members if (member, day) in facts.workers]
+        workers = total(facts.workers[(member, day)] for member in with_workers) if with_workers else None
+        worker_hours = self.calc.factory_period_hours(
+            facts.factory_hours[(member, day)] for member in with_workers if (member, day) in facts.factory_hours
+        )
+        mo, mo8h = self._members_mo8h(facts, members)
+        target_mo8h = self.target_mo8h(
+            [target for member in with_workers for target in facts.targets.get(member, ())], workers, worker_hours
+        )
         target_a = total(target_map.values()) if target_map else None
         efficiency_a = None
         if target_a:
@@ -260,6 +388,7 @@ class ReportBusiness(BaseBusiness[CleanRow]):
         efficiency_b = self.calc.efficiency_b(rows)
         return DailyFactorySummary(
             factory=factory,
+            group_name=group_name,
             mo=mo,
             hours=hours,
             target_mo8h=target_mo8h,
@@ -269,6 +398,7 @@ class ReportBusiness(BaseBusiness[CleanRow]):
             output=total(row.quantity for row in rows) if rows else None,
             efficiency_a=efficiency_a,
             efficiency_b=efficiency_b,
+            efficiency_no_ratio=self.calc.efficiency_no_ratio(rows),
             strength_match=self.calc.strength_match(targets),
             workers=workers,
             efficiency_a_assessment=self.calc.assess_efficiency(efficiency_a, goal),
@@ -300,6 +430,8 @@ class ReportBusiness(BaseBusiness[CleanRow]):
             by_line[row.line].append(row)
         if metric == RankingMetric.EFFICIENCY_B:
             return {line: self.calc.efficiency_b(rows) for line, rows in by_line.items()}
+        if metric == RankingMetric.NO_RATIO:
+            return {line: self.calc.efficiency_no_ratio(rows) for line, rows in by_line.items()}
         if facts.filtered:
             return {}
         if metric == RankingMetric.EFFICIENCY_A:

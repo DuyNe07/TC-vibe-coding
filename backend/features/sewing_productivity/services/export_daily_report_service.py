@@ -21,10 +21,13 @@ class ExportDailyReportService(BaseService[ExportDailyRequest, FileDownloadDTO])
     def execute(self, request: ExportDailyRequest) -> FileDownloadDTO:
         facts = self.reports.facts(self.loader(), request.report_date, request.report_date)
         summaries = [self.reports.daily_summary(facts, factory) for factory in ALL_FACTORIES]
+        hcm = self.reports.hcm_daily_summary(facts)
+        if hcm:
+            summaries.append(hcm)
         rows = []
         for factory in ALL_FACTORIES:
             day_rows = self.lines.day_rows(facts, factory)
             if day_rows:
                 rows.extend([*day_rows, self.lines.day_total_row(facts, factory, day_rows)])
         self.logger.info("Export daily report %s lines=%s", request.report_date, len(rows))
-        return DailyReportFileBuilder(request.report_date, summaries, rows).build()
+        return DailyReportFileBuilder(request.report_date, summaries, rows, request.english).build()

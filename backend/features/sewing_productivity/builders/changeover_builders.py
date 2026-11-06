@@ -8,6 +8,7 @@ from backend.features.sewing_productivity.builders.display import (
     as_float,
     excel_date,
     excel_value,
+    file_sheets,
     with_header,
 )
 from backend.features.sewing_productivity.constants import TOTAL_LINE_LABEL
@@ -100,10 +101,11 @@ class ChangeoverResponseBuilder(BaseBuilder[ChangeoverResponse]):
 
 
 class ChangeoverFileBuilder(BaseBuilder[FileDownloadDTO]):
-    def __init__(self, from_date: date, to_date: date, report: ChangeoverReport) -> None:
+    def __init__(self, from_date: date, to_date: date, report: ChangeoverReport, english: bool = False) -> None:
         self.from_date = from_date
         self.to_date = to_date
         self.report = report
+        self.english = english
 
     def build(self) -> FileDownloadDTO:
         sheets = {
@@ -114,7 +116,7 @@ class ChangeoverFileBuilder(BaseBuilder[FileDownloadDTO]):
         }
         return FileDownloadDTO(
             filename=f"doi-ma-hang_{self.from_date.isoformat()}_{self.to_date.isoformat()}.xlsx",
-            content=ExcelWriter().write(sheets),
+            content=ExcelWriter().write(file_sheets(sheets, self.english)),
             mime_type=MimeType.XLSX,
         )
 

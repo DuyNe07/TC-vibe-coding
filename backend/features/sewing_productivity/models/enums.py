@@ -10,6 +10,13 @@ class Factory(StrEnum):
     FAC_5 = "Fac 5"
 
 
+class FactoryGroup(StrEnum):
+    """BR-51 a column that adds several factories together. Never stored."""
+
+    HCM = "HCM"
+    TOTAL = "Total"  # BR-58: every chosen factory, Vinh Long and HCM together
+
+
 class Assessment(StrEnum):
     """BR-28 result, written in tables and Excel files."""
 
@@ -19,10 +26,11 @@ class Assessment(StrEnum):
 
 
 class RankingMetric(StrEnum):
-    """BR-44 metric used to rank the lines."""
+    """BR-44 metric used to rank the lines. Names on screen: BR-56 (`A` = with ratio - system, `B` = with ratio - sum)."""
 
     EFFICIENCY_B = "Hiệu suất B"
     EFFICIENCY_A = "Hiệu suất A"
+    NO_RATIO = "Hiệu suất (không tỉ lệ)"
     MO8H = "MO 8h"
 
 

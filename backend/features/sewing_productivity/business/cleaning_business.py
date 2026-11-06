@@ -129,6 +129,7 @@ class CleaningBusiness(BaseBusiness[ProductionRecord]):
                     sewers=record.sewers,
                     smv=record.smv,
                     standard_output=record.standard_output,
+                    standard_output_no_ratio=record.standard_output_no_ratio,
                     is_mismatched=record.is_mismatched,
                 )
             )

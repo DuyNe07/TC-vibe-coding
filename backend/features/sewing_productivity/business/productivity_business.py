@@ -54,6 +54,17 @@ class ProductivityBusiness(BaseBusiness[CleanRow]):
         target = total(row.standard_output for row in kept)
         return total(row.quantity for row in kept) * HUNDRED / target if target else None
 
+    def target_no_ratio(self, rows: list[CleanRow]) -> Decimal | None:
+        """BR-55 target without ratio = sum of the cells that have a value; "-" when none has."""
+        values = [row.standard_output_no_ratio for row in rows if row.standard_output_no_ratio is not None]
+        return total(values) if values else None
+
+    def efficiency_no_ratio(self, rows: list[CleanRow]) -> Decimal | None:
+        """BR-55 efficiency without ratio (%) = output / that target, without the rows missing it on both sides."""
+        kept = [row for row in rows if row.standard_output_no_ratio is not None]
+        target = total(row.standard_output_no_ratio for row in kept)
+        return total(row.quantity for row in kept) * HUNDRED / target if target else None
+
     def line_hours(self, rows: list[CleanRow]) -> dict[tuple[object, str, date], Decimal]:
         """BR-20 hours of a line on a day = average hours of its rows."""
         grouped: defaultdict[tuple[object, str, date], list[Decimal]] = defaultdict(list)

@@ -3,7 +3,13 @@
 from datetime import date
 
 from backend.core.base import BaseBuilder, FileDownloadDTO, MimeType
-from backend.features.sewing_productivity.builders.display import as_float, excel_value, is_below, with_header
+from backend.features.sewing_productivity.builders.display import (
+    as_float,
+    excel_value,
+    file_sheets,
+    is_below,
+    with_header,
+)
 from backend.features.sewing_productivity.builders.overview_builders import ASSESSMENT_ROWS, DAILY_ROWS, metric_rows
 from backend.features.sewing_productivity.dto.daily_dto import DailyLineRowDTO, DailyReportResponse
 from backend.features.sewing_productivity.models.enums import NumberKind
@@ -45,21 +51,24 @@ class DailyReportResponseBuilder(BaseBuilder[DailyReportResponse]):
 
 
 class DailyReportFileBuilder(BaseBuilder[FileDownloadDTO]):
-    def __init__(self, report_date: date, summaries: list[DailyFactorySummary], lines: list[LineStat]) -> None:
+    def __init__(
+        self, report_date: date, summaries: list[DailyFactorySummary], lines: list[LineStat], english: bool = False
+    ) -> None:
         self.report_date = report_date
         self.summaries = summaries
         self.lines = lines
+        self.english = english
 
     def build(self) -> FileDownloadDTO:
         factories: list[dict[str, object]] = [
             {
                 "Chỉ số": label,
-                **{summary.factory.value: excel_value(getattr(summary, field), kind) for summary in self.summaries},
+                **{summary.column: excel_value(getattr(summary, field), kind) for summary in self.summaries},
             }
             for label, field, kind, _assessment in DAILY_ROWS
         ]
         factories.extend(
-            {"Chỉ số": label, **{summary.factory.value: getattr(summary, field).value for summary in self.summaries}}
+            {"Chỉ số": label, **{summary.column: getattr(summary, field).value for summary in self.summaries}}
             for label, field in ASSESSMENT_ROWS
         )
         sheets = {
@@ -68,7 +77,7 @@ class DailyReportFileBuilder(BaseBuilder[FileDownloadDTO]):
         }
         return FileDownloadDTO(
             filename=f"bao-cao-ngay_{self.report_date.isoformat()}.xlsx",
-            content=ExcelWriter().write(sheets),
+            content=ExcelWriter().write(file_sheets(sheets, self.english)),
             mime_type=MimeType.XLSX,
         )
 

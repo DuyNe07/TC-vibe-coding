@@ -36,5 +36,12 @@ class GetChartsService(BaseService[ChartsRequest, ChartsResponse]):
             "Charts %s..%s metric=%s days=%s", request.from_date, request.to_date, request.ranking_metric, len(days)
         )
         return ChartsResponseBuilder(
-            days, summaries, top_lines, bottom_lines, message, self.reports.has_data(facts)
+            days,
+            summaries,
+            top_lines,
+            bottom_lines,
+            message,
+            self.reports.has_data(facts),
+            self.reports.hcm_days(facts),
+            self.reports.hcm_summary(facts),
         ).build()

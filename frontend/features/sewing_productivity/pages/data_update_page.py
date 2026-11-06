@@ -1,4 +1,4 @@
-"""Screen 7 - Cập nhật dữ liệu: the data file, the weekly changeover numbers and the upload history."""
+"""Screen 7 - Data Update: the data file, the weekly changeover numbers and the upload history."""
 
 from backend.core.base import EmptyRequest
 from backend.core.exceptions import AppError
@@ -11,11 +11,11 @@ from frontend.features.sewing_productivity.components.weekly_changeover_blocks i
 
 
 class DataUpdatePage(BasePage):
-    title = "Cập nhật dữ liệu"
+    title = "Data Update"
     icon = "📤"
     slug = "data-update"
-    description = "Tải file dữ liệu và nhập đổi mã hàng tuần."
-    menu_group = "Quản lý dữ liệu"
+    description = "Upload the data file and enter the weekly changeover."
+    menu_group = "Data management"
 
     def render(self) -> None:
         feature = gateway.open(SewingProductivityController)

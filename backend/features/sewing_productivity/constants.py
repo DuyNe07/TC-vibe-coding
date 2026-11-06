@@ -4,7 +4,7 @@ from datetime import date
 from decimal import Decimal
 from typing import Final
 
-from backend.features.sewing_productivity.models.enums import Factory
+from backend.features.sewing_productivity.models.enums import Factory, FactoryGroup
 
 FEATURE_KEY: Final = "sewing_productivity"
 UPDATER_ROLE: Final = "UPDATER"
@@ -43,6 +43,7 @@ PRODUCTION_OPTIONAL_COLUMNS: Final = {
     "color": ("Color",),
     "smv": ("SMV",),
     "standard_output": ("Standard output of SMV (have efficiency ratio)",),
+    "standard_output_no_ratio": ("Standard output of SMV (no efficiency ratio)",),
     "match_text": ("Match line strength",),
 }
 TARGET_REQUIRED_COLUMNS: Final = {
@@ -82,6 +83,11 @@ DAYS_IN_WEEK: Final = 7  # BR-31
 TOTAL_LINE_LABEL: Final = "Tổng"
 PERIOD_LABEL: Final = "Cả kỳ"
 ALL_FACTORIES: Final = tuple(Factory)
+NO_RATIO_TABLE_TITLE: Final = "Hiệu suất (không tỉ lệ)"  # BR-55
+HCM_COLUMN: Final = FactoryGroup.HCM.value  # BR-51
+TOTAL_COLUMN: Final = FactoryGroup.TOTAL.value  # BR-58
+HCM_FACTORIES: Final = (Factory.FAC_2, Factory.FAC_3, Factory.FAC_5)  # BR-51
+MIN_HCM_FACTORIES: Final = 2  # BR-51: one factory alone would only repeat its own column
 
 # ---- messages (section 7) ----
 MESSAGE_BR01: Final = (
