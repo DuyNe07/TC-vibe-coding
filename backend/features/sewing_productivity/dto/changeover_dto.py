@@ -21,6 +21,7 @@ class ChangeoverRequest(BaseRequestDTO):
     to_date: date
     factories: list[Factory] = []
     lines: list[str] = []
+    english: bool = False  # BR-52: English names in the Excel file
 
 
 class ChangeoverFactoryRowDTO(BaseDTO):

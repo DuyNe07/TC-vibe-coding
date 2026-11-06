@@ -28,6 +28,8 @@ class LineDetailRowDTO(BaseDTO):
     efficiency_a: float | None = None
     target_b: float | None = None
     efficiency_b: float | None = None
+    target_no_ratio: float | None = None
+    efficiency_no_ratio: float | None = None
     cm_earning: float | None = None
     sewers: float | None = None
     hours: float | None = None

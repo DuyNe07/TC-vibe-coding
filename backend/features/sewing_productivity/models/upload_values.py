@@ -47,6 +47,7 @@ class RawProductionRow(BaseValueObject):
     color: str | None = None
     smv: Decimal | None = None
     standard_output: Decimal | None = None
+    standard_output_no_ratio: Decimal | None = None
     match_text: str = ""
 
     @property

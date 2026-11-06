@@ -30,6 +30,8 @@ OVERVIEW_ROWS = (
     ("Mục tiêu B", "target_b", NumberKind.INTEGER, None),
     ("Hiệu suất B", "efficiency_b", NumberKind.PERCENT, "efficiency_b_assessment"),
     ("% so với mục tiêu của hiệu suất B", "efficiency_b_vs_target", NumberKind.PERCENT, None),
+    ("Mục tiêu (không tỉ lệ)", "target_no_ratio", NumberKind.INTEGER, None),
+    ("Hiệu suất (không tỉ lệ)", "efficiency_no_ratio", NumberKind.PERCENT, None),
     ("Tiền CM", "cm_earning", NumberKind.MONEY, None),
     ("Mục tiêu MO 8h", "mo8h_target", NumberKind.MONEY, None),
     ("MO 8h", "mo8h", NumberKind.MONEY, "mo8h_assessment"),
@@ -50,6 +52,7 @@ DAILY_ROWS = (
     ("Sản lượng", "output", NumberKind.INTEGER, None),
     ("Hiệu suất A", "efficiency_a", NumberKind.PERCENT, "efficiency_a_assessment"),
     ("Hiệu suất B", "efficiency_b", NumberKind.PERCENT, "efficiency_b_assessment"),
+    ("Hiệu suất (không tỉ lệ)", "efficiency_no_ratio", NumberKind.PERCENT, None),
     ("Tỷ lệ đúng sở trường", "strength_match", NumberKind.PERCENT, None),
     ("Số thợ", "workers", NumberKind.PEOPLE, None),
 )
@@ -70,10 +73,9 @@ def metric_rows(
             metric=label,
             decimals=KIND_DECIMALS[kind],
             suffix=suffix_of(kind),
-            values={summary.factory.value: as_float(getattr(summary, field)) for summary in summaries},
+            values={summary.column: as_float(getattr(summary, field)) for summary in summaries},
             below={
-                summary.factory.value: is_below(getattr(summary, assessment)) if assessment else False
-                for summary in summaries
+                summary.column: is_below(getattr(summary, assessment)) if assessment else False for summary in summaries
             },
         )
         for label, field, kind, assessment in spec
@@ -101,6 +103,8 @@ class ChartsResponseBuilder(BaseBuilder[ChartsResponse]):
         bottom_lines: list[RankedLine],
         not_applicable_message: str,
         has_data: bool,
+        hcm_days: list[FactoryDayStat] | None = None,
+        hcm_summary: FactorySummary | None = None,
     ) -> None:
         self.days = days
         self.summaries = summaries
@@ -108,34 +112,45 @@ class ChartsResponseBuilder(BaseBuilder[ChartsResponse]):
         self.bottom_lines = bottom_lines
         self.not_applicable_message = not_applicable_message
         self.has_data = has_data
+        self.hcm_days = hcm_days or []
+        self.hcm_summary = hcm_summary
 
     def build(self) -> ChartsResponse:
+        hcm_outputs = self._outputs([self.hcm_summary] if self.hcm_summary else [])
         return ChartsResponse(
-            efficiency_a=self._series("efficiency_a"),
-            efficiency_b=self._series("efficiency_b"),
-            mo8h=self._series("mo8h"),
-            output_vs_target=[] if self.not_applicable_message else self._outputs(),
+            efficiency_a=self._series(self.days, "efficiency_a"),
+            efficiency_b=self._series(self.days, "efficiency_b"),
+            efficiency_no_ratio=self._series(self.days, "efficiency_no_ratio"),
+            mo8h=self._series(self.days, "mo8h"),
+            output_vs_target=[] if self.not_applicable_message else self._outputs(self.summaries),
             top_lines=self._ranked(self.top_lines),
             bottom_lines=self._ranked(self.bottom_lines),
             not_applicable_message=self.not_applicable_message,
             has_data=self.has_data,
+            hcm_efficiency_a=self._series(self.hcm_days, "efficiency_a"),
+            hcm_efficiency_b=self._series(self.hcm_days, "efficiency_b"),
+            hcm_efficiency_no_ratio=self._series(self.hcm_days, "efficiency_no_ratio"),
+            hcm_mo8h=self._series(self.hcm_days, "mo8h"),
+            hcm_output=hcm_outputs[0] if hcm_outputs and not self.not_applicable_message else None,
         )
 
-    def _series(self, field: str) -> list[ChartPointDTO]:
+    @staticmethod
+    def _series(days: list[FactoryDayStat], field: str) -> list[ChartPointDTO]:
         return [
-            ChartPointDTO(day=stat.day, factory=stat.factory.value, value=float(getattr(stat, field)))
-            for stat in self.days
+            ChartPointDTO(day=stat.day, factory=stat.column, value=float(getattr(stat, field)))
+            for stat in days
             if getattr(stat, field) is not None
         ]
 
-    def _outputs(self) -> list[FactoryOutputDTO]:
+    @staticmethod
+    def _outputs(summaries: list[FactorySummary]) -> list[FactoryOutputDTO]:
         return [
             FactoryOutputDTO(
-                factory=summary.factory.value,
+                factory=summary.column,
                 output=float(summary.output or Decimal(0)),
                 target_a=as_float(summary.target_a),
             )
-            for summary in self.summaries
+            for summary in summaries
             if summary.output is not None or summary.target_a is not None
         ]
 

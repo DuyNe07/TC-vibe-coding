@@ -24,6 +24,7 @@ class ProductionRecord(StoredRecord):
     sewers: Decimal = Field(gt=0)
     smv: Decimal | None = Field(default=None, gt=0)
     standard_output: Decimal | None = Field(default=None, ge=0)
+    standard_output_no_ratio: Decimal | None = Field(default=None, ge=0)  # BR-55: rows saved before it have none
     is_mismatched: bool = False
 
 

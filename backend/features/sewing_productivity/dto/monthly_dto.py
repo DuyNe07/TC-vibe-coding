@@ -12,6 +12,7 @@ class MonthlyReportRequest(BaseRequestDTO):
     from_date: date
     to_date: date
     factories: list[Factory] = []
+    english: bool = False  # BR-52: English names in the Excel file
 
 
 class MonthlyRowDTO(BaseDTO):
@@ -25,6 +26,8 @@ class MonthlyRowDTO(BaseDTO):
     target_b: float | None = None
     output: float | None = None
     efficiency_b: float | None = None
+    target_no_ratio: float | None = None
+    efficiency_no_ratio: float | None = None
     cm_earning: float | None = None
     workers: float | None = None
     efficiency_b_below: bool = False

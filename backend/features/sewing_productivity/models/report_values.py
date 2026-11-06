@@ -45,6 +45,8 @@ class LineStat(BaseValueObject):
     efficiency_a: Decimal | None = None
     target_b: Decimal | None = None
     efficiency_b: Decimal | None = None
+    target_no_ratio: Decimal | None = None
+    efficiency_no_ratio: Decimal | None = None
     cm_earning: Decimal = Decimal(0)
     sewers: Decimal | None = None
     hours: Decimal | None = None
@@ -57,9 +59,10 @@ class LineStat(BaseValueObject):
 
 
 class FactoryDayStat(BaseValueObject):
-    """One factory on one day; ``day`` is None on the total row (BR-48)."""
+    """One factory (or the HCM group: BR-51) on one day; ``day`` is None on the total row (BR-48)."""
 
-    factory: Factory
+    factory: Factory | None = None
+    group_name: str = ""
     day: date | None = None
     mo: Decimal | None = None
     hours: Decimal | None = None
@@ -69,16 +72,23 @@ class FactoryDayStat(BaseValueObject):
     target_b: Decimal | None = None
     output: Decimal = Decimal(0)
     efficiency_b: Decimal | None = None
+    target_no_ratio: Decimal | None = None
+    efficiency_no_ratio: Decimal | None = None
     cm_earning: Decimal = Decimal(0)
     workers: Decimal | None = None
     efficiency_b_assessment: Assessment = Assessment.NOT_AVAILABLE
     mo8h_assessment: Assessment = Assessment.NOT_AVAILABLE
 
+    @property
+    def column(self) -> str:
+        return self.factory.value if self.factory else self.group_name
+
 
 class FactorySummary(BaseValueObject):
-    """One column of the overview table (Screen 1)."""
+    """One column of the overview table (Screen 1): one factory, or the HCM group (BR-51)."""
 
-    factory: Factory
+    factory: Factory | None = None
+    group_name: str = ""
     target_a: Decimal | None = None
     output: Decimal | None = None
     efficiency_target: Decimal | None = None
@@ -87,6 +97,8 @@ class FactorySummary(BaseValueObject):
     target_b: Decimal | None = None
     efficiency_b: Decimal | None = None
     efficiency_b_vs_target: Decimal | None = None
+    target_no_ratio: Decimal | None = None
+    efficiency_no_ratio: Decimal | None = None
     cm_earning: Decimal | None = None
     mo8h_target: Decimal | None = None
     mo8h: Decimal | None = None
@@ -100,11 +112,16 @@ class FactorySummary(BaseValueObject):
     efficiency_b_assessment: Assessment = Assessment.NOT_AVAILABLE
     mo8h_assessment: Assessment = Assessment.NOT_AVAILABLE
 
+    @property
+    def column(self) -> str:
+        return self.factory.value if self.factory else self.group_name
+
 
 class DailyFactorySummary(BaseValueObject):
-    """One column of the daily report (Screen 3)."""
+    """One column of the daily report (Screen 3): one factory, or the HCM group (BR-51)."""
 
-    factory: Factory
+    factory: Factory | None = None
+    group_name: str = ""
     mo: Decimal | None = None
     hours: Decimal | None = None
     target_mo8h: Decimal | None = None
@@ -114,11 +131,16 @@ class DailyFactorySummary(BaseValueObject):
     output: Decimal | None = None
     efficiency_a: Decimal | None = None
     efficiency_b: Decimal | None = None
+    efficiency_no_ratio: Decimal | None = None
     strength_match: Decimal | None = None
     workers: Decimal | None = None
     efficiency_a_assessment: Assessment = Assessment.NOT_AVAILABLE
     efficiency_b_assessment: Assessment = Assessment.NOT_AVAILABLE
     mo8h_assessment: Assessment = Assessment.NOT_AVAILABLE
+
+    @property
+    def column(self) -> str:
+        return self.factory.value if self.factory else self.group_name
 
 
 class RankedLine(BaseValueObject):

@@ -1,4 +1,4 @@
-"""How "Năng suất xưởng may" appears on Home (card) and in its own sidebar menu."""
+"""How "Sewing Performance" appears on Home (card) and in its own sidebar menu."""
 
 from frontend.core.feature_manifest import FeatureManifest
 from frontend.features.sewing_productivity.pages.catalogs_page import CatalogsPage
@@ -13,12 +13,12 @@ from frontend.features.sewing_productivity.pages.overview_page import OverviewPa
 
 FEATURE = FeatureManifest(
     key="sewing_productivity",
-    title="Năng suất xưởng may",
-    description="Theo dõi và phân tích năng suất các xưởng may theo khoảng thời gian bất kỳ.",
+    title="Sewing Performance",
+    description="Track and analyse the performance of the sewing factories over any period.",
     icon="🧵",
-    group="Sản xuất",
-    owner="Nhóm PI - SO",
-    roles=(("UPDATER", "Người cập nhật dữ liệu"),),
+    group="Production",
+    owner="PI - SO team",
+    roles=(("UPDATER", "Data updater"),),
     pages=(
         OverviewPage,
         LineDetailPage,

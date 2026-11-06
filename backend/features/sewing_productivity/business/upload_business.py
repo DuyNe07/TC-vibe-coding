@@ -105,6 +105,7 @@ class UploadBusiness(BaseBusiness[RawProductionRow]):
         occurrences[identity] += 1
         smv = row.smv if row.smv is not None and row.smv > 0 else None
         standard = row.standard_output if row.standard_output is not None and row.standard_output >= 0 else None
+        no_ratio = row.standard_output_no_ratio
         return ProductionRecord(
             id=stable_id(*identity, occurrences[identity]),
             production_date=row.production_date,
@@ -121,6 +122,7 @@ class UploadBusiness(BaseBusiness[RawProductionRow]):
             sewers=row.sewers,
             smv=smv,
             standard_output=standard,
+            standard_output_no_ratio=no_ratio if no_ratio is not None and no_ratio >= 0 else None,
             is_mismatched=normalize_key(row.match_text) == MISMATCHED_PRODUCTION_VALUE,
         )
 

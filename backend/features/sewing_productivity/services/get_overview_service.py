@@ -29,6 +29,10 @@ class GetOverviewService(BaseService[OverviewRequest, OverviewResponse]):
             request.product_groups,
         )
         summaries = [self.reports.factory_summary(facts, factory) for factory in ALL_FACTORIES]
+        hcm = self.reports.hcm_summary(facts)
+        if hcm:
+            summaries.append(hcm)
+        summaries.append(self.reports.total_summary(facts))  # BR-58: read by the cards of Screen 1 only
         has_data = self.reports.has_data(facts)
         self.logger.info(
             "Overview %s..%s filtered=%s has_data=%s", request.from_date, request.to_date, facts.filtered, has_data

@@ -31,9 +31,12 @@ class ExportWeeklyReportService(BaseService[ExportWeeklyRequest, FileDownloadDTO
             request.product_groups,
         )
         summaries = [self.reports.factory_summary(facts, factory) for factory in ALL_FACTORIES]
+        hcm = self.reports.hcm_summary(facts)
+        if hcm:
+            summaries.append(hcm)
         lines = {}
         for factory in ALL_FACTORIES:
             rows = self.lines.line_rows(facts, factory) if factory in facts.factories else []
             lines[factory.value] = [*rows, self.lines.factory_total_row(facts, factory)] if rows else []
         self.logger.info("Export weekly report %s..%s", request.from_date, request.to_date)
-        return WeeklyReportFileBuilder(request.from_date, request.to_date, summaries, lines).build()
+        return WeeklyReportFileBuilder(request.from_date, request.to_date, summaries, lines, request.english).build()

@@ -13,6 +13,7 @@ class LineMoRequest(BaseRequestDTO):
     to_date: date
     factory: Factory = Factory.FAC_1
     lines: list[str] = []
+    english: bool = False  # BR-52: English names in the Excel file
 
 
 class LineMoCellDTO(BaseDTO):
@@ -40,3 +41,4 @@ class LineMoResponse(BaseResponseDTO):
     dates: list[date]
     tables: list[LineMoTableDTO]
     has_data: bool
+    no_ratio_table: LineMoTableDTO | None = None  # BR-55, the last tab

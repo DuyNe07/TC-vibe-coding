@@ -7,6 +7,7 @@ from backend.features.sewing_productivity.builders.display import (
     as_float,
     excel_date,
     excel_value,
+    file_sheets,
     is_below,
     with_header,
 )
@@ -22,8 +23,8 @@ from backend.features.sewing_productivity.models.report_values import FactoryDay
 from backend.shared.file_io import ExcelWriter
 
 WEEKLY_LINE_HEADERS = (
-    "Chuyền", "Ngày", "Mục tiêu A", "Sản lượng", "Hiệu suất A (%)", "Mục tiêu B", "Hiệu suất B (%)", "Tiền CM",
-    "Số người", "Giờ làm", "MO 8h", "Đánh giá hiệu suất A", "Đánh giá hiệu suất B", "Đánh giá MO 8h",
+    "Chuyền", "Ngày", "Mục tiêu A", "Sản lượng", "Hiệu suất A (%)", "Mục tiêu B", "Hiệu suất B (%)",
+    "Mục tiêu (không tỉ lệ)", "Hiệu suất (không tỉ lệ) (%)", "Tiền CM", "Số người", "Giờ làm", "MO 8h", "Đánh giá hiệu suất A", "Đánh giá hiệu suất B", "Đánh giá MO 8h",
 )  # fmt: skip
 
 
@@ -56,6 +57,8 @@ class LineDetailResponseBuilder(BaseBuilder[LineDetailResponse]):
             efficiency_a=as_float(stat.efficiency_a),
             target_b=as_float(stat.target_b),
             efficiency_b=as_float(stat.efficiency_b),
+            target_no_ratio=as_float(stat.target_no_ratio),
+            efficiency_no_ratio=as_float(stat.efficiency_no_ratio),
             cm_earning=as_float(stat.cm_earning),
             sewers=as_float(stat.sewers),
             hours=as_float(stat.hours),
@@ -68,12 +71,18 @@ class LineDetailResponseBuilder(BaseBuilder[LineDetailResponse]):
 
 class WeeklyReportFileBuilder(BaseBuilder[FileDownloadDTO]):
     def __init__(
-        self, from_date: date, to_date: date, summaries: list[FactorySummary], lines: dict[str, list[LineStat]]
+        self,
+        from_date: date,
+        to_date: date,
+        summaries: list[FactorySummary],
+        lines: dict[str, list[LineStat]],
+        english: bool = False,
     ) -> None:
         self.from_date = from_date
         self.to_date = to_date
         self.summaries = summaries
         self.lines = lines
+        self.english = english
 
     def build(self) -> FileDownloadDTO:
         sheets: dict[str, list[dict[str, object]]] = {"Tong quan": self._overview()}
@@ -81,7 +90,7 @@ class WeeklyReportFileBuilder(BaseBuilder[FileDownloadDTO]):
             sheets[factory] = with_header([self._line_row(stat) for stat in stats], WEEKLY_LINE_HEADERS)
         return FileDownloadDTO(
             filename=f"bao-cao-tuan_{self.from_date.isoformat()}_{self.to_date.isoformat()}.xlsx",
-            content=ExcelWriter().write(sheets),
+            content=ExcelWriter().write(file_sheets(sheets, self.english)),
             mime_type=MimeType.XLSX,
         )
 
@@ -89,12 +98,12 @@ class WeeklyReportFileBuilder(BaseBuilder[FileDownloadDTO]):
         rows: list[dict[str, object]] = [
             {
                 "Chỉ số": label,
-                **{summary.factory.value: excel_value(getattr(summary, field), kind) for summary in self.summaries},
+                **{summary.column: excel_value(getattr(summary, field), kind) for summary in self.summaries},
             }
             for label, field, kind, _assessment in OVERVIEW_ROWS
         ]
         rows.extend(
-            {"Chỉ số": label, **{summary.factory.value: getattr(summary, field).value for summary in self.summaries}}
+            {"Chỉ số": label, **{summary.column: getattr(summary, field).value for summary in self.summaries}}
             for label, field in ASSESSMENT_ROWS
         )
         return rows
@@ -109,6 +118,8 @@ class WeeklyReportFileBuilder(BaseBuilder[FileDownloadDTO]):
             "Hiệu suất A (%)": excel_value(stat.efficiency_a, NumberKind.PERCENT),
             "Mục tiêu B": excel_value(stat.target_b, NumberKind.INTEGER),
             "Hiệu suất B (%)": excel_value(stat.efficiency_b, NumberKind.PERCENT),
+            "Mục tiêu (không tỉ lệ)": excel_value(stat.target_no_ratio, NumberKind.INTEGER),
+            "Hiệu suất (không tỉ lệ) (%)": excel_value(stat.efficiency_no_ratio, NumberKind.PERCENT),
             "Tiền CM": excel_value(stat.cm_earning, NumberKind.MONEY),
             "Số người": excel_value(stat.sewers, NumberKind.PEOPLE),
             "Giờ làm": excel_value(stat.hours, NumberKind.MONEY),

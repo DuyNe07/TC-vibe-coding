@@ -1,10 +1,11 @@
-"""Screen 6 - Đổi mã hàng: the changeover KPI and the counts including re-runs, in 4 tabs."""
+"""Screen 6 - Changeover: the changeover KPI and the counts including re-runs, in 4 tabs."""
 
 import streamlit as st
 
 from backend.core.gateway import gateway
 from backend.features.sewing_productivity import SewingProductivityController
 from backend.features.sewing_productivity.dto.changeover_dto import ChangeoverRequest
+from backend.features.sewing_productivity.dto.display_names import english_name
 from frontend.core.base_page import BasePage
 from frontend.core.components import data_table, download_button, empty_state, panel
 from frontend.features.sewing_productivity.components.report_cells import (
@@ -25,46 +26,48 @@ from frontend.features.sewing_productivity.components.report_filters import (
     show_data_times,
 )
 
-TAB_LABELS = ("Theo xưởng", "Theo tháng", "Theo chuyền", "Chi tiết")
+TAB_LABELS = ("By factory", "By month", "By line", "Details")
 FACTORY_COLUMNS: tuple[ColumnSpec, ...] = (
-    ("Số lần đổi KPI", "kpi_count", 0, "", None),
-    ("Số ngày làm việc", "working_days", 0, "", None),
-    ("Số chuyền", "line_count", 0, "", None),
-    ("KPI đổi mã hàng", "kpi", 3, "", None),
-    ("Số lần đổi gồm cả lên lại", "rerun_count", 0, "", None),
-    ("Đổi mã hàng tuần", "weekly_count", 0, "", None),
+    ("KPI changeovers", "kpi_count", 0, "", None),
+    ("Working days", "working_days", 0, "", None),
+    ("Lines", "line_count", 0, "", None),
+    ("Changeover KPI", "kpi", 3, "", None),
+    ("Changeovers incl. re-runs", "rerun_count", 0, "", None),
+    ("Weekly changeover", "weekly_count", 0, "", None),
 )
 MONTH_COLUMNS = FACTORY_COLUMNS[:-1]
 LINE_COLUMNS: tuple[ColumnSpec, ...] = (
-    ("Số lần đổi KPI", "kpi_count", 0, "", None),
-    ("Số lần đổi gồm cả lên lại", "rerun_count", 0, "", None),
+    ("KPI changeovers", "kpi_count", 0, "", None),
+    ("Changeovers incl. re-runs", "rerun_count", 0, "", None),
 )
 DETAIL_COLUMNS: tuple[ColumnSpec, ...] = (
     ("SMV", "smv", 2, "", None),
-    ("Giá CM", "cm_price", 2, "", None),
+    ("CM price", "cm_price", 2, "", None),
 )
 
 
 class ChangeoverPage(BasePage):
-    title = "Đổi mã hàng"
+    title = "Changeover"
     icon = "🔄"
     slug = "changeover"
-    description = "Theo dõi KPI đổi mã hàng và số lần đổi gồm cả lên lại."
-    menu_group = "Báo cáo"
+    description = "Track the changeover KPI and the counts including re-runs."
+    menu_group = "Reports"
 
     def render(self) -> None:
         feature = gateway.open(SewingProductivityController)
         options = load_filter_options(feature)
         if options is None:
             return
-        with panel("Bộ lọc", icon="🔎"):
+        with panel("Filters", icon="🔎"):
             from_date, to_date, factories = period_and_factories(
                 self.key, options.default_month_from, options.latest_date
             )
-            lines = multi_filter("Chuyền", lines_of(options, factories), self.key("lines"))
+            lines = multi_filter("Line", lines_of(options, factories), self.key("lines"))
         show_data_times(options)
 
-        request = ChangeoverRequest(from_date=from_date, to_date=to_date, factories=factories, lines=lines)
+        request = ChangeoverRequest(
+            from_date=from_date, to_date=to_date, factories=factories, lines=lines, english=True
+        )
         with st.spinner(REPORT_SPINNER):
             data = feature.get_changeover(request)
         if not data.has_data:
@@ -77,7 +80,7 @@ class ChangeoverPage(BasePage):
                 data_table(
                     column_rows(
                         {
-                            "Xưởng": [row.factory for row in data.by_factory],
+                            "Factory": [english_name(row.factory) for row in data.by_factory],
                             **spec_columns(data.by_factory, FACTORY_COLUMNS),
                         }
                     ),
@@ -89,8 +92,8 @@ class ChangeoverPage(BasePage):
                 data_table(
                     column_rows(
                         {
-                            "Tháng": [row.month for row in data.by_month],
-                            "Xưởng": [row.factory for row in data.by_month],
+                            "Month": [row.month for row in data.by_month],
+                            "Factory": [english_name(row.factory) for row in data.by_month],
                             **spec_columns(data.by_month, MONTH_COLUMNS),
                         }
                     ),
@@ -102,8 +105,8 @@ class ChangeoverPage(BasePage):
                 data_table(
                     column_rows(
                         {
-                            "Xưởng": [row.factory for row in data.by_line],
-                            "Chuyền": [row.line for row in data.by_line],
+                            "Factory": [english_name(row.factory) for row in data.by_line],
+                            "Line": [row.line for row in data.by_line],
                             **spec_columns(data.by_line, LINE_COLUMNS),
                         }
                     ),
@@ -115,16 +118,16 @@ class ChangeoverPage(BasePage):
                 data_table(
                     column_rows(
                         {
-                            "Ngày": [row.work_date for row in data.details],
-                            "Xưởng": [row.factory for row in data.details],
-                            "Chuyền": [row.line for row in data.details],
-                            "Mã đơn gốc": [row.base_po for row in data.details],
+                            "Date": [row.work_date for row in data.details],
+                            "Factory": [english_name(row.factory) for row in data.details],
+                            "Line": [row.line for row in data.details],
+                            "Base PO": [row.base_po for row in data.details],
                             "Style": [row.style for row in data.details],
                             **spec_columns(data.details, DETAIL_COLUMNS),
                         }
                     ),
                     column_config={
-                        "Ngày": st.column_config.DateColumn(format="DD/MM/YYYY"),
+                        "Date": st.column_config.DateColumn(format="DD/MM/YYYY"),
                         **right_text_columns(spec_labels(DETAIL_COLUMNS)),
                     },
                     height=long_table_height(len(data.details)),
@@ -132,8 +135,8 @@ class ChangeoverPage(BasePage):
                 )
         download_button(
             lambda: feature.export_changeover(request),
-            label="Tải Excel",
+            label="Download Excel",
             key=self.key("export"),
             primary=True,
-            file_name=f"doi-ma-hang_{from_date.isoformat()}_{to_date.isoformat()}.xlsx",
+            file_name=f"changeover_{from_date.isoformat()}_{to_date.isoformat()}.xlsx",
         )

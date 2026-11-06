@@ -66,6 +66,7 @@ class CleanRow(BaseValueObject):
     sewers: Decimal
     smv: Decimal | None = None
     standard_output: Decimal | None = None
+    standard_output_no_ratio: Decimal | None = None
     is_mismatched: bool = False
 
 

@@ -21,6 +21,9 @@ class GetDailyReportService(BaseService[DailyReportRequest, DailyReportResponse]
     def execute(self, request: DailyReportRequest) -> DailyReportResponse:
         facts = self.reports.facts(self.loader(), request.report_date, request.report_date)
         summaries = [self.reports.daily_summary(facts, factory) for factory in ALL_FACTORIES]
+        hcm = self.reports.hcm_daily_summary(facts)
+        if hcm:
+            summaries.append(hcm)
         rows = self.lines.day_rows(facts, request.factory)
         if rows:
             rows.append(self.lines.day_total_row(facts, request.factory, rows))

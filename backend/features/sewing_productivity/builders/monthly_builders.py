@@ -7,6 +7,7 @@ from backend.features.sewing_productivity.builders.display import (
     as_float,
     excel_date,
     excel_value,
+    file_sheets,
     is_below,
     with_header,
 )
@@ -17,8 +18,8 @@ from backend.features.sewing_productivity.models.report_values import FactoryDay
 from backend.shared.file_io import ExcelWriter
 
 MONTHLY_HEADERS = (
-    "Ngày", "MO", "Giờ làm", "MO 8h", "Mục tiêu B", "Sản lượng", "Hiệu suất B (%)", "Tiền CM", "Số thợ",
-    "Đánh giá hiệu suất B", "Đánh giá MO 8h",
+    "Ngày", "MO", "Giờ làm", "MO 8h", "Mục tiêu B", "Sản lượng", "Hiệu suất B (%)", "Mục tiêu (không tỉ lệ)",
+    "Hiệu suất (không tỉ lệ) (%)", "Tiền CM", "Số thợ", "Đánh giá hiệu suất B", "Đánh giá MO 8h",
 )  # fmt: skip
 
 
@@ -47,6 +48,8 @@ class MonthlyReportResponseBuilder(BaseBuilder[MonthlyReportResponse]):
             target_b=as_float(stat.target_b),
             output=as_float(stat.output),
             efficiency_b=as_float(stat.efficiency_b),
+            target_no_ratio=as_float(stat.target_no_ratio),
+            efficiency_no_ratio=as_float(stat.efficiency_no_ratio),
             cm_earning=as_float(stat.cm_earning),
             workers=as_float(stat.workers),
             efficiency_b_below=is_below(stat.efficiency_b_assessment),
@@ -55,10 +58,13 @@ class MonthlyReportResponseBuilder(BaseBuilder[MonthlyReportResponse]):
 
 
 class MonthlyReportFileBuilder(BaseBuilder[FileDownloadDTO]):
-    def __init__(self, from_date: date, to_date: date, tables: dict[str, list[FactoryDayStat]]) -> None:
+    def __init__(
+        self, from_date: date, to_date: date, tables: dict[str, list[FactoryDayStat]], english: bool = False
+    ) -> None:
         self.from_date = from_date
         self.to_date = to_date
         self.tables = tables
+        self.english = english
 
     def build(self) -> FileDownloadDTO:
         sheets = {
@@ -67,7 +73,7 @@ class MonthlyReportFileBuilder(BaseBuilder[FileDownloadDTO]):
         }
         return FileDownloadDTO(
             filename=f"bao-cao-thang_{self.from_date.isoformat()}_{self.to_date.isoformat()}.xlsx",
-            content=ExcelWriter().write(sheets),
+            content=ExcelWriter().write(file_sheets(sheets, self.english)),
             mime_type=MimeType.XLSX,
         )
 
@@ -81,6 +87,8 @@ class MonthlyReportFileBuilder(BaseBuilder[FileDownloadDTO]):
             "Mục tiêu B": excel_value(stat.target_b, NumberKind.INTEGER),
             "Sản lượng": excel_value(stat.output, NumberKind.INTEGER),
             "Hiệu suất B (%)": excel_value(stat.efficiency_b, NumberKind.PERCENT),
+            "Mục tiêu (không tỉ lệ)": excel_value(stat.target_no_ratio, NumberKind.INTEGER),
+            "Hiệu suất (không tỉ lệ) (%)": excel_value(stat.efficiency_no_ratio, NumberKind.PERCENT),
             "Tiền CM": excel_value(stat.cm_earning, NumberKind.MONEY),
             "Số thợ": excel_value(stat.workers, NumberKind.PEOPLE),
             "Đánh giá hiệu suất B": stat.efficiency_b_assessment.value,

@@ -25,4 +25,4 @@ class ExportMonthlyReportService(BaseService[MonthlyReportRequest, FileDownloadD
             days = self.reports.factory_days(facts, factory)
             tables[factory.value] = [*days, self.reports.factory_total(facts, factory)] if days else []
         self.logger.info("Export monthly report %s..%s", request.from_date, request.to_date)
-        return MonthlyReportFileBuilder(request.from_date, request.to_date, tables).build()
+        return MonthlyReportFileBuilder(request.from_date, request.to_date, tables, request.english).build()

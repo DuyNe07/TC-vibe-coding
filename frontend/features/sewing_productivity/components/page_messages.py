@@ -3,6 +3,7 @@
 import streamlit as st
 
 from backend.core.exceptions import AppError
+from backend.features.sewing_productivity.dto.display_names import english_terms
 from frontend.core.session_state import SessionState
 
 FLASH = "flash"
@@ -15,7 +16,7 @@ def show_no_permission(exc: AppError) -> None:
 
 def leave_flash(state: SessionState, message: str) -> None:
     """Keep the message of a save for the next run: the save is followed by st.rerun(), which would drop a toast."""
-    state.set(FLASH, message)
+    state.set(FLASH, english_terms(message))
 
 
 def show_flash(state: SessionState) -> None:

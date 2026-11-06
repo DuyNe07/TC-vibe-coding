@@ -33,4 +33,4 @@ class ExportChangeoverService(BaseService[ChangeoverRequest, FileDownloadDTO]):
             request.lines,
         )
         self.logger.info("Export changeover %s..%s", request.from_date, request.to_date)
-        return ChangeoverFileBuilder(request.from_date, request.to_date, report).build()
+        return ChangeoverFileBuilder(request.from_date, request.to_date, report, request.english).build()

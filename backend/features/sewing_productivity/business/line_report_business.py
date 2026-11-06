@@ -11,7 +11,7 @@ from backend.features.sewing_productivity.business.productivity_business import 
     total,
 )
 from backend.features.sewing_productivity.business.report_business import ReportBusiness
-from backend.features.sewing_productivity.constants import TOTAL_LINE_LABEL
+from backend.features.sewing_productivity.constants import NO_RATIO_TABLE_TITLE, TOTAL_LINE_LABEL
 from backend.features.sewing_productivity.models.clean_values import CleanRow, line_sort_key
 from backend.features.sewing_productivity.models.enums import Factory, NumberKind, RowType
 from backend.features.sewing_productivity.models.report_values import (
@@ -85,6 +85,8 @@ class LineReportBusiness(BaseBusiness[CleanRow]):
             efficiency_a=efficiency_a,
             target_b=self.calc.target_b(rows),
             efficiency_b=efficiency_b,
+            target_no_ratio=self.calc.target_no_ratio(rows),
+            efficiency_no_ratio=self.calc.efficiency_no_ratio(rows),
             cm_earning=cm,
             sewers=sewers,
             hours=hours,
@@ -119,6 +121,8 @@ class LineReportBusiness(BaseBusiness[CleanRow]):
             efficiency_a=efficiency_a,
             target_b=self.calc.target_b(rows),
             efficiency_b=efficiency_b,
+            target_no_ratio=self.calc.target_no_ratio(rows),
+            efficiency_no_ratio=self.calc.efficiency_no_ratio(rows),
             cm_earning=total(stat.cm_earning for stat in stats),
             sewers=average(stat.sewers for stat in stats if stat.sewers is not None),
             hours=average(stat.hours for stat in stats if stat.hours is not None),
@@ -143,6 +147,8 @@ class LineReportBusiness(BaseBusiness[CleanRow]):
             efficiency_a=summary.efficiency_a,
             target_b=summary.target_b,
             efficiency_b=summary.efficiency_b,
+            target_no_ratio=summary.target_no_ratio,
+            efficiency_no_ratio=summary.efficiency_no_ratio,
             cm_earning=total(row.cm_earning for row in shown),
             sewers=None if facts.filtered else self._average_people_per_day(facts, factory),
             hours=summary.average_hours,
@@ -186,7 +192,7 @@ class LineReportBusiness(BaseBusiness[CleanRow]):
     def mo_tables(
         self, facts: ReportFacts, factory: Factory, lines: list[str] | None
     ) -> tuple[list[date], list[MatrixTable]]:
-        """UC-09 the 5 tables of Screen 5: lines in rows, days in columns, period column and total row (BR-48)."""
+        """UC-09 the tables of Screen 5: lines in rows, days in columns, period column and total row (BR-48, BR-55)."""
         by_line = self._days_by_line(facts, factory, lines, with_targets=False)
         names = sorted(by_line, key=line_sort_key)
         day_stats = {
@@ -206,6 +212,10 @@ class LineReportBusiness(BaseBusiness[CleanRow]):
             self._table(
                 "Hiệu suất B", "Hieu suat B", NumberKind.PERCENT, names, day_stats, period_stats, "efficiency_b",
                 "efficiency_b_assessment",
+            ),
+            self._table(
+                NO_RATIO_TABLE_TITLE, "Hieu suat khong ti le", NumberKind.PERCENT, names, day_stats, period_stats,
+                "efficiency_no_ratio", None,
             ),
         ]  # fmt: skip
         totals = self._matrix_totals(facts, factory, by_line, dates)
@@ -242,7 +252,7 @@ class LineReportBusiness(BaseBusiness[CleanRow]):
     def _matrix_totals(
         self, facts: ReportFacts, factory: Factory, by_line: dict[str, dict[date, list[CleanRow]]], dates: list[date]
     ) -> list[MatrixRow]:
-        """BR-48 total row, for each day and for the period; in the order of the 5 tables."""
+        """BR-48 total row, for each day and for the period; in the order of the tables."""
         day_rows: defaultdict[date, list[CleanRow]] = defaultdict(list)
         for days in by_line.values():
             for day, rows in days.items():
@@ -256,6 +266,7 @@ class LineReportBusiness(BaseBusiness[CleanRow]):
         hour_cells: dict[date, MatrixCell] = {}
         people_cells: dict[date, MatrixCell] = {}
         efficiency_cells: dict[date, MatrixCell] = {}
+        no_ratio_cells: dict[date, MatrixCell] = {}
         for day in dates:
             goal = self.calc.goal_on(facts.goals.get(factory, []), day)
             cm = total(row.cm_earning for row in day_rows[day])
@@ -268,6 +279,9 @@ class LineReportBusiness(BaseBusiness[CleanRow]):
             people_cells[day] = MatrixCell.model_construct(value=day_people[day], assessment=None)
             efficiency_cells[day] = MatrixCell.model_construct(
                 value=efficiency, assessment=self.calc.assess_efficiency(efficiency, goal)
+            )
+            no_ratio_cells[day] = MatrixCell.model_construct(
+                value=self.calc.efficiency_no_ratio(day_rows[day]), assessment=None
             )
         goal = self.calc.goal_on(facts.goals.get(factory, []), facts.to_date)
         all_rows = [row for rows in day_rows.values() for row in rows]
@@ -286,8 +300,9 @@ class LineReportBusiness(BaseBusiness[CleanRow]):
             MatrixCell.model_construct(
                 value=period_efficiency, assessment=self.calc.assess_efficiency(period_efficiency, goal)
             ),
+            MatrixCell.model_construct(value=self.calc.efficiency_no_ratio(all_rows), assessment=None),
         ]
-        cells = [mo8h_cells, cm_cells, hour_cells, people_cells, efficiency_cells]
+        cells = [mo8h_cells, cm_cells, hour_cells, people_cells, efficiency_cells, no_ratio_cells]
         return [
             MatrixRow.model_construct(line=TOTAL_LINE_LABEL, is_total=True, cells=day_cells, period=period)
             for day_cells, period in zip(cells, periods, strict=True)

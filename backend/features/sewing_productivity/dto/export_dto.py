@@ -14,7 +14,9 @@ class ExportWeeklyRequest(BaseRequestDTO):
     factories: list[Factory] = []
     customer_groups: list[str] = []
     product_groups: list[str] = []
+    english: bool = False  # BR-52: English names in the file
 
 
 class ExportDailyRequest(BaseRequestDTO):
     report_date: date
+    english: bool = False  # BR-52: English names in the file

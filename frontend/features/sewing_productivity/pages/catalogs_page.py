@@ -1,4 +1,4 @@
-"""Screen 9 - Danh mục: 4 tabs, each with a table edited in place and the list of what is still missing."""
+"""Screen 9 - Catalogs: 4 tabs, each with a table edited in place and the list of what is still missing."""
 
 from collections.abc import Callable, Mapping, Sequence
 from typing import Any
@@ -24,16 +24,16 @@ from frontend.features.sewing_productivity.components.page_messages import (
     show_no_permission,
 )
 
-TAB_LABELS = ("Nhóm sản phẩm", "Nhóm khách hàng", "Số chuyền Fac 1", "Tên sản phẩm theo style")
-COUNT_COLUMN = {"Số dòng": st.column_config.NumberColumn(format="localized")}
+TAB_LABELS = ("Product groups", "Customer groups", "Fac Vinh Long line numbers", "Product name by style")
+COUNT_COLUMN = {"Rows": st.column_config.NumberColumn(format="localized")}
 
 
 class CatalogsPage(BasePage):
-    title = "Danh mục"
+    title = "Catalogs"
     icon = "🗂️"
     slug = "catalogs"
-    description = "Sửa các danh mục dùng để làm sạch dữ liệu. Sửa xong áp dụng ngay cho toàn bộ dữ liệu."
-    menu_group = "Quản lý dữ liệu"
+    description = "Edit the catalogs used to clean the data. A saved change applies to all the data at once."
+    menu_group = "Data management"
 
     def render(self) -> None:
         feature = gateway.open(SewingProductivityController)
@@ -50,67 +50,67 @@ class CatalogsPage(BasePage):
             self._grid(
                 "products",
                 catalogs.product_groups,
-                {"product_name": "Tên sản phẩm", "product_group": "Nhóm sản phẩm"},
-                "Lưu nhóm sản phẩm",
+                {"product_name": "Product name", "product_group": "Product group"},
+                "Save product groups",
                 lambda rows: feature.save_product_groups(SaveProductGroupsRequest(rows=rows)),
             )
-            section_title("Tên sản phẩm chưa phân nhóm")
+            section_title("Product names without a group")
             data_table(
                 [
-                    {"Tên sản phẩm": item.product_name, "Số dòng": item.row_count}
+                    {"Product name": item.product_name, "Rows": item.row_count}
                     for item in catalogs.unclassified_products
                 ],
                 column_config=COUNT_COLUMN,
                 key=self.key("unclassified"),
-                empty_message="Không còn tên sản phẩm chưa phân nhóm.",
+                empty_message="Every product name has a group.",
             )
         with customers:
             self._grid(
                 "customers",
                 catalogs.customer_groups,
-                {"customer_name": "Tên khách hàng", "customer_group": "Nhóm khách hàng"},
-                "Lưu nhóm khách hàng",
+                {"customer_name": "Customer name", "customer_group": "Customer group"},
+                "Save customer groups",
                 lambda rows: feature.save_customer_groups(SaveCustomerGroupsRequest(rows=rows)),
             )
-            section_title("Tên khách hàng đang có")
+            section_title("Customer names in the data")
             data_table(
                 [
                     {
-                        "Tên khách hàng": item.customer_name,
-                        "Nhóm hiện tại": item.customer_group,
-                        "Số dòng": item.row_count,
+                        "Customer name": item.customer_name,
+                        "Current group": item.customer_group,
+                        "Rows": item.row_count,
                     }
                     for item in catalogs.customer_names
                 ],
                 column_config=COUNT_COLUMN,
                 key=self.key("customer_names"),
-                empty_message="Chưa có tên khách hàng nào.",
+                empty_message="No customer names yet.",
             )
         with lines:
             self._grid(
                 "lines",
                 catalogs.line_mappings,
-                {"old_line": "Chuyền cũ", "new_line": "Chuyền mới"},
-                "Lưu bảng số chuyền",
+                {"old_line": "Old line", "new_line": "New line"},
+                "Save line numbers",
                 lambda rows: feature.save_line_mappings(SaveLineMappingsRequest(rows=rows)),
             )
         with styles:
             self._grid(
                 "styles",
                 catalogs.style_products,
-                {"style": "Style", "product_name": "Tên sản phẩm"},
-                "Lưu tên sản phẩm",
+                {"style": "Style", "product_name": "Product name"},
+                "Save product names",
                 lambda rows: feature.save_style_products(SaveStyleProductsRequest(rows=rows)),
             )
-            section_title("Style chưa có tên sản phẩm")
+            section_title("Styles without a product name")
             data_table(
                 [
-                    {"Style": item.style, "Khách hàng": item.customer_name, "Số dòng": item.row_count}
+                    {"Style": item.style, "Customer": item.customer_name, "Rows": item.row_count}
                     for item in catalogs.styles_without_product
                 ],
                 column_config=COUNT_COLUMN,
                 key=self.key("styles_without_product"),
-                empty_message="Không còn style chưa có tên sản phẩm.",
+                empty_message="Every style has a product name.",
             )
 
     def _grid(
