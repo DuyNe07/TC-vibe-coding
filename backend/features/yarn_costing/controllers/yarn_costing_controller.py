@@ -51,6 +51,38 @@ from backend.features.yarn_costing.dto.master_dto import (
     SaveStageConfigRequest,
     UpdateTrialFactorRequest,
 )
+from backend.features.yarn_costing.dto.material_dto import (
+    ArrivalImportResponse,
+    ArrivalListResponse,
+    CalculateQuoteRequest,
+    DeleteQuoteRequest,
+    ExportQuotesRequest,
+    GetMaterialAveragesRequest,
+    GetMaterialSetupRequest,
+    GetMonthlySettingRequest,
+    GetQuoteFormRequest,
+    GetStockOutComparisonRequest,
+    ImportArrivalFileRequest,
+    ImportStockFileRequest,
+    ListArrivalsRequest,
+    ListQuotesRequest,
+    ListStockMonthsRequest,
+    MaterialAveragesResponse,
+    MaterialSaveResponse,
+    MaterialSetupResponse,
+    MonthlySettingResponse,
+    QuoteFormResponse,
+    QuoteListResponse,
+    QuoteResponse,
+    SaveArrivalLotsRequest,
+    SaveArrivalMappingsRequest,
+    SaveMonthlySettingRequest,
+    SavePriceGroupRequest,
+    SaveStockItemSettingsRequest,
+    StockImportResponse,
+    StockMonthListResponse,
+    StockOutComparisonResponse,
+)
 from backend.features.yarn_costing.dto.price_dto import (
     CreateAdjustmentLineRequest,
     DeleteAdjustmentLineRequest,
@@ -107,6 +139,7 @@ from backend.features.yarn_costing.dto.sales_dto import (
 from backend.features.yarn_costing.services.add_exchange_rate_service import AddExchangeRateService
 from backend.features.yarn_costing.services.analyze_yarn_name_service import AnalyzeYarnNameService
 from backend.features.yarn_costing.services.apply_rate_version_service import ApplyRateVersionService
+from backend.features.yarn_costing.services.calculate_quote_service import CalculateQuoteService
 from backend.features.yarn_costing.services.cancel_yarn_request_service import CancelYarnRequestService
 from backend.features.yarn_costing.services.check_nsm_anomalies_service import CheckNsmAnomaliesService
 from backend.features.yarn_costing.services.check_price_anomalies_service import CheckPriceAnomaliesService
@@ -121,6 +154,7 @@ from backend.features.yarn_costing.services.create_secondary_loss_group_service 
 from backend.features.yarn_costing.services.create_yarn_request_service import CreateYarnRequestService
 from backend.features.yarn_costing.services.delete_adjustment_line_service import DeleteAdjustmentLineService
 from backend.features.yarn_costing.services.delete_loss_group_service import DeleteLossGroupService
+from backend.features.yarn_costing.services.delete_quote_service import DeleteQuoteService
 from backend.features.yarn_costing.services.download_component_template_service import (
     DownloadComponentTemplateService,
 )
@@ -129,31 +163,47 @@ from backend.features.yarn_costing.services.download_not_produced_template_servi
 )
 from backend.features.yarn_costing.services.download_template_service import DownloadTemplateService
 from backend.features.yarn_costing.services.export_price_lines_service import ExportPriceLinesService
+from backend.features.yarn_costing.services.export_quotes_service import ExportQuotesService
 from backend.features.yarn_costing.services.get_accounting_comparison_service import GetAccountingComparisonService
 from backend.features.yarn_costing.services.get_dashboard_service import GetDashboardService
 from backend.features.yarn_costing.services.get_legacy_comparison_service import GetLegacyComparisonService
+from backend.features.yarn_costing.services.get_material_averages_service import GetMaterialAveragesService
+from backend.features.yarn_costing.services.get_material_setup_service import GetMaterialSetupService
+from backend.features.yarn_costing.services.get_monthly_setting_service import GetMonthlySettingService
+from backend.features.yarn_costing.services.get_quote_form_service import GetQuoteFormService
 from backend.features.yarn_costing.services.get_recalc_diff_service import GetRecalcDiffService
 from backend.features.yarn_costing.services.get_reference_data_service import GetReferenceDataService
+from backend.features.yarn_costing.services.get_stock_out_comparison_service import GetStockOutComparisonService
 from backend.features.yarn_costing.services.get_yarn_detail_service import GetYarnDetailService
 from backend.features.yarn_costing.services.import_accounting_file_service import ImportAccountingFileService
+from backend.features.yarn_costing.services.import_arrival_file_service import ImportArrivalFileService
 from backend.features.yarn_costing.services.import_component_file_service import ImportComponentFileService
 from backend.features.yarn_costing.services.import_not_produced_file_service import ImportNotProducedFileService
+from backend.features.yarn_costing.services.import_stock_file_service import ImportStockFileService
 from backend.features.yarn_costing.services.import_workbook_service import ImportWorkbookService
 from backend.features.yarn_costing.services.list_accounting_months_service import ListAccountingMonthsService
+from backend.features.yarn_costing.services.list_arrivals_service import ListArrivalsService
 from backend.features.yarn_costing.services.list_audit_log_service import ListAuditLogService
 from backend.features.yarn_costing.services.list_customer_names_service import ListCustomerNamesService
 from backend.features.yarn_costing.services.list_import_batches_service import ListImportBatchesService
 from backend.features.yarn_costing.services.list_loss_groups_service import ListLossGroupsService
 from backend.features.yarn_costing.services.list_price_lines_service import ListPriceLinesService
+from backend.features.yarn_costing.services.list_quotes_service import ListQuotesService
 from backend.features.yarn_costing.services.list_recalc_batches_service import ListRecalcBatchesService
+from backend.features.yarn_costing.services.list_stock_months_service import ListStockMonthsService
 from backend.features.yarn_costing.services.list_yarns_service import ListYarnsService
 from backend.features.yarn_costing.services.recalculate_not_priced_service import RecalculateNotPricedService
 from backend.features.yarn_costing.services.reject_yarn_request_service import RejectYarnRequestService
+from backend.features.yarn_costing.services.save_arrival_lots_service import SaveArrivalLotsService
+from backend.features.yarn_costing.services.save_arrival_mappings_service import SaveArrivalMappingsService
 from backend.features.yarn_costing.services.save_customer_name_service import SaveCustomerNameService
+from backend.features.yarn_costing.services.save_monthly_setting_service import SaveMonthlySettingService
 from backend.features.yarn_costing.services.save_packaging_types_service import SavePackagingTypesService
+from backend.features.yarn_costing.services.save_price_group_service import SavePriceGroupService
 from backend.features.yarn_costing.services.save_process_routes_service import SaveProcessRoutesService
 from backend.features.yarn_costing.services.save_recovery_rates_service import SaveRecoveryRatesService
 from backend.features.yarn_costing.services.save_stage_config_service import SaveStageConfigService
+from backend.features.yarn_costing.services.save_stock_item_settings_service import SaveStockItemSettingsService
 from backend.features.yarn_costing.services.save_yarn_nsm_service import SaveYarnNsmService
 from backend.features.yarn_costing.services.set_accounting_code_service import SetAccountingCodeService
 from backend.features.yarn_costing.services.set_not_produced_service import SetNotProducedService
@@ -412,3 +462,76 @@ class YarnCostingController(BaseController):
     def get_accounting_comparison(self, request: GetAccountingComparisonRequest) -> AccountingComparisonResponse:
         """UC-54 Đối chiếu giá app với giá thành kế toán."""
         return GetAccountingComparisonService().handle(request)
+
+    # ---- đợt 2 (bổ sung 2026-11-10): đọc theo tài khoản (BR-84) nên không dùng @cached_query ----
+    def get_material_setup(self, request: GetMaterialSetupRequest) -> MaterialSetupResponse:
+        """UC-55 / UC-57 Nhóm giá nguyên liệu và khai báo mã kho (chỉ Sales / Phòng SO, BR-84)."""
+        return GetMaterialSetupService().handle(request)
+
+    def save_price_group(self, request: SavePriceGroupRequest) -> MaterialSaveResponse:
+        """UC-55 Thêm / sửa / xoá nhóm giá nguyên liệu."""
+        return SavePriceGroupService().handle(request)
+
+    def import_stock_file(self, request: ImportStockFileRequest) -> StockImportResponse:
+        """UC-56 Tải file kho tháng."""
+        return ImportStockFileService().handle(request)
+
+    def list_stock_months(self, request: ListStockMonthsRequest) -> StockMonthListResponse:
+        """UC-56 Các tháng kho đã lưu."""
+        return ListStockMonthsService().handle(request)
+
+    def save_stock_item_settings(self, request: SaveStockItemSettingsRequest) -> MaterialSaveResponse:
+        """UC-57 Khai báo mã kho nguyên liệu."""
+        return SaveStockItemSettingsService().handle(request)
+
+    def get_monthly_setting(self, request: GetMonthlySettingRequest) -> MonthlySettingResponse:
+        """UC-58 Khai báo tháng (bản đã lưu hoặc bản nháp)."""
+        return GetMonthlySettingService().handle(request)
+
+    def save_monthly_setting(self, request: SaveMonthlySettingRequest) -> MaterialSaveResponse:
+        """UC-58 Lưu khai báo tháng."""
+        return SaveMonthlySettingService().handle(request)
+
+    def get_material_averages(self, request: GetMaterialAveragesRequest) -> MaterialAveragesResponse:
+        """UC-59 Bảng giá nguyên liệu bình quân tháng."""
+        return GetMaterialAveragesService().handle(request)
+
+    def import_arrival_file(self, request: ImportArrivalFileRequest) -> ArrivalImportResponse:
+        """UC-60 Nhập file hàng sắp về."""
+        return ImportArrivalFileService().handle(request)
+
+    def list_arrivals(self, request: ListArrivalsRequest) -> ArrivalListResponse:
+        """UC-61 Danh sách lô hàng sắp về."""
+        return ListArrivalsService().handle(request)
+
+    def save_arrival_lots(self, request: SaveArrivalLotsRequest) -> MaterialSaveResponse:
+        """UC-61 Lưu thay đổi lô hàng sắp về."""
+        return SaveArrivalLotsService().handle(request)
+
+    def save_arrival_mappings(self, request: SaveArrivalMappingsRequest) -> MaterialSaveResponse:
+        """UC-61 Khai báo nhóm cho nhà cung cấp + mô tả."""
+        return SaveArrivalMappingsService().handle(request)
+
+    def get_quote_form(self, request: GetQuoteFormRequest) -> QuoteFormResponse:
+        """UC-62 Dữ liệu điền sẵn của khối Tính giá báo khách."""
+        return GetQuoteFormService().handle(request)
+
+    def calculate_quote(self, request: CalculateQuoteRequest) -> QuoteResponse:
+        """UC-62 Tính thử / lưu giá báo khách."""
+        return CalculateQuoteService().handle(request)
+
+    def list_quotes(self, request: ListQuotesRequest) -> QuoteListResponse:
+        """UC-63 Các lần tính giá báo khách."""
+        return ListQuotesService().handle(request)
+
+    def export_quotes(self, request: ExportQuotesRequest) -> FileDownloadDTO:
+        """UC-63 Xuất Excel các lần tính giá báo khách."""
+        return ExportQuotesService().handle(request)
+
+    def delete_quote(self, request: DeleteQuoteRequest) -> MaterialSaveResponse:
+        """UC-63 Xoá một lần tính giá báo khách."""
+        return DeleteQuoteService().handle(request)
+
+    def get_stock_out_comparison(self, request: GetStockOutComparisonRequest) -> StockOutComparisonResponse:
+        """UC-64 So đơn giá xuất kho với giá bình quân."""
+        return GetStockOutComparisonService().handle(request)

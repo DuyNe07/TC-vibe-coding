@@ -52,6 +52,7 @@ USE_CASE_PERMISSIONS: Final = {
     "UC-50": (_SO, _SALES),  # bổ sung 2026-11-10
     "UC-51": (_SO, _SALES),
     "UC-53": (_SO, _SALES),
+    **{f"UC-{n}": (_SO, _SALES) for n in range(55, 65)},  # đợt 2 (bổ sung 2026-11-10), BR-84 kể cả xem
     INITIAL_IMPORT_USE_CASE: (_SO,),
 }
 

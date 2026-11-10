@@ -3,13 +3,16 @@
 from backend.features.yarn_costing.dto.common_dto import ROLE_LABELS, GroupCode
 from frontend.core.feature_manifest import FeatureManifest
 from frontend.features.yarn_costing.pages.accounting_page import AccountingPage
+from frontend.features.yarn_costing.pages.arrival_page import ArrivalPage
 from frontend.features.yarn_costing.pages.compare_page import ComparePage
 from frontend.features.yarn_costing.pages.dashboard_page import DashboardPage
 from frontend.features.yarn_costing.pages.excel_import_page import ExcelImportPage
 from frontend.features.yarn_costing.pages.loss_group_page import LossGroupPage
 from frontend.features.yarn_costing.pages.master_data_page import MasterDataPage
+from frontend.features.yarn_costing.pages.material_price_page import MaterialPricePage
 from frontend.features.yarn_costing.pages.nsm_pricing_page import NsmPricingPage
 from frontend.features.yarn_costing.pages.price_list_page import PriceListPage
+from frontend.features.yarn_costing.pages.quote_page import QuotePage
 from frontend.features.yarn_costing.pages.user_audit_page import UserAuditPage
 from frontend.features.yarn_costing.pages.yarn_request_page import YarnRequestPage
 
@@ -26,6 +29,9 @@ FEATURE = FeatureManifest(
         DashboardPage,
         AccountingPage,  # bổ sung 2026-11-10
         ComparePage,
+        QuotePage,  # đợt 2 (bổ sung 2026-11-10): 3 màn Sales đứng trên Yêu cầu tính giá
+        MaterialPricePage,
+        ArrivalPage,
         YarnRequestPage,
         NsmPricingPage,
         LossGroupPage,

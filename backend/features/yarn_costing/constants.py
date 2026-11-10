@@ -141,6 +141,17 @@ USE_CASE_ACTIONS: Final = {
     "UC-50": "Dùng sợi có sẵn từ gợi ý",
     "UC-51": "Thêm / sửa / xoá tên theo khách",
     "UC-53": "Tải file giá thành kế toán",
+    # đợt 2 (bổ sung 2026-11-10): kể cả xem chỉ Sales / Phòng SO (BR-84)
+    "UC-55": "Khai báo nhóm giá nguyên liệu",
+    "UC-56": "Tải file kho tháng",
+    "UC-57": "Khai báo mã kho nguyên liệu",
+    "UC-58": "Khai báo tháng (hồi phế nguyên liệu, phương án bông)",
+    "UC-59": "Xem giá nguyên liệu bình quân",
+    "UC-60": "Nhập file hàng sắp về",
+    "UC-61": "Sửa lô hàng sắp về",
+    "UC-62": "Tính giá báo khách",
+    "UC-63": "Xem / xuất / xoá giá báo khách",
+    "UC-64": "So giá xuất kho",
 }
 
 # ---- Tolerances and limits -----------------------------------------------------------------------------------------
