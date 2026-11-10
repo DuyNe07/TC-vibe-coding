@@ -1,4 +1,4 @@
-"""Screen 1 (landing) - Bảng giá đã tính (UC-22, UC-25..UC-30)."""
+"""Screen 1 (landing) - Bảng giá đã tính (UC-22, UC-25..UC-30; UC-51 tên theo khách, bổ sung 2026-11-10)."""
 
 from datetime import date
 
@@ -17,6 +17,7 @@ from backend.features.yarn_costing.dto.price_dto import (
 )
 from backend.features.yarn_costing.dto.pricing_dto import GetYarnDetailRequest, YarnDetailResponse
 from backend.features.yarn_costing.dto.reference_dto import GetReferenceDataRequest, ReferenceDataResponse
+from backend.features.yarn_costing.dto.sales_dto import ListCustomerNamesRequest, SaveCustomerNameRequest
 from frontend.core.base_page import BasePage
 from frontend.core.components import data_table, download_button, panel, section_title, stat_row
 from frontend.core.formatting import format_number
@@ -77,7 +78,10 @@ class PriceListPage(BasePage):
         show_data_warnings(reference)
         show_flash(self.state)
 
-        request = self._filters(reference)
+        customers = sorted(
+            {c.customer_name for c in feature.list_customer_names(ListCustomerNamesRequest()).items}, key=str.casefold
+        )
+        request = self._filters(reference, customers)
         data = feature.list_price_lines(request)
         rate_text = (
             f"Tỷ giá đang dùng: {format_number(data.exchange_rate)} VND/USD (từ {fmt_date(data.exchange_rate_date)})"
@@ -109,7 +113,7 @@ class PriceListPage(BasePage):
             self._selected_line(feature, str(picked[0]["Mã dòng"]))
 
     # ---- filters ----
-    def _filters(self, reference: ReferenceDataResponse) -> ListPriceLinesRequest:
+    def _filters(self, reference: ReferenceDataResponse, customers: list[str]) -> ListPriceLinesRequest:
         factories = reference.factories
         with panel("Bộ lọc", icon="🔎"):
             c1, c2, c3, c4 = st.columns(4)
@@ -147,8 +151,15 @@ class PriceListPage(BasePage):
             accounting = d2.segmented_control("Mã kế toán", [ALL, "Có", "Chưa có"], default=ALL, key=self.key("f_acc"))
             priced_from = d3.date_input("Ngày tính giá từ", value=None, format="DD/MM/YYYY", key=self.key("f_from"))
             priced_to = d4.date_input("Ngày tính giá đến", value=None, format="DD/MM/YYYY", key=self.key("f_to"))
-            keyword = st.text_input(
-                "Từ khoá", placeholder="Mã dòng, tên sợi, mã kế toán", max_chars=200, key=self.key("f_keyword")
+            k1, k2 = st.columns([1, 3])
+            chosen_customers = k1.multiselect(
+                "Khách hàng", customers, default=[], placeholder="Tất cả", key=self.key("f_customers")
+            )
+            keyword = k2.text_input(
+                "Từ khoá",
+                placeholder="Mã dòng, tên sợi, mã kế toán, tên theo khách",
+                max_chars=200,
+                key=self.key("f_keyword"),
             )
         return ListPriceLinesRequest(
             factory_code=all_or(factory),
@@ -160,6 +171,7 @@ class PriceListPage(BasePage):
             priced_from=priced_from,
             priced_to=priced_to,
             keyword=keyword,
+            customers=chosen_customers or None,
         )
 
     # ---- buttons under the table ----
@@ -236,6 +248,77 @@ class PriceListPage(BasePage):
                     key=self.key("d_history"),
                 )
             self._line_actions(feature, detail, line_code, line)
+            self._customer_names(feature, detail.yarn.base_code)
+
+    # ---- UC-51 tên theo khách ----
+    def _customer_names(self, feature: YarnCostingController, base_code: str) -> None:
+        section_title(f"Tên theo khách của {base_code}", "🏷️")
+        items = feature.list_customer_names(ListCustomerNamesRequest(base_code=base_code)).items
+        picked = data_table(
+            [
+                {
+                    "Khách hàng": a.customer_name,
+                    "Tên khách gọi": a.customer_yarn_name,
+                    "Ghi chú": a.note,
+                    "Người thêm": a.created_by,
+                    "Ngày": a.created_at,
+                    "id": a.id,
+                }
+                for a in items
+            ],
+            column_order=["Khách hàng", "Tên khách gọi", "Ghi chú", "Người thêm", "Ngày"],
+            column_config={"Ngày": st.column_config.DatetimeColumn("Ngày", format="DD/MM/YYYY")},
+            selection="single",
+            empty_message="Sợi chưa có tên theo khách.",
+            key=self.key(f"aliases.{base_code}"),
+        )
+        disabled, why = action_state("UC-51")
+        with st.form(self.key(f"alias_add.{base_code}"), clear_on_submit=True):
+            c1, c2, c3 = st.columns([2, 3, 3])
+            customer = c1.text_input("Khách hàng", max_chars=100)
+            name = c2.text_input("Tên khách gọi", max_chars=200)
+            note = c3.text_input("Ghi chú", max_chars=500)
+            if st.form_submit_button("Thêm tên", icon="➕", disabled=disabled, help=why):
+                result = feature.save_customer_name(
+                    SaveCustomerNameRequest(
+                        base_code=base_code, customer_name=customer, customer_yarn_name=name, note=note
+                    )
+                )
+                set_flash(self.state, result.message)
+                st.rerun()
+        if picked:
+            alias = next(a for a in items if a.id == picked[0]["id"])
+            e1, e2 = st.columns([3, 3])
+            new_name = e1.text_input(
+                f"Tên khách gọi ({alias.customer_name})",
+                value=alias.customer_yarn_name,
+                max_chars=200,
+                key=self.key(f"alias_name.{alias.id}"),
+            )
+            new_note = e2.text_input("Ghi chú", value=alias.note, max_chars=500, key=self.key(f"alias_note.{alias.id}"))
+            left, right, _ = st.columns([1, 1, 3])
+            if left.button("Lưu", type="primary", key=self.key("alias_save"), disabled=disabled, help=why):
+                result = feature.save_customer_name(
+                    SaveCustomerNameRequest(
+                        base_code=base_code, alias_id=alias.id, customer_yarn_name=new_name, note=new_note
+                    )
+                )
+                set_flash(self.state, result.message)
+                st.rerun()
+            if right.button("Xoá tên", icon="🗑️", key=self.key("alias_delete"), disabled=disabled, help=why):
+                confirm_dialog(
+                    self.state,
+                    self.key(f"dlg.alias_delete.{alias.id}"),
+                    "Xác nhận xoá tên theo khách",
+                    f"Xoá tên '{alias.customer_yarn_name}' của khách {alias.customer_name} khỏi sợi {base_code}?",
+                    "Xoá tên",
+                    lambda: (
+                        feature.save_customer_name(
+                            SaveCustomerNameRequest(base_code=base_code, alias_id=alias.id, delete=True)
+                        ).message
+                    ),
+                )
+        explain(why)
 
     def _yarn_info(self, detail: YarnDetailResponse) -> None:
         y = detail.yarn

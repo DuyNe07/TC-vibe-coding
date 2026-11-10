@@ -7,6 +7,7 @@ from decimal import Decimal
 from backend.core.base import BaseBuilder
 from backend.features.yarn_costing.constants import NO_CARDING_LABEL
 from backend.features.yarn_costing.dto.price_dto import ListPriceLinesRequest, PriceLineRowDTO
+from backend.features.yarn_costing.models.customer_name import CustomerYarnName
 from backend.features.yarn_costing.models.enums import LineType
 from backend.features.yarn_costing.models.stage import Stage
 from backend.features.yarn_costing.models.yarn import PriceLine, Yarn
@@ -48,8 +49,16 @@ class PriceLineRowsBuilder(BaseBuilder[list[PriceLineRowDTO]]):
         exchange_rate: Decimal | None,
         packaging_names: dict[tuple[str, str], str],
         stages: list[Stage] | None = None,
+        customer_names: dict[str, list[CustomerYarnName]] | None = None,
     ) -> None:
         self.yarns, self.request, self.rate, self.packaging_names = yarns, request, exchange_rate, packaging_names
+        self.aliases = customer_names or {}
+        wanted = {c.casefold() for c in request.customers or []}
+        self.customer_bases = (
+            {base for base, items in self.aliases.items() if any(a.customer_name.casefold() in wanted for a in items)}
+            if wanted
+            else None
+        )
         self.single_pass_lines = {
             (s.factory_code.value, s.stage_code) for s in stages or [] if s.is_carding and s.pass_limit == 1
         }
@@ -63,17 +72,21 @@ class PriceLineRowsBuilder(BaseBuilder[list[PriceLineRowDTO]]):
             and (not r.yarn_group or y.yarn_group == r.yarn_group.strip().upper())
             and (r.priced_from is None or (y.first_priced_at is not None and y.first_priced_at >= r.priced_from))
             and (r.priced_to is None or (y.first_priced_at is not None and y.first_priced_at <= r.priced_to))
+            and (self.customer_bases is None or y.base_code in self.customer_bases)
         )
 
     def _line_ok(self, y: Yarn, line: PriceLine) -> bool:
         r = self.request
         keyword = r.keyword.strip().casefold()
-        text = f"{line.line_code} {y.yarn_name} {line.accounting_code or ''}".casefold()
+        text = f"{line.line_code} {y.yarn_name} {line.accounting_code or ''} {self._alias_text(y)}".casefold()
         return (
             (not r.line_types or line.line_type in r.line_types)
             and (r.has_accounting_code is None or line.has_accounting_code == r.has_accounting_code)
             and (not keyword or keyword in text)
         )
+
+    def _alias_text(self, y: Yarn) -> str:
+        return "; ".join(f"{a.customer_name}: {a.customer_yarn_name}" for a in self.aliases.get(y.base_code, []))
 
     def build(self) -> list[PriceLineRowDTO]:
         pairs = [(y, line) for y in self.yarns if self._yarn_ok(y) for line in y.lines if self._line_ok(y, line)]
@@ -121,6 +134,7 @@ class PriceLineRowsBuilder(BaseBuilder[list[PriceLineRowDTO]]):
                     adjustment_reason=line.adjustment_reason,
                     order_ref=line.order_ref,
                     is_locked=y.is_locked,
+                    customer_names_text=self._alias_text(y),
                 )
             )
         return rows

@@ -35,6 +35,7 @@ class ListPriceLinesRequest(BaseRequestDTO):
     priced_from: date | None = None
     priced_to: date | None = None
     keyword: str = ""
+    customers: list[str] | None = None  # bổ sung 2026-11-10: lọc Khách hàng (tên theo khách)
 
 
 class ExportPriceLinesRequest(ListPriceLinesRequest):
@@ -74,6 +75,7 @@ class PriceLineRowDTO(BaseDTO):
     adjustment_reason: str = ""
     order_ref: str = ""
     is_locked: bool = False
+    customer_names_text: str = ""  # bổ sung 2026-11-10: "<khách>: <tên>; …"
 
 
 class PriceLineListResponse(BaseResponseDTO):
@@ -86,6 +88,7 @@ class PriceLineListResponse(BaseResponseDTO):
     exchange_rate: Decimal | None = None
     exchange_rate_date: date | None = None
     trial_factor: Decimal
+    customers: list[str] = []  # bổ sung 2026-11-10: khách đã có tên theo khách (bộ lọc)
 
 
 class SetAccountingCodeRequest(BaseRequestDTO):

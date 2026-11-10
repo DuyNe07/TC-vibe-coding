@@ -138,6 +138,9 @@ USE_CASE_ACTIONS: Final = {
     "UC-28": "Nhập / sửa / xoá mã kế toán",
     "UC-34": "Nhập dữ liệu từ file",
     "UC-34-BAN-DAU": "Chuyển dữ liệu ban đầu",
+    "UC-50": "Dùng sợi có sẵn từ gợi ý",
+    "UC-51": "Thêm / sửa / xoá tên theo khách",
+    "UC-53": "Tải file giá thành kế toán",
 }
 
 # ---- Tolerances and limits -----------------------------------------------------------------------------------------

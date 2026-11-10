@@ -67,6 +67,7 @@ class PriceExportFileBuilder(BaseBuilder[FileDownloadDTO]):
                 "% CK/PP": pct(r.adjustment_percent),
                 "Lý do CK/PP": r.adjustment_reason,
                 "Đơn hàng": r.order_ref,
+                "Tên theo khách": r.customer_names_text,
             }
             for r in self.rows
         ]

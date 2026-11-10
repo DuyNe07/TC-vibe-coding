@@ -86,6 +86,24 @@ from backend.features.yarn_costing.dto.request_dto import (
     YarnNameAnalysisResponse,
     YarnResponse,
 )
+from backend.features.yarn_costing.dto.sales_dto import (
+    AccountingComparisonResponse,
+    AccountingImportResponse,
+    AccountingMonthListResponse,
+    ComparePriceLinesRequest,
+    ComparePriceLinesResponse,
+    CustomerNameListResponse,
+    CustomerNameResponse,
+    GetAccountingComparisonRequest,
+    ImportAccountingFileRequest,
+    ListAccountingMonthsRequest,
+    ListCustomerNamesRequest,
+    SaveCustomerNameRequest,
+    SuggestYarnsRequest,
+    UseExistingYarnRequest,
+    UseExistingYarnResponse,
+    YarnSuggestionResponse,
+)
 from backend.features.yarn_costing.services.add_exchange_rate_service import AddExchangeRateService
 from backend.features.yarn_costing.services.analyze_yarn_name_service import AnalyzeYarnNameService
 from backend.features.yarn_costing.services.apply_rate_version_service import ApplyRateVersionService
@@ -94,6 +112,7 @@ from backend.features.yarn_costing.services.check_nsm_anomalies_service import C
 from backend.features.yarn_costing.services.check_price_anomalies_service import CheckPriceAnomaliesService
 from backend.features.yarn_costing.services.check_request_submit_service import CheckRequestSubmitService
 from backend.features.yarn_costing.services.check_siro_anomalies_service import CheckSiroAnomaliesService
+from backend.features.yarn_costing.services.compare_price_lines_service import ComparePriceLinesService
 from backend.features.yarn_costing.services.correct_yarn_nsm_service import CorrectYarnNsmService
 from backend.features.yarn_costing.services.create_adjustment_line_service import CreateAdjustmentLineService
 from backend.features.yarn_costing.services.create_nsm_revision_service import CreateNsmRevisionService
@@ -110,15 +129,19 @@ from backend.features.yarn_costing.services.download_not_produced_template_servi
 )
 from backend.features.yarn_costing.services.download_template_service import DownloadTemplateService
 from backend.features.yarn_costing.services.export_price_lines_service import ExportPriceLinesService
+from backend.features.yarn_costing.services.get_accounting_comparison_service import GetAccountingComparisonService
 from backend.features.yarn_costing.services.get_dashboard_service import GetDashboardService
 from backend.features.yarn_costing.services.get_legacy_comparison_service import GetLegacyComparisonService
 from backend.features.yarn_costing.services.get_recalc_diff_service import GetRecalcDiffService
 from backend.features.yarn_costing.services.get_reference_data_service import GetReferenceDataService
 from backend.features.yarn_costing.services.get_yarn_detail_service import GetYarnDetailService
+from backend.features.yarn_costing.services.import_accounting_file_service import ImportAccountingFileService
 from backend.features.yarn_costing.services.import_component_file_service import ImportComponentFileService
 from backend.features.yarn_costing.services.import_not_produced_file_service import ImportNotProducedFileService
 from backend.features.yarn_costing.services.import_workbook_service import ImportWorkbookService
+from backend.features.yarn_costing.services.list_accounting_months_service import ListAccountingMonthsService
 from backend.features.yarn_costing.services.list_audit_log_service import ListAuditLogService
+from backend.features.yarn_costing.services.list_customer_names_service import ListCustomerNamesService
 from backend.features.yarn_costing.services.list_import_batches_service import ListImportBatchesService
 from backend.features.yarn_costing.services.list_loss_groups_service import ListLossGroupsService
 from backend.features.yarn_costing.services.list_price_lines_service import ListPriceLinesService
@@ -126,6 +149,7 @@ from backend.features.yarn_costing.services.list_recalc_batches_service import L
 from backend.features.yarn_costing.services.list_yarns_service import ListYarnsService
 from backend.features.yarn_costing.services.recalculate_not_priced_service import RecalculateNotPricedService
 from backend.features.yarn_costing.services.reject_yarn_request_service import RejectYarnRequestService
+from backend.features.yarn_costing.services.save_customer_name_service import SaveCustomerNameService
 from backend.features.yarn_costing.services.save_packaging_types_service import SavePackagingTypesService
 from backend.features.yarn_costing.services.save_process_routes_service import SaveProcessRoutesService
 from backend.features.yarn_costing.services.save_recovery_rates_service import SaveRecoveryRatesService
@@ -134,9 +158,11 @@ from backend.features.yarn_costing.services.save_yarn_nsm_service import SaveYar
 from backend.features.yarn_costing.services.set_accounting_code_service import SetAccountingCodeService
 from backend.features.yarn_costing.services.set_not_produced_service import SetNotProducedService
 from backend.features.yarn_costing.services.suggest_nsm_service import SuggestNsmService
+from backend.features.yarn_costing.services.suggest_similar_yarns_service import SuggestSimilarYarnsService
 from backend.features.yarn_costing.services.update_loss_group_service import UpdateLossGroupService
 from backend.features.yarn_costing.services.update_trial_factor_service import UpdateTrialFactorService
 from backend.features.yarn_costing.services.update_yarn_request_service import UpdateYarnRequestService
+from backend.features.yarn_costing.services.use_existing_yarn_service import UseExistingYarnService
 
 
 class YarnCostingController(BaseController):
@@ -348,3 +374,41 @@ class YarnCostingController(BaseController):
     def import_not_produced_file(self, request: ImportNotProducedFileRequest) -> NotProducedImportResponse:
         """UC-48 Kiểm tra và lưu file đánh dấu Không sản xuất."""
         return ImportNotProducedFileService().handle(request)
+
+    # ---- mở rộng 2026-11-10 (yêu cầu của Sales) ----
+    @cached_query
+    def suggest_similar_yarns(self, request: SuggestYarnsRequest) -> YarnSuggestionResponse:
+        """UC-49 Gợi ý sợi tương tự khi nhập tên."""
+        return SuggestSimilarYarnsService().handle(request)
+
+    def use_existing_yarn(self, request: UseExistingYarnRequest) -> UseExistingYarnResponse:
+        """UC-50 Dùng sợi có sẵn từ gợi ý."""
+        return UseExistingYarnService().handle(request)
+
+    @cached_query
+    def list_customer_names(self, request: ListCustomerNamesRequest) -> CustomerNameListResponse:
+        """UC-51 (xem) Tên theo khách của một sợi."""
+        return ListCustomerNamesService().handle(request)
+
+    def save_customer_name(self, request: SaveCustomerNameRequest) -> CustomerNameResponse:
+        """UC-51 Thêm / sửa / xoá tên theo khách."""
+        return SaveCustomerNameService().handle(request)
+
+    @cached_query
+    def compare_price_lines(self, request: ComparePriceLinesRequest) -> ComparePriceLinesResponse:
+        """UC-52 So sánh 2 sợi."""
+        return ComparePriceLinesService().handle(request)
+
+    def import_accounting_file(self, request: ImportAccountingFileRequest) -> AccountingImportResponse:
+        """UC-53 Tải file giá thành kế toán (file Z)."""
+        return ImportAccountingFileService().handle(request)
+
+    @cached_query
+    def list_accounting_months(self, request: ListAccountingMonthsRequest) -> AccountingMonthListResponse:
+        """UC-53 / UC-54 Các tháng giá thành kế toán đã lưu."""
+        return ListAccountingMonthsService().handle(request)
+
+    @cached_query
+    def get_accounting_comparison(self, request: GetAccountingComparisonRequest) -> AccountingComparisonResponse:
+        """UC-54 Đối chiếu giá app với giá thành kế toán."""
+        return GetAccountingComparisonService().handle(request)

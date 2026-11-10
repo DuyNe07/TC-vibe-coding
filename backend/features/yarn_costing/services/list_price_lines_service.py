@@ -5,8 +5,10 @@ from datetime import date
 from backend.core.base import BaseService
 from backend.features.yarn_costing.builders.price_rows_builder import PriceLineRowsBuilder
 from backend.features.yarn_costing.business.costing_business import CostingBusiness
+from backend.features.yarn_costing.business.customer_name_business import CustomerNameBusiness
 from backend.features.yarn_costing.dto.price_dto import ListPriceLinesRequest, PriceLineListResponse
 from backend.features.yarn_costing.models.enums import YarnStatus
+from backend.features.yarn_costing.repositories.customer_name_repository import CustomerYarnNameRepository
 from backend.features.yarn_costing.repositories.exchange_rate_repository import (
     ExchangeRateRepository,
     SettingsRepository,
@@ -26,7 +28,12 @@ class ListPriceLinesService(BaseService[ListPriceLinesRequest, PriceLineListResp
         yarns = self.repository.list_all()
         names = {(p.factory_code.value, p.code): p.name for p in PackagingTypeRepository().list_all()}
         rows = PriceLineRowsBuilder(
-            yarns, request, rate.rate if rate else None, names, StageRepository().list_all()
+            yarns,
+            request,
+            rate.rate if rate else None,
+            names,
+            StageRepository().list_all(),
+            CustomerNameBusiness().by_base(CustomerYarnNameRepository().list_all()),
         ).build()
         scoped = [y for y in yarns if request.factory_code is None or y.factory_code == request.factory_code]
         self.logger.info(
@@ -42,4 +49,5 @@ class ListPriceLinesService(BaseService[ListPriceLinesRequest, PriceLineListResp
             exchange_rate=rate.rate if rate else None,
             exchange_rate_date=rate.effective_date if rate else None,
             trial_factor=SettingsRepository().get_settings().trial_factor,
+            customers=sorted({a.customer_name for a in CustomerYarnNameRepository().list_all()}, key=str.casefold),
         )

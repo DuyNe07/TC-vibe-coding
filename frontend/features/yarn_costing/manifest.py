@@ -2,6 +2,8 @@
 
 from backend.features.yarn_costing.dto.common_dto import ROLE_LABELS, GroupCode
 from frontend.core.feature_manifest import FeatureManifest
+from frontend.features.yarn_costing.pages.accounting_page import AccountingPage
+from frontend.features.yarn_costing.pages.compare_page import ComparePage
 from frontend.features.yarn_costing.pages.dashboard_page import DashboardPage
 from frontend.features.yarn_costing.pages.excel_import_page import ExcelImportPage
 from frontend.features.yarn_costing.pages.loss_group_page import LossGroupPage
@@ -22,6 +24,8 @@ FEATURE = FeatureManifest(
         # sắp theo vai trò: Dùng chung, Sales, Xưởng sợi, Phòng SO (Kế toán dùng Bảng giá)
         PriceListPage,
         DashboardPage,
+        AccountingPage,  # bổ sung 2026-11-10
+        ComparePage,
         YarnRequestPage,
         NsmPricingPage,
         LossGroupPage,
