@@ -339,3 +339,17 @@ def test_ac116_old_request_flow_unchanged() -> None:
         CreateYarnRequestService().handle(
             CreateYarnRequestRequest(factory_code=S4, yarn_name="cvc 30/1 (60/40) mvs", packaging_code="Type 3")
         )
+
+
+def test_ac117_match_by_first_18_characters() -> None:
+    """BR-82 (sửa 2026-11-10): app codes typed without the D / E / FCD / FCE suffix still match file Z."""
+    put_yarn("S4-3010", "CM 20/1", total="19500", accounting_code="S41602000010000000")
+    import_z({"Z SỢI T09.26": [CM20]})
+    res = GetAccountingComparisonService().handle(GetAccountingComparisonRequest(period="2026-09"))
+    assert res.matched_count == 1 and res.missing_count == 0
+    row = res.rows[0]
+    assert row.line_code == "S4-3010"
+    assert row.app_price_note == "giá hiện tại; ghép theo 18 ký tự đầu (S41602000010000000)"
+    put_yarn("S4-3011", "CM 20/1 COMPACT", total="21000", accounting_code="S41602000010000000FCE")
+    exact = GetAccountingComparisonService().handle(GetAccountingComparisonRequest(period="2026-09"))
+    assert exact.rows[0].line_code == "S4-3011" and "ghép theo" not in exact.rows[0].app_price_note
