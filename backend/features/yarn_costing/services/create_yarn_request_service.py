@@ -3,6 +3,7 @@
 from backend.core.base import BaseService
 from backend.features.yarn_costing.builders.dto_builders import yarn_dto
 from backend.features.yarn_costing.business.access_business import AccessBusiness
+from backend.features.yarn_costing.business.blend_business import BlendBusiness
 from backend.features.yarn_costing.business.master_business import MasterBusiness
 from backend.features.yarn_costing.business.name_business import YarnNameBusiness, collapse_spaces
 from backend.features.yarn_costing.business.request_business import RequestBusiness
@@ -10,12 +11,16 @@ from backend.features.yarn_costing.constants import FACTORY_NAMES
 from backend.features.yarn_costing.dto.request_dto import CreateYarnRequestRequest, YarnResponse
 from backend.features.yarn_costing.models.enums import YarnOrigin, YarnStatus
 from backend.features.yarn_costing.models.yarn import Yarn
+from backend.features.yarn_costing.repositories.customer_name_repository import CustomerYarnNameRepository
 from backend.features.yarn_costing.repositories.packaging_type_repository import PackagingTypeRepository
 from backend.features.yarn_costing.repositories.rate_version_repository import RateVersionRepository
 from backend.features.yarn_costing.repositories.recalc_batch_repository import AuditLogRepository
 from backend.features.yarn_costing.repositories.yarn_repository import YarnRepository
 
 PACKAGING_MESSAGE = "Vui lòng chọn loại đóng gói đang dùng của xưởng."
+CUSTOMER_MAX = 100
+REASON_MAX = 500
+MSG_LENGTH = "Khách hàng tối đa 100 ký tự, lý do tối đa 500 ký tự."
 
 
 class CreateYarnRequestService(BaseService[CreateYarnRequestRequest, YarnResponse]):
@@ -25,6 +30,7 @@ class CreateYarnRequestService(BaseService[CreateYarnRequestRequest, YarnRespons
         self.names = YarnNameBusiness()
         self.requests = RequestBusiness()
         self.master = MasterBusiness()
+        self.blends = BlendBusiness()
 
     def execute(self, request: CreateYarnRequestRequest) -> YarnResponse:
         factory = request.factory_code
@@ -37,6 +43,9 @@ class CreateYarnRequestService(BaseService[CreateYarnRequestRequest, YarnRespons
         chosen = packaging.get(request.packaging_code.strip())
         self.master.require(chosen is not None and self.master.is_selectable(chosen, version), PACKAGING_MESSAGE)
         yarns = self.repository.list_all()
+        customer = collapse_spaces(request.customer_name)
+        reason = (request.duplicate_reason or "").strip()
+        self.master.require(len(customer) <= CUSTOMER_MAX and len(reason) <= REASON_MAX, MSG_LENGTH)
         label = self.access.user_label(self.current_user)
         code = self.requests.next_base_code(factory, yarns)
         yarn = Yarn(
@@ -53,11 +62,24 @@ class CreateYarnRequestService(BaseService[CreateYarnRequestRequest, YarnRespons
             status=YarnStatus.CHO_XUONG_XEM,
             origin=YarnOrigin.YEU_CAU_SALES,
             requested_by=label,
+            customer_name=customer,
         )
         self.requests.ensure_unique_name(yarn, yarns)
+        # BR-78: a Trùng yarn in the chosen factory needs a reason
+        _, same, _ = self.blends.suggest(name, yarns, CustomerYarnNameRepository().list_all(), factory.value)
+        same_here = [s.yarn for s in same if s.yarn.factory_code == factory]
+        self.blends.ensure_duplicate_reason(same_here, reason)
+        if same_here:
+            yarn = yarn.model_copy(update={"duplicate_reason": reason})
         self.repository.store(yarns, [yarn])
         AuditLogRepository().add(
-            self.access.audit_entry(self.current_user, "UC-15", code, f"{name} / {yarn.packaging_code}")
+            self.access.audit_entry(
+                self.current_user,
+                "UC-15",
+                code,
+                f"{name} / {yarn.packaging_code}" + (f" / khách {customer}" if customer else ""),
+                yarn.duplicate_reason,
+            )
         )
         self.logger.info("Yarn request %s created for %s (%s)", code, factory, name)
         return YarnResponse(

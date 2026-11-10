@@ -1,4 +1,4 @@
-"""Screen 2 (`yeu-cau-tinh-gia`) - Yêu cầu tính giá (UC-15..UC-17, UC-19, UC-40)."""
+"""Screen 2 (`yeu-cau-tinh-gia`) - Yêu cầu tính giá (UC-15..UC-17, UC-19, UC-40; UC-49, UC-50 bổ sung 2026-11-10)."""
 
 from datetime import date, timedelta
 
@@ -17,12 +17,17 @@ from backend.features.yarn_costing.dto.request_dto import (
     UpdateYarnRequestRequest,
     YarnSummaryDTO,
 )
+from backend.features.yarn_costing.dto.sales_dto import (
+    SuggestYarnsRequest,
+    UseExistingYarnRequest,
+    YarnSuggestionDTO,
+)
 from frontend.core.base_page import BasePage
 from frontend.core.components import data_table, panel
 from frontend.features.yarn_costing.components.columns import YARN_SUMMARY_CONFIG, yarn_summary_rows
 from frontend.features.yarn_costing.components.data_warnings import show_data_warnings
 from frontend.features.yarn_costing.components.dialogs import confirm_dialog
-from frontend.features.yarn_costing.components.display import count_text, yes_no
+from frontend.features.yarn_costing.components.display import count_text, usd, vnd, yes_no
 from frontend.features.yarn_costing.components.flash import set_flash, show_flash
 from frontend.features.yarn_costing.components.labels import (
     ALL,
@@ -67,6 +72,7 @@ class YarnRequestPage(BasePage):
         show_flash(self.state)
 
         self._create_form(feature, reference)
+        self._used_lines()
         items = self._request_list(feature, reference)
         picked = items["picked"]
         if picked:
@@ -76,7 +82,7 @@ class YarnRequestPage(BasePage):
     def _create_form(self, feature: YarnCostingController, reference: ReferenceDataResponse) -> None:
         factories = reference.factories
         with panel("Tạo yêu cầu tính giá", icon="📝"):
-            c1, c2, c3 = st.columns([1, 3, 2])
+            c1, c2, c_customer, c3 = st.columns([1, 3, 2, 2])
             factory = c1.selectbox(
                 "Xưởng",
                 factory_codes(factories),
@@ -87,6 +93,9 @@ class YarnRequestPage(BasePage):
             )
             name = c2.text_input(
                 "Tên sợi", max_chars=200, placeholder="Ví dụ: CVC 30/1 (60/40) MVS", key=self.key("new_name")
+            )
+            customer = c_customer.text_input(
+                "Khách hàng", max_chars=100, placeholder="Không bắt buộc", key=self.key("new_customer")
             )
             choices = packaging_choices(reference, factory)
             default_pack = default_packaging(reference, factory)
@@ -118,6 +127,16 @@ class YarnRequestPage(BasePage):
                         )
                 if (not analysis.valid or analysis.duplicate_code) and analysis.message:
                     st.warning(analysis.message, icon="⚠️")
+            same_here = self._suggestions(feature, factory, name, customer)
+            reason = ""
+            if same_here:  # BR-78
+                reason = st.text_area(
+                    "Lý do gửi yêu cầu mới",
+                    max_chars=500,
+                    placeholder=f"Đã có sợi trùng ở xưởng {factory}: {', '.join(same_here[:3])}. "
+                    "Ghi lý do vẫn gửi yêu cầu mới.",
+                    key=self.key(f"new_reason.{factory}"),
+                )
             # BR-63 / UC-42 + BR-47: lý do khoá nút hiện ngay cạnh nút
             check = feature.check_request_submit(CheckRequestSubmitRequest(factory_code=factory))
             no_role, no_role_why = action_state("UC-15", factory)
@@ -134,13 +153,100 @@ class YarnRequestPage(BasePage):
                 help="Vui lòng chọn xưởng, nhập tên sợi và chọn loại đóng gói." if missing and allowed else None,
             ):
                 result = feature.create_yarn_request(
-                    CreateYarnRequestRequest(factory_code=factory, yarn_name=name, packaging_code=pack)
+                    CreateYarnRequestRequest(
+                        factory_code=factory,
+                        yarn_name=name,
+                        packaging_code=pack,
+                        customer_name=customer,
+                        duplicate_reason=reason,
+                    )
                 )
                 set_flash(self.state, result.message)
                 st.session_state.pop(self.key("new_name"), None)
+                st.session_state.pop(self.key("new_customer"), None)
                 st.rerun()
             with reason_col:
                 explain(*reasons)
+
+    # ---- UC-49 / UC-50 ----
+    def _suggestions(self, feature: YarnCostingController, factory: str | None, name: str, customer: str) -> list[str]:
+        """Show the Trùng / Gần giống tables under the form; return the Trùng codes of the chosen factory (BR-78)."""
+        if not name.strip():
+            return []
+        data = feature.suggest_similar_yarns(SuggestYarnsRequest(yarn_name=name, factory_code=factory))
+        if data.blend_text:
+            st.markdown(f"**App đọc được:** {data.blend_text}")
+        if data.message:
+            st.caption(data.message)
+        picked: YarnSuggestionDTO | None = None
+        for title, items, key in (
+            (f"Sợi trùng ({len(data.same)})", data.same, "same"),
+            (f"Sợi gần giống ({len(data.near)})", data.near, "near"),
+        ):
+            if not items:
+                continue
+            st.markdown(f"**{title}**")
+            rows = [
+                {
+                    "Xưởng": str(s.factory_code),
+                    "Mã": s.yarn_code,
+                    "Tên chuẩn": s.yarn_name,
+                    "Tên theo khách": s.customer_names_text,
+                    ("Khác ở đâu" if key == "near" else "Ghi chú"): s.note,
+                    "Trạng thái": s.status.value,
+                    "Tổng (VND/kg)": vnd(s.total_vnd),
+                    "USD/kg": usd(s.usd_per_kg),
+                    "Mã kế toán": s.accounting_code,
+                }
+                for s in items
+            ]
+            chosen = data_table(rows, selection="single", key=self.key(f"suggest.{key}"))
+            if chosen:
+                picked = next((s for s in items if s.yarn_code == chosen[0]["Mã"]), picked)
+        if data.same or data.near:
+            disabled, why = action_state("UC-50")
+            if st.button(
+                "Dùng sợi này",
+                icon="✅",
+                key=self.key("use_existing"),
+                disabled=disabled or picked is None,
+                help=why or ("Chọn một dòng trong bảng gợi ý." if picked is None else None),
+            ):
+                assert picked is not None
+                result = feature.use_existing_yarn(
+                    UseExistingYarnRequest(yarn_code=picked.yarn_code, typed_name=name, customer_name=customer)
+                )
+                self.state.set("request_used", result.model_dump(mode="json"))
+                set_flash(self.state, result.message)
+                for k in ("new_name", "new_customer"):
+                    st.session_state.pop(self.key(k), None)
+                st.rerun()
+            explain(why)
+        return data.same_in_factory
+
+    def _used_lines(self) -> None:
+        """UC-50 output: the price lines of the yarn chosen with "Dùng sợi này"."""
+        used = self.state.get("request_used")
+        if not used:
+            return
+        with panel(f"Dòng giá của sợi {used['yarn_code']} - {used['yarn_name']}", icon="💰"):
+            data_table(
+                [
+                    {
+                        "Mã dòng": line["line_code"],
+                        "Loại dòng": str(line["line_type"]),
+                        "Tổng (VND/kg)": vnd(line["total_vnd"]),
+                        "USD/kg": usd(line["usd_per_kg"]),
+                        "Mã kế toán": line["accounting_code"],
+                    }
+                    for line in used["lines"]
+                ],
+                key=self.key("used_lines"),
+                empty_message="Sợi chưa có dòng giá.",
+            )
+            if st.button("Đóng", key=self.key("used_close")):
+                self.state.pop("request_used")
+                st.rerun()
 
     # ---- list ----
     def _request_list(self, feature: YarnCostingController, reference: ReferenceDataResponse) -> dict:
@@ -210,6 +316,9 @@ class YarnRequestPage(BasePage):
                 )
             c1, c2 = st.columns([3, 2])
             name = c1.text_input("Tên sợi", value=item.yarn_name, max_chars=200, key=self.key(f"edit_name.{code}"))
+            customer = c1.text_input(
+                "Khách hàng", value=item.customer_name, max_chars=100, key=self.key(f"edit_customer.{code}")
+            )
             choices = packaging_choices(reference, str(item.factory_code))
             if item.packaging_code and item.packaging_code not in choices:
                 choices = {item.packaging_code: item.packaging_code, **choices}
@@ -234,7 +343,9 @@ class YarnRequestPage(BasePage):
                 help=save_why,
             ):
                 result = feature.update_yarn_request(
-                    UpdateYarnRequestRequest(yarn_code=code, yarn_name=name, packaging_code=pack or "")
+                    UpdateYarnRequestRequest(
+                        yarn_code=code, yarn_name=name, packaging_code=pack or "", customer_name=customer
+                    )
                 )
                 set_flash(self.state, result.message)
                 st.rerun()

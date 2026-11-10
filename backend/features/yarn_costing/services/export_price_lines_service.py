@@ -7,7 +7,9 @@ from backend.features.yarn_costing.builders.dto_builders import stage_cost_dto
 from backend.features.yarn_costing.builders.file_builders import PriceExportFileBuilder
 from backend.features.yarn_costing.builders.price_rows_builder import PriceLineRowsBuilder
 from backend.features.yarn_costing.business.costing_business import CostingBusiness
+from backend.features.yarn_costing.business.customer_name_business import CustomerNameBusiness
 from backend.features.yarn_costing.dto.price_dto import ExportPriceLinesRequest
+from backend.features.yarn_costing.repositories.customer_name_repository import CustomerYarnNameRepository
 from backend.features.yarn_costing.repositories.exchange_rate_repository import ExchangeRateRepository
 from backend.features.yarn_costing.repositories.packaging_type_repository import PackagingTypeRepository
 from backend.features.yarn_costing.repositories.stage_repository import StageRepository
@@ -24,7 +26,12 @@ class ExportPriceLinesService(BaseService[ExportPriceLinesRequest, FileDownloadD
         yarns = self.repository.list_all()
         names = {(p.factory_code.value, p.code): p.name for p in PackagingTypeRepository().list_all()}
         rows = PriceLineRowsBuilder(
-            yarns, request, rate.rate if rate else None, names, StageRepository().list_all()
+            yarns,
+            request,
+            rate.rate if rate else None,
+            names,
+            StageRepository().list_all(),
+            CustomerNameBusiness().by_base(CustomerYarnNameRepository().list_all()),
         ).build()
         codes = list(dict.fromkeys(r.yarn_code for r in rows))
         by_code = {y.yarn_code: y for y in yarns}

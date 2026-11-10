@@ -92,6 +92,7 @@ def price_line_rows(items: Iterable[PriceLineRowDTO]) -> list[dict[str, Any]]:
             "% CK/PP": pct(row.adjustment_percent),
             "Lý do CK/PP": row.adjustment_reason,
             "Đơn hàng": row.order_ref,
+            "Tên theo khách": row.customer_names_text,
         }
         for row in items
     ]
@@ -184,6 +185,8 @@ def yarn_summary_rows(
                 "Lý do từ chối / chưa tính được": y.reason,
                 "Tổng (VND/kg)": vnd(y.total_vnd),
                 "USD/kg": usd(y.usd_per_kg),
+                "Khách hàng": y.customer_name,
+                "Lý do gửi khi đã có sợi trùng": y.duplicate_reason,
             }
         )
     return rows

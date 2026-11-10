@@ -49,6 +49,9 @@ USE_CASE_PERMISSIONS: Final = {
     "UC-26": (_SO, *_FACTORY_ROLES),
     "UC-28": (_SO, _KT, *_FACTORY_ROLES),
     "UC-34": (_SO, *_FACTORY_ROLES),
+    "UC-50": (_SO, _SALES),  # bổ sung 2026-11-10
+    "UC-51": (_SO, _SALES),
+    "UC-53": (_SO, _SALES),
     INITIAL_IMPORT_USE_CASE: (_SO,),
 }
 

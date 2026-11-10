@@ -140,6 +140,8 @@ class Yarn(BaseEntity):
     max_ck_no: int = 0
     max_pp_no: int = 0
     pending_accounting_code: str | None = None  # BR-70: waits for the first Thường line, never locks the yarn
+    customer_name: str = ""  # 4.12 (bổ sung 2026-11-10): khách hàng Sales nhập khi gửi yêu cầu
+    duplicate_reason: str = ""  # BR-78: lý do gửi yêu cầu mới khi đã có sợi Trùng cùng xưởng
 
     @property
     def is_locked(self) -> bool:

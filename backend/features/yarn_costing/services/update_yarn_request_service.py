@@ -48,11 +48,17 @@ class UpdateYarnRequestService(BaseService[UpdateYarnRequestRequest, YarnRespons
                 "technology": self.names.technology(name),
                 "is_compact": parsed.is_compact,
                 "packaging_code": chosen.code,  # type: ignore[union-attr]
+                "customer_name": yarn.customer_name
+                if request.customer_name is None
+                else collapse_spaces(request.customer_name),
             }
         )
+        self.master.require(len(updated.customer_name) <= 100, "Khách hàng tối đa 100 ký tự.")
         self.requests.ensure_unique_name(updated, yarns)
         self.repository.store(yarns, [updated])
         detail = f"{yarn.yarn_name} / {yarn.packaging_code} → {name} / {updated.packaging_code}"
+        if updated.customer_name != yarn.customer_name:
+            detail += f" / khách {yarn.customer_name or '-'} → {updated.customer_name or '-'}"
         AuditLogRepository().add(self.access.audit_entry(self.current_user, "UC-16", yarn.yarn_code, detail))
         self.logger.info("Yarn request %s updated", yarn.yarn_code)
         return YarnResponse(
