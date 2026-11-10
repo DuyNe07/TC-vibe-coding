@@ -94,3 +94,50 @@ class PriceEvent(StrEnum):
     TINH_LAI_CHUA_TINH = "Tính lại mã chưa tính được"
     KHONG_SAN_XUAT = "Không sản xuất"  # BR-72
     BO_KHONG_SAN_XUAT = "Bỏ đánh dấu không sản xuất"  # BR-74
+
+
+# ---- Đợt 2 (bổ sung 2026-11-10): giá nguyên liệu bình quân, hàng sắp về, giá báo khách ----
+class PriceGroupKind(StrEnum):
+    COTTON = "Cotton theo xuất xứ"
+    XO = "Xơ theo nhà cung cấp"
+
+
+class CottonOrigin(StrEnum):
+    USA = "USA"
+    BRAZIL = "Brazil"
+    AUSTRALIA = "Australia"
+
+
+class MaterialMarket(StrEnum):
+    """Loại hàng của mã kho / lô sắp về (Chung = vào cả Nội địa và Xuất khẩu); lần tính báo giá chỉ chọn NOI_DIA / XUAT_KHAU."""
+
+    NOI_DIA = "Nội địa"
+    XUAT_KHAU = "Xuất khẩu"
+    CHUNG = "Chung"
+
+
+class MaterialDecision(StrEnum):
+    CHUA_KHAI_BAO = "Chưa khai báo"
+    THEO_NHOM = "Tính theo nhóm"
+    KHONG_TINH = "Không tính"
+
+
+class StockSection(StrEnum):
+    NGUYEN_LIEU = "Nguyên liệu"
+    SOI_THANH_PHAM = "Sợi thành phẩm"
+    PHU_LIEU = "Phụ liệu"
+
+
+class PriceKind(StrEnum):
+    THUONG = "Thường"
+    THI_NGHIEM = "Thí nghiệm"
+
+
+class Incoterm(StrEnum):
+    FOB = "FOB"
+    CIF = "CIF"
+
+
+class PriceCurrency(StrEnum):
+    USD = "USD"
+    VND = "VND"

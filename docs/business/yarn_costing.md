@@ -16,6 +16,8 @@ file đó: Sales tạo yêu cầu và mã tính giá tự sinh, xưởng nhập 
 nhau rồi tính chi phí sản xuất cho 1 kg sợi (5 khoản, VND và USD), tự tạo giá thí nghiệm, lưu bảng giá có lịch sử;
 kế toán hoặc xưởng nhập mã kế toán để khoá sợi. Phòng SO quản lý dữ liệu nền của từng xưởng, tính lại toàn bộ khi
 định mức thay đổi và theo dõi sai lệch trên dashboard. Giá chỉ là chi phí gia công, không gồm tiền nguyên liệu.
+(Bổ sung 2026-11-10, đợt 2) Riêng Sales và Phòng SO có thêm phần giá nguyên liệu bình quân theo kho S4 + hàng sắp về và tính
+giá báo khách (giá vốn có nguyên liệu, FOB / CIF, GP, Commission) - mục 4.22-4.28, Screen 11-13.
 Chức năng được chuyển từ app cũ sang app mới (chỉ có chức năng này); toàn bộ dữ liệu đã nhập ở app cũ được chép sang một lần
 (mục 5.6) và từ đó chỉ dùng app mới.
 
@@ -26,7 +28,7 @@ vai trò). Một tài khoản có thể có nhiều vai trò. Quản trị viên
 
 | Actor (vai trò) | Description |
 |---|---|
-| Sales (SALES) | Tạo yêu cầu tính giá cho sợi mới (chọn xưởng, nhập tên sợi, khách hàng, chọn loại đóng gói); xem gợi ý sợi tương tự đã có giá; sửa / huỷ yêu cầu khi xưởng chưa xử lý; xem trạng thái và giá; thêm / sửa / xoá tên theo khách; tải file giá thành kế toán hằng tháng (bổ sung 2026-11-10) |
+| Sales (SALES) | Tạo yêu cầu tính giá cho sợi mới (chọn xưởng, nhập tên sợi, khách hàng, chọn loại đóng gói); xem gợi ý sợi tương tự đã có giá; sửa / huỷ yêu cầu khi xưởng chưa xử lý; xem trạng thái và giá; thêm / sửa / xoá tên theo khách; tải file giá thành kế toán hằng tháng (bổ sung 2026-11-10); (đợt 2, 2026-11-10) tải file kho S4, khai báo nhóm giá nguyên liệu, mã kho, hồi phế nguyên liệu, phương án bông, hàng sắp về; tính và lưu giá báo khách |
 | Xưởng S1 (XS1), Xưởng S4 (XS4) | Mỗi xưởng chỉ thao tác dữ liệu của xưởng mình: từ chối yêu cầu; nhập NSM + tỷ lệ pha và tính giá; tạo bản ĐCNSM, dòng CK/PP; khai báo và sửa tiêu hao (khi chưa bị khoá); nhập / sửa / xoá mã kế toán; tải file cập nhật NSM và tiêu hao |
 | Phòng SO (SO) | Làm được mọi thao tác của hai xưởng cho cả S1 và S4; ngoài ra: dữ liệu nền (cấu hình công đoạn, định mức chi phí/phút, loại đóng gói, hồi phế, quy trình công nghệ, tỷ giá, hệ số thí nghiệm); sửa tiêu hao đã bị khoá; chuyển dữ liệu cũ từ file Excel |
 | Kế toán (KT) | Nhập / sửa / xoá mã kế toán cho các dòng bảng giá |
@@ -80,6 +82,15 @@ vai trò). Một tài khoản có thể có nhiều vai trò. Quản trị viên
 | Tên chuẩn / Tên theo khách | (bổ sung 2026-11-10) Tên chuẩn = tên sợi trên app (`yarn_name` của mã gốc). Tên theo khách = tên một khách hàng gọi sợi đó (4.20); một sợi có nhiều tên theo khách |
 | File Z | (bổ sung 2026-11-10) File "Bảng tổng hợp giá thành sợi" kế toán làm hằng tháng (ví dụ `3. Z SOI T09.2026.xlsx`), mỗi sheet một tháng, mỗi dòng một mã kế toán (5.9) |
 | Chi phí chế biến kế toán | (bổ sung 2026-11-10) Giá thành đơn vị của kế toán bỏ phần nguyên liệu: (Cộng − VLC) ÷ Số lượng (BR-80); so được với giá app vì giá app chỉ là chi phí gia công |
+| File kho | (đợt 2, 2026-11-10) Báo cáo nhập - xuất - tồn kho xưởng S4 một tháng từ hệ thống kế toán, ví dụ `GIÁ SỢI 4 THÁNG 10.xlsx` (5.10) |
+| Nhóm giá nguyên liệu | (đợt 2) Nhóm các mã kho nguyên liệu được tính chung một giá bình quân: cotton theo xuất xứ (USA, Brazil, Australia), xơ theo nhà cung cấp (ví dụ "Poly nguyên sinh – Indorama") (4.22) |
+| Cotton (phương án) | (đợt 2) Nhóm giá cố định = bình quân các nhóm cotton theo phương án pha bông của tháng, ví dụ 31% USA + 69% Brazil (BR-92) |
+| Nội địa / Xuất khẩu / Chung | (đợt 2) Loại hàng của mã kho / lô sắp về; giá bình quân tách theo Nội địa và Xuất khẩu, hàng "Chung" vào cả hai (BR-92) |
+| Hồi phế nguyên liệu | (đợt 2) Số USD/kg Sales khai báo theo nhóm giá hằng tháng, **trừ** khỏi giá bình quân, ví dụ cotton 0,18; khác "Hồi phế" (tỷ lệ chạy lại) của chi phí gia công |
+| Hàng sắp về | (đợt 2) Lô nguyên liệu sẽ về nhà máy theo file theo dõi của Sales (sheet "Update Fiber arrival") (4.26, 5.11) |
+| Giá báo khách | (đợt 2) Một lần Sales tính giá bán cho một sợi: giá nguyên liệu + norm × hệ số → giá vốn, bình quân với sợi tồn, cộng GP, Commission → FOB, CIF (4.28, BR-95) |
+| FOB / CIF, F&I | (đợt 2) Điều kiện giá bán; CIF = FOB + F&I (chi phí cước và bảo hiểm, mặc định 0,03 USD/kg) |
+| Norm | (đợt 2) Chi phí gia công trên app (Tổng VND/kg của dòng Thường hoặc Thí nghiệm) đổi ra USD |
 
 ## 4. Data (Dữ liệu)
 
@@ -240,6 +251,9 @@ Khoá duy nhất: (factory_code, yarn_group, technology).
 | note | text ≤ 200 | No | Ghi chú | |
 | created_by, created_at | text, datetime | Yes | Người và lúc nhập | |
 Tỷ giá đang dùng = dòng có `effective_date` lớn nhất ≤ hôm nay (nếu nhiều dòng cùng ngày: dòng nhập sau cùng).
+(Bổ sung 2026-11-10, đợt 2) **Tỷ giá của tháng M** (chỉ dùng cho giá nguyên liệu và giá báo khách) = dòng có `effective_date`
+lớn nhất ≤ ngày cuối tháng M (BR-89). Phòng SO khai báo tỷ giá theo tháng bằng cách thêm dòng có ngày áp dụng = ngày 1 của tháng;
+các mốc cũ giữ nguyên.
 
 ### 4.10 Tham số chung (Settings)
 | Field | Type | Required | Description | Example |
@@ -461,6 +475,141 @@ Mỗi tháng chỉ có một bản đang dùng; tải lại tháng đó thì b�
 | conversion_unit_cost | decimal (tính) | Chi phí chế biến = (total_amount − material_amount) ÷ quantity (đ/kg) - BR-80 | 19.680 |
 | labor_unit … overhead_unit | decimal (tính) | Từng khoản ÷ quantity (đ/kg) | |
 
+### 4.22 Nhóm giá nguyên liệu (Material price group) - đợt 2, bổ sung 2026-11-10
+| Field | Type | Required | Description | Example |
+|---|---|---|---|---|
+| id | text (tự sinh) | Yes | Định danh | |
+| name | text ≤ 100, không trùng (so không phân biệt hoa thường, gộp khoảng trắng) | Yes | Tên nhóm | Poly nguyên sinh – Indorama |
+| kind | list of values: Cotton theo xuất xứ / Xơ theo nhà cung cấp | Yes | Loại nhóm | Xơ theo nhà cung cấp |
+| origin | list of values: USA / Brazil / Australia | Khi kind = Cotton | Xuất xứ của nhóm cotton | USA |
+| note | text ≤ 500 | No | Ghi chú | Hàng chỉ định của khách |
+| created_by, created_at, updated_by, updated_at | text, datetime | Yes / No | Người và lúc thêm / sửa | |
+Nhóm cố định **"Cotton (phương án)"** không lưu trong bảng này, luôn có trong danh sách chọn (BR-92). Xoá = cờ xoá; mã kho, cặp
+hàng sắp về đang gán nhóm đã xoá trở về "Chưa khai báo".
+
+### 4.23 Khai báo mã kho nguyên liệu (Stock item setting) - đợt 2
+Một dòng cho mỗi mã kế toán nguyên liệu (phần "Nguyên liệu" của file kho, BR-86) đã từng xuất hiện.
+
+| Field | Type | Required | Description | Example |
+|---|---|---|---|---|
+| accounting_code | text, không trùng (viết hoa, bỏ khoảng trắng hai đầu) | Yes | Mã kế toán (cột ITT_CODE) | MN1001203812233001IDR |
+| item_name | text | Yes | Tên hàng lần gần nhất (cột VAT_TU) | PSF Indonesia 1.2D x 38mm Semidull Indorama Brand |
+| ica_name | text | Yes | Nhóm của kế toán (cột ICA_NAME) | Xơ |
+| decision | list of values: Chưa khai báo / Tính theo nhóm / Không tính | Yes (mặc định Chưa khai báo) | Cách dùng mã | Tính theo nhóm |
+| price_group_id | tham chiếu 4.22 | Khi decision = Tính theo nhóm | Nhóm giá | Poly nguyên sinh – Indorama |
+| market | list of values: Nội địa / Xuất khẩu / Chung | Yes (mặc định theo BR-86) | Loại hàng | Nội địa |
+| updated_by, updated_at | text, datetime | No | Người và lúc khai báo | |
+
+### 4.24 Tháng kho (Stock month) - đợt 2
+| Field | Type | Description | Example |
+|---|---|---|---|
+| id | text (tự sinh) | Định danh | |
+| period | text `yyyy-mm` | Tháng của file (BR-86) | 2026-10 |
+| factory_code | S4 | Xưởng (hiện chỉ S4) | S4 |
+| file_name | text | File đã đọc | GIÁ SỢI 4 THÁNG 10.xlsx |
+| material_count, yarn_count, accessory_count | integer | Số mã Nguyên liệu / Sợi thành phẩm / Phụ liệu đã lưu | 22, 112, 18 |
+| imported_by, imported_at | text, datetime | Người, lúc tải | |
+Mỗi tháng chỉ có một bản đang dùng (BR-87).
+
+#### 4.24.1 Dòng kho (Stock line)
+| Field | Type | Description | Example |
+|---|---|---|---|
+| month_id, period | tham chiếu 4.24, text | Tháng | 2026-10 |
+| section | list of values: Nguyên liệu / Sợi thành phẩm / Phụ liệu | Theo ICA_NAME (BR-86) | Nguyên liệu |
+| ica_name | text | Cột ICA_NAME | Bông |
+| accounting_code | text | Cột ITT_CODE | MN1100153210200005IDR |
+| item_name, unit | text | Cột VAT_TU, DVT | COTTON Usa 1-5/32" 3.5~4.9 Green Card, KG |
+| opening_qty, opening_value | decimal | SL_TON (kg), GT_TON (đồng) | 553.312,08, 27.660.201.661 |
+| in_qty, in_value | decimal | SL_NHAP, GT_NHAP | 0, 0 |
+| out_qty, out_value | decimal | SL_XUAT, GT_XUAT | 197.056,56, 9.850.904.728 |
+| closing_qty, closing_value | decimal | SL_CUOI, GT_CUOI1 (hoặc GT_CUOI) | 356.255,52, 17.809.296.933 |
+
+### 4.25 Khai báo tháng (Monthly material setting) - đợt 2
+Một bản cho mỗi tháng tính (BR-88).
+
+| Field | Type | Required | Description | Example |
+|---|---|---|---|---|
+| period | text `yyyy-mm`, không trùng | Yes | Tháng tính | 2026-11 |
+| norm_factor | decimal > 0 (mặc định 1,10) | Yes | Hệ số nhân norm mặc định, hiện dạng % | 110% |
+| default_fi | decimal ≥ 0 (mặc định 0,03) | Yes | F&I mặc định khi chọn CIF (USD/kg) | 0,03 |
+| cotton_plan_note | text ≤ 200 | No | Ghi chú phương án pha bông | 01/10 – 20/12 |
+| cotton_plan | danh sách (origin: USA / Brazil / Australia, percent > 0) | No | Phương án pha bông, tổng 100% | USA 31%, Brazil 69% |
+| recoveries | danh sách (price_group: nhóm 4.22 hoặc "Cotton (phương án)", usd_per_kg ≥ 0) | No | Hồi phế nguyên liệu theo nhóm | Cotton (phương án) 0,18; Poly nguyên sinh – Indorama 0,07 |
+| copied_from | text `yyyy-mm` | No | Tháng được chép sang (BR-88) | 2026-10 |
+| updated_by, updated_at | text, datetime | No | Người và lúc lưu | |
+
+### 4.26 Lô nguyên liệu sắp về (Arrival lot) - đợt 2
+| Field | Type | Required | Description | Example |
+|---|---|---|---|---|
+| id | text (tự sinh) | Yes | Định danh | |
+| import_id | tham chiếu 4.26.1 | No | Lần nhập file (trống = nhập tay) | |
+| supplier | text ≤ 200 | Yes | Nhà cung cấp (SUPPLIER) | PT Indorama Polychem Indonesia |
+| commodity | text ≤ 200 | No | Loại hàng (COMMODITY) | Polyester |
+| description | text ≤ 300 | Yes | Mô tả hàng (cột TYPE dưới Good Description) | 100% Polyester Staple Fiber |
+| spec | text ≤ 100 | No | Spec | 1.2D*38MM |
+| contract_no, contract_date | text, date | No | Contract No., DATE | 20484212, 16/10/2026 |
+| quantity | decimal > 0 | Yes | Quantity in kg | 50.000 |
+| unit_price | decimal > 0 | Yes | Unit price như file | 1,255 |
+| price_currency | USD / VND | Yes | VND khi unit_price > 100 (BR-90) | USD |
+| receiving_price | decimal > 0 | No | Giá nhập kho (USD/kg, đã gồm logistic); trống = dùng unit_price | 1,28 |
+| term | text ≤ 20 | No | Term (CIF, FOB...) | CIF |
+| origin_country | text ≤ 100 | No | COUNTRY OF ORIGIN | INDONESIA |
+| shipment_date, eta_port | date | No | SHIPMENT DATE, ETA AT PORT | |
+| eta_warehouse | date | Yes | ETA AT WAREHOUSE - quyết định tháng về (BR-92) | 06/11/2026 |
+| warehouse | text ≤ 100 | Yes | WAREHOUSE như file | MILL 4 |
+| factory_code | S1 / S4 | Yes | Từ WAREHOUSE (BR-90) | S4 |
+| market | Nội địa / Xuất khẩu / Chung | Yes | Từ WAREHOUSE (BR-90), sửa được | Chung |
+| note | text ≤ 500 | No | NOTE | |
+| created_by, created_at, updated_by, updated_at | text, datetime | Yes / No | Người và lúc nhập / sửa | |
+
+#### 4.26.1 Lần nhập file hàng sắp về (Arrival import)
+| Field | Type | Description | Example |
+|---|---|---|---|
+| id, file_name, sheet_name | text | Định danh, file, sheet đã đọc | Ke hoach xo ve NM - 06.11.xlsx, Update Fiber arrival 06.11 |
+| lot_count, rejected_count | integer | Số lô đã lưu, số dòng bị loại | 240, 14 |
+| imported_by, imported_at | text, datetime | Người, lúc nhập | |
+
+### 4.27 Ghép hàng sắp về với nhóm giá (Arrival mapping) - đợt 2
+| Field | Type | Required | Description | Example |
+|---|---|---|---|---|
+| supplier_key, description_key | text (viết hoa, bỏ dấu, gộp khoảng trắng), cặp không trùng | Yes | Nhà cung cấp + Mô tả hàng | PT INDORAMA POLYCHEM INDONESIA + 100% POLYESTER STAPLE FIBER |
+| decision | Chưa khai báo / Tính theo nhóm / Không tính | Yes | Cách dùng | Tính theo nhóm |
+| price_group_id | tham chiếu 4.22 | Khi Tính theo nhóm | Nhóm giá | Poly nguyên sinh – Indorama |
+| updated_by, updated_at | text, datetime | No | | |
+
+### 4.28 Lần tính giá báo khách (Quote) - đợt 2
+| Field | Type | Required | Description | Example |
+|---|---|---|---|---|
+| id | text (tự sinh) | Yes | Định danh | |
+| quote_no | text | Yes | Số báo giá tự sinh `BG-<yyyy>-<4 số>` (BR-97) | BG-2026-0001 |
+| period | text `yyyy-mm` | Yes | Tháng tính | 2026-11 |
+| line_code | text (4.13) | Yes | Dòng giá dùng lấy norm (dòng Thường hoặc Thí nghiệm của cùng bản NSM) | S4-1897 |
+| price_kind | Thường / Thí nghiệm | Yes | | Thường |
+| yarn_name | text | Yes | Tên chuẩn lúc tính | CVC 26/1 (60/40) SIRO AB |
+| accounting_code | text ≤ 50 | No | Mã kế toán Sales chọn / dán (BR-98) | S42602600010400000FCE |
+| customer_name | text ≤ 100 | No | Khách hàng | Salponpat |
+| market | Nội địa / Xuất khẩu | Yes | | Xuất khẩu |
+| order_qty | decimal > 0 | Yes | SL đơn hàng (kg) | 4.000 |
+| norm_factor | decimal > 0 | Yes | Hệ số nhân norm | 110% |
+| gp_percent, commission_percent | decimal ≥ 0 | Yes | GP %, Commission % trên giá bán | 10%, 2% |
+| incoterm | FOB / CIF | Yes | | CIF |
+| fi_usd | decimal ≥ 0 | Khi CIF | F&I (USD/kg) | 0,03 |
+| exchange_rate | decimal | Yes | Tỷ giá tháng (BR-89) | 25.800 |
+| material_usd, norm_usd, new_cost_usd | decimal | Yes | Giá NL/kg sợi, norm × hệ số, giá vốn sợi sản xuất mới (USD/kg) | 1,7564; 0,8527; 2,6091 |
+| stock_qty, stock_cost_usd | decimal | No | SL và giá vốn sợi tồn (BR-95) | 1.000; 2,5 |
+| avg_cost_usd, fob_usd, cif_usd | decimal | Yes / Yes / Khi CIF | Giá vốn bình quân, giá FOB, giá CIF | 2,5873; 2,9401; 2,9701 |
+| note | text ≤ 500 | No | Ghi chú | |
+| created_by, created_at | text, datetime | Yes | Người và lúc lưu | |
+
+#### 4.28.1 Thành phần của lần tính (Quote component)
+| Field | Type | Description | Example |
+|---|---|---|---|
+| material_label, ratio | text, decimal | Nguyên liệu và tỷ lệ của thành phần (4.12.1) | CM - Ring, 60% |
+| loss | decimal | Tiêu hao sản xuất của thành phần (BR-94) | 15% |
+| price_group | text | Nhóm giá đã chọn | Cotton (phương án) |
+| average_usd, recovery_usd, net_usd | decimal | Giá BQ, hồi phế, giá tính = BQ − hồi phế (USD/kg) | 1,9832; 0,18; 1,8032 |
+| cost_usd | decimal | Tỷ lệ × giá tính ÷ (1 − tiêu hao) (USD/kg sợi) | 1,2729 |
+
 ## 5. Input / output files (File nhập / xuất)
 
 ### 5.1 Quy định chung cho file tải lên (UC-33, UC-34)
@@ -617,6 +766,58 @@ xưởng đó (để người dùng sửa rồi tải lên lại). Sheet "4. Ban
 - **Thiếu cột:** "Sheet '<sheet>' thiếu cột bắt buộc: <danh sách>." (sheet đó bỏ qua, sheet khác vẫn đọc).
 - **Kết quả kiểm tra:** mỗi tháng đọc được: số mã S1, số mã S4, tổng số lượng, dòng bị loại kèm lý do (BR-80), và "Tháng này đã có
   bản lưu ngày <dd/mm/yyyy> của <người>, lưu sẽ thay bản đó." nếu tháng đã có (BR-81).
+
+### 5.10 File kho tháng (UC-56 in, đợt 2, bổ sung 2026-11-10)
+- **File:** báo cáo nhập - xuất - tồn kho S4 xuất từ hệ thống kế toán, giữ nguyên (không có file mẫu riêng), ví dụ
+  `GIÁ SỢI 4 THÁNG 10.xlsx`; theo BR-41. Đọc sheet đầu tiên.
+- **Dòng tiêu đề:** dòng 1. Cột (so khớp không phân biệt hoa thường, khoảng trắng thừa):
+
+| Cột | Bắt buộc | Dữ liệu (4.24.1) |
+|---|---|---|
+| ICA_NAME | Có | ica_name → section (BR-86) |
+| ITT_CODE | Có | accounting_code; ô trống → bỏ dòng (dòng tổng cuối file) |
+| VAT_TU, DVT | Có | item_name, unit |
+| SL_TON, GT_TON, SL_NHAP, GT_NHAP, SL_XUAT, GT_XUAT, SL_CUOI | Có | số (ô trống = 0) |
+| GT_CUOI1 hoặc GT_CUOI | Có | closing_value |
+| CF_APE_DATE | Không | "Từ ngày dd-mm-yyyy đến ngày ..." → tháng của file (BR-86) |
+| Các cột khác (NGAY_NHAP_CUOI, DG_CUOI, Column1, CS_..., SUM...) | Không | bỏ qua |
+
+- **Kết quả kiểm tra:** tháng đọc được, số mã Nguyên liệu / Sợi thành phẩm / Phụ liệu, dòng bị loại kèm lý do, số mã nguyên liệu
+  mới chưa khai báo, và "Tháng này đã có bản lưu ngày <dd/mm/yyyy> của <người>, lưu sẽ thay bản đó." nếu tháng đã có (BR-87).
+
+### 5.11 File hàng sắp về (UC-60 in, đợt 2)
+- **File:** file theo dõi của Sales, ví dụ `Ke hoach xo ve NM - 06.11.xlsx`; theo BR-41. Một mẫu duy nhất là sheet **"Update Fiber
+  arrival"**: đọc sheet có tên (bỏ dấu, không phân biệt hoa thường) bắt đầu bằng "UPDATE FIBER ARRIVAL"; không có → "File không có
+  sheet 'Update Fiber arrival ...'." Cotton sắp về cũng ghi vào sheet này. Các sheet khác bỏ qua.
+- **Dòng tiêu đề:** trong 10 dòng đầu, dòng có ô "SUPPLIER"; tiêu đề có thể nằm ở 2 dòng (dòng có SUPPLIER và dòng ngay dưới) - tên
+  cột = ô dòng dưới nếu có, ngược lại ô dòng trên.
+
+| Cột | Bắt buộc | Dữ liệu (4.26) |
+|---|---|---|
+| SUPPLIER | Có | supplier; ô trống → bỏ dòng |
+| COMMODITY (hoặc Good Description) | Không | commodity |
+| TYPE | Có | description |
+| Spec | Không | spec |
+| NO. (Contract No.), DATE | Không | contract_no, contract_date |
+| Quantity in kg | Có | quantity |
+| Unit price | Có | unit_price, price_currency (BR-90) |
+| Term | Không | term |
+| Value (USD) | Không | chỉ để xem |
+| COUNTRY OF ORIGIN, SHIPMENT DATE, ETA AT PORT | Không | origin_country, shipment_date, eta_port |
+| ETA AT WAREHOUSE | Có | eta_warehouse |
+| WAREHOUSE | Có | warehouse, factory_code, market (BR-90) |
+| NOTE | Không | note |
+| Giá nhập kho (cột mới Sales thêm) | Không | receiving_price (USD/kg); trống → dùng Unit price |
+
+- **Kết quả kiểm tra:** số lô hợp lệ (S1 / S4), dòng bị loại kèm lý do (BR-43), số cặp Nhà cung cấp + Mô tả chưa khai báo nhóm,
+  và "Lưu sẽ thay toàn bộ <n> lô hiện có (kể cả lô nhập tay)." (BR-91).
+
+### 5.12 Xuất danh sách giá báo khách (UC-63 out, đợt 2)
+Một sheet `Gia bao khach`, mỗi lần tính một dòng theo bộ lọc đang chọn: Số báo giá, Tháng, Ngày tính, Người tính, Khách hàng, Mã
+dòng, Tên chuẩn, Mã kế toán, Thường / Thí nghiệm, Nội địa / Xuất khẩu, SL đơn (kg), Tỷ giá, Giá NL (USD/kg), Norm (USD/kg), Hệ số,
+Giá vốn mới, SL sợi tồn, Giá vốn sợi tồn, Giá vốn BQ, GP %, Commission %, FOB / CIF, F&I, Giá FOB (USD/kg), Giá CIF (USD/kg), Giá
+FOB (VND/kg), Giá CIF (VND/kg), Thành phần (dạng chữ: "<nguyên liệu> <tỷ lệ>% · <nhóm giá> <giá tính>; ..."), Ghi chú. Số làm tròn
+theo BR-23 (USD 4 chữ số).
 
 ## 6. Use cases (Nghiệp vụ)
 Mọi UC làm thay đổi dữ liệu đều chạy bằng tài khoản đã đăng nhập (BR-46: thay bằng đăng nhập của ứng dụng) có vai trò phù hợp
@@ -1145,6 +1346,123 @@ thường - BR-70); lịch sử ghi event "Sửa NSM". Mã đã khoá: nút lưu
   giá thành kế toán. Sales hoặc Phòng SO tải file Z ở khối bên dưới."
 - **Rules applied:** BR-22, BR-23, BR-82, BR-83
 
+### UC-55: Khai báo nhóm giá nguyên liệu (đợt 2, bổ sung 2026-11-10)
+- **Actor:** Sales, Phòng SO
+- **Trigger:** Screen 11, thẻ "Khai báo": bảng nhóm giá (Tên, Loại, Xuất xứ, Ghi chú, Số mã kho đang gán); form thêm (Tên, Loại,
+  Xuất xứ - chỉ hiện khi Loại = Cotton, Ghi chú) + "Thêm nhóm"; chọn một nhóm → sửa + "Lưu nhóm", "Xoá nhóm" (hỏi xác nhận).
+- **Main flow:** kiểm tra BR-85; lưu / đặt cờ xoá; ghi nhật ký.
+- **Output:** "Đã thêm nhóm giá '<tên>'." / "Đã cập nhật nhóm giá '<tên>'." / "Đã xoá nhóm giá '<tên>'; <n> mã kho trở về Chưa khai báo."
+- **Errors:** BR-85; BR-84.
+- **Rules applied:** BR-49, BR-84, BR-85
+
+### UC-56: Tải file kho tháng (đợt 2)
+- **Actor:** Sales, Phòng SO
+- **Trigger:** Screen 11, thẻ "File kho": chọn file, bấm "Kiểm tra file" (không lưu); xem kết quả (5.10); ô Tháng (điền sẵn tháng đọc
+  được, sửa được); bấm "Lưu tháng <mm/yyyy>", xác nhận.
+- **Main flow:** 1. Kiểm tra file (BR-41, 5.10). 2. Đọc từng dòng theo BR-86; dòng lỗi liệt kê (BR-43). 3. Khi lưu: BR-87; ghi nhật ký.
+- **Output:** "Đã lưu file kho tháng <mm/yyyy>: <a> mã nguyên liệu, <b> mã sợi thành phẩm, <c> mã phụ liệu; <n> mã nguyên liệu mới
+  cần khai báo."
+- **Errors:** BR-41; thiếu cột → "File thiếu cột bắt buộc: <danh sách>."; không đọc được tháng và ô Tháng trống → "Vui lòng chọn tháng
+  của file."; không có dòng hợp lệ → nút Lưu tắt, "Không có dòng hợp lệ để lưu."; BR-84.
+- **Rules applied:** BR-41, BR-43, BR-49, BR-84, BR-86, BR-87
+
+### UC-57: Khai báo mã kho nguyên liệu (đợt 2)
+- **Actor:** Sales, Phòng SO
+- **Trigger:** Screen 11, thẻ "Khai báo": khối "Mã kho nguyên liệu" - ô số liệu "Chưa khai báo: n" và công tắc "Chỉ hiện mã chưa khai
+  báo" (bật sẵn khi n > 0); bảng sửa trong ô: Mã kế toán, Tên hàng, Nhóm kế toán (chỉ xem), Tồn cuối tháng gần nhất (kg, chỉ xem),
+  Cách dùng (Chưa khai báo / Tính theo nhóm / Không tính), Nhóm giá (danh sách chọn 4.22), Loại hàng (Nội địa / Xuất khẩu / Chung);
+  nút "Lưu khai báo mã kho".
+- **Main flow:** kiểm tra từng dòng đã đổi: Tính theo nhóm phải có nhóm giá; lưu; ghi nhật ký (trước → sau). Bảng giá BQ (UC-59) dùng
+  khai báo mới ngay.
+- **Output:** "Đã lưu khai báo <n> mã kho."
+- **Errors:** "Mã <mã>: vui lòng chọn nhóm giá." ; BR-84.
+- **Rules applied:** BR-49, BR-84, BR-86
+
+### UC-58: Khai báo tháng - hồi phế nguyên liệu, phương án bông, hệ số, F&I (đợt 2)
+- **Actor:** Sales, Phòng SO
+- **Trigger:** Screen 11, thẻ "Khai báo tháng": chọn Tháng (mặc định tháng hiện tại). Tháng chưa có bản → app tạo bản nháp theo
+  BR-88 và hiện "Chép từ tháng <mm/yyyy>, chưa lưu."; ô Hệ số norm mặc định (%), F&I mặc định (USD/kg), Ghi chú phương án; bảng sửa
+  trong ô "Phương án pha bông" (Xuất xứ, Tỷ lệ %); bảng sửa trong ô "Hồi phế nguyên liệu" (Nhóm giá - mọi nhóm 4.22 + "Cotton
+  (phương án)", USD/kg); nút "Lưu khai báo tháng".
+- **Main flow:** kiểm tra BR-88; lưu bản của tháng (tháng khác không đổi); ghi nhật ký (trước → sau).
+- **Output:** "Đã lưu khai báo tháng <mm/yyyy>."
+- **Errors:** BR-88; BR-84.
+- **Rules applied:** BR-49, BR-84, BR-88
+
+### UC-59: Xem bảng giá nguyên liệu bình quân tháng (đợt 2)
+- **Actor:** Sales, Phòng SO
+- **Trigger:** Screen 11, thẻ "Giá bình quân": chọn Tháng tính M (mặc định tháng hiện tại). Không lưu gì.
+- **Main flow:** tính theo BR-92 với file kho tháng M−1, hàng về kho S4 trong M, khai báo tháng M (bản đã lưu, chưa có thì bản nháp
+  BR-88) và tỷ giá tháng M (BR-89).
+- **Output:** dòng thông tin "File kho tháng <M−1> · Tỷ giá <số> · Phương án bông: <USA a% + Brazil b%>"; bảng: Nhóm giá, Loại hàng
+  (Nội địa / Xuất khẩu), SL tồn (kg), Giá tồn (USD/kg), SL về trong tháng (kg), Giá về (USD/kg), SL bình quân, Giá BQ, Hồi phế, Giá
+  tính (USD/kg), Giá tính (VND/kg), Ghi chú ("không có tồn và hàng về" ...); dòng "Cotton (phương án)" đầu bảng; bảng con "Chi tiết"
+  khi chọn một dòng: các mã kho và lô hàng về cộng vào dòng đó. Cảnh báo phía trên khi có mã kho / cặp hàng về chưa khai báo:
+  "Có <n> mã kho và <m> lô hàng về chưa khai báo nhóm, chưa được tính vào giá bình quân."
+- **Errors:** BR-89 (thiếu tỷ giá); "Chưa có file kho tháng <mm/yyyy> (tháng trước tháng tính). Vui lòng tải ở thẻ File kho."
+- **Rules applied:** BR-23, BR-84, BR-88, BR-89, BR-92
+
+### UC-60: Nhập file hàng sắp về (đợt 2)
+- **Actor:** Sales, Phòng SO
+- **Trigger:** Screen 12, khối "Nhập file": chọn file, "Kiểm tra file" (không lưu); xem kết quả (5.11); "Lưu <n> lô", xác nhận.
+- **Main flow:** 1. Kiểm tra file (BR-41, 5.11). 2. Đọc dòng theo BR-90; dòng lỗi liệt kê (BR-43). 3. Khi lưu: BR-91; ghi nhật ký.
+- **Output:** "Đã lưu <n> lô hàng sắp về (thay <m> lô cũ); <k> cặp nhà cung cấp + mô tả mới cần khai báo nhóm."
+- **Errors:** BR-41; không có sheet / thiếu cột → 5.11; không có dòng hợp lệ → nút Lưu tắt, "Không có dòng hợp lệ để lưu."; BR-84.
+- **Rules applied:** BR-41, BR-43, BR-49, BR-84, BR-90, BR-91
+
+### UC-61: Sửa lô hàng sắp về và khai báo nhóm cho nhà cung cấp + mô tả (đợt 2)
+- **Actor:** Sales, Phòng SO
+- **Trigger:** Screen 12: bộ lọc (Xưởng - mặc định S4, Tháng về, Nhóm giá, Loại hàng, công tắc "Chỉ hiện lô chưa có nhóm"); bảng lô
+  sửa trong ô (thêm / xoá dòng): Nhà cung cấp, Loại hàng (commodity), Mô tả, Spec, Contract No., SL (kg), Đơn giá, Tiền tệ (chỉ xem),
+  Giá nhập kho, Ngày về kho, Kho, Xưởng, Nội địa / Xuất khẩu / Chung, Nhóm giá (chỉ xem, theo 4.27), Ghi chú; nút "Lưu thay đổi lô";
+  khối "Khai báo nhóm cho nhà cung cấp + mô tả": bảng sửa trong ô (Nhà cung cấp, Mô tả, Số lô, Cách dùng, Nhóm giá) + "Lưu khai báo
+  nhóm".
+- **Main flow:** kiểm tra từng lô theo BR-90 (bắt buộc, số > 0, ngày); lưu (dòng xoá = cờ xoá); khai báo nhóm áp cho mọi lô cùng cặp
+  (BR-91); ghi nhật ký.
+- **Output:** "Đã lưu <a> lô thêm, <b> lô sửa, <c> lô xoá." / "Đã lưu khai báo nhóm cho <n> cặp nhà cung cấp + mô tả."
+- **Errors:** câu BR-90 kèm số dòng; "Cặp <nhà cung cấp> + <mô tả>: vui lòng chọn nhóm giá."; BR-84.
+- **Rules applied:** BR-49, BR-84, BR-90, BR-91
+
+### UC-62: Tính giá báo khách và lưu (đợt 2)
+- **Actor:** Sales, Phòng SO
+- **Trigger:** Screen 13, khối "Tính giá": Tháng tính (mặc định tháng hiện tại); Sợi - danh sách chọn có tìm kiếm các dòng giá
+  Thường đã có giá của S4 (tìm theo mã, tên chuẩn, tên theo khách, mã kế toán); Thường / Thí nghiệm; Mã kế toán (danh sách gợi ý
+  BR-98, gõ / dán được mã khác); Khách hàng; Nội địa / Xuất khẩu; SL đơn hàng (kg); bảng thành phần (Nguyên liệu, Tỷ lệ, Tiêu hao -
+  chỉ xem; Nhóm giá - danh sách chọn, điền sẵn theo BR-93; Giá tính - chỉ xem); Hệ số norm (%, điền sẵn khai báo tháng); GP %;
+  Commission %; FOB / CIF; F&I (USD/kg, chỉ hiện khi CIF, điền sẵn khai báo tháng); Ghi chú; nút "Tính thử" và "Lưu lần tính".
+- **Main flow:** 1. Kiểm tra BR-96. 2. Tính theo BR-94, BR-95 (giá NL theo BR-92). 3. "Tính thử": hiện kết quả, không lưu. 4. "Lưu lần
+  tính": tính lại, lưu 4.28 + 4.28.1 theo BR-97; ghi nhật ký.
+- **Output:** khối kết quả: bảng thành phần (Nguyên liệu, Tỷ lệ, Tiêu hao, Nhóm giá, Giá BQ, Hồi phế, Giá tính, Chi phí NL/kg sợi);
+  bảng giá (USD/kg và VND/kg): Giá NL, Norm (dòng <mã>), Norm × hệ số, Giá vốn sợi sản xuất mới, Sợi tồn (SL kg · giá) hoặc "không
+  có sợi tồn cùng mã kế toán", Giá vốn bình quân, GP, Commission, **Giá FOB**, F&I, **Giá CIF**. Lưu xong: "Đã lưu báo giá <số> cho
+  sợi <tên>: FOB <x> USD/kg[, CIF <y> USD/kg]."
+- **Errors:** BR-96; BR-89; BR-92 (nhóm không có giá); BR-84.
+- **Rules applied:** BR-23, BR-49, BR-84, BR-89, BR-92, BR-93, BR-94, BR-95, BR-96, BR-97, BR-98
+
+### UC-63: Xem, xuất, xoá các lần tính giá báo khách (đợt 2)
+- **Actor:** Sales, Phòng SO
+- **Trigger:** Screen 13, khối "Các lần đã tính": bộ lọc (Từ ngày - Đến ngày, Tháng tính, Khách hàng, tìm theo số báo giá / tên /
+  mã kế toán); bảng chọn dòng (Số báo giá, Ngày, Người tính, Khách hàng, Tên chuẩn, Mã kế toán, Thường / TN, Nội địa / XK, SL đơn, Giá
+  vốn BQ, GP %, Commission %, FOB / CIF, Giá FOB, Giá CIF - USD/kg); "Xuất Excel" (5.12); chọn dòng → khối chi tiết như kết quả UC-62
+  (số đã lưu) + nút "Dùng lại để tính mới" (điền các ô của khối Tính giá bằng số của lần đó) + "Xoá lần tính" (hỏi xác nhận).
+- **Main flow:** xoá = cờ xoá (người tính hoặc Phòng SO); ghi nhật ký.
+- **Output:** "Đã xoá báo giá <số>."
+- **Errors:** "Chỉ người tính hoặc Phòng SO được xoá báo giá này."; BR-84.
+- **Rules applied:** BR-23, BR-49, BR-84, BR-97
+
+### UC-64: So đơn giá xuất kho với giá bình quân (đợt 2)
+- **Actor:** Sales, Phòng SO
+- **Trigger:** Screen 11, thẻ "So giá xuất": chọn Tháng (các tháng kho đã lưu, mặc định mới nhất), mức Lệch nhiều (%, mặc định 10),
+  công tắc "Chỉ hiện mã lệch nhiều". Không lưu gì.
+- **Main flow:** tính theo BR-99.
+- **Output:** 4 ô số liệu (Mã nguyên liệu so được, Mã sợi so được, Lệch nhiều, Chưa có giá so); bảng "Nguyên liệu": Mã kế toán,
+  Tên hàng, Nhóm giá, Loại hàng, SL xuất (kg), Đơn giá xuất (USD/kg), Giá BQ tháng (USD/kg), Chênh lệch, Chênh lệch %, Ghi chú; bảng
+  "Sợi thành phẩm": Mã kế toán, Tên hàng, SL xuất, Đơn giá xuất (USD/kg và VND/kg), Báo giá so sánh (số, ngày), Giá vốn BQ của báo giá,
+  Chênh lệch, Chênh lệch %, Ghi chú; sắp theo |Chênh lệch %| giảm dần; cột Cảnh báo "🔴 Lệch nhiều".
+- **Errors:** BR-89; mức không phải số > 0 → "Mức cảnh báo phải là số lớn hơn 0."; chưa có tháng kho nào → "Chưa có file kho. Vui lòng
+  tải ở thẻ File kho."
+- **Rules applied:** BR-23, BR-84, BR-89, BR-92, BR-99
+
 ## 7. Business rules (Quy tắc nghiệp vụ)
 | ID | Rule | Error message shown to user (VI) |
 |---|---|---|
@@ -1194,7 +1512,7 @@ thường - BR-70); lịch sử ghi event "Sửa NSM". Mã đã khoá: nút lưu
 | BR-44 | Đọc sheet "1. Input NSM": mã chuẩn hoá = bỏ khoảng trắng quanh "-" ("S4 - 586" → "S4-586"), hậu tố "(ĐCNSM…)" chuẩn hoá thành " (ĐCNSMn)" (không số → n = 1) và tạo bản ĐCNSM trỏ về mã gốc; mã trống → cấp mã mới theo BR-05; mã đã có trong app → cập nhật tên, thành phần nguyên liệu (BR-58), NSM, đóng gói nếu bản chưa khoá (đã khoá → loại dòng với thông báo BR-32); mã chưa có → tạo mới với mã đó. Mã trùng trong file → mọi dòng trùng bị loại. Tên không hợp lệ (BR-01) → loại dòng. Thiếu đóng gói / thiếu tiêu hao → vẫn tạo, trạng thái "Chưa tính được" (BR-16). Sheet "4. Bang gia da tinh": mã kế toán không trống → gán cho dòng Thường của mã đó (bản bị khoá); mã tính giá không dạng "<xưởng>-N" và không có ở sheet NSM → loại dòng "Không có dữ liệu NSM cho mã '<mã>'."; mã tính giá dạng mã kế toán (không theo "<xưởng>-N") có ở sheet NSM → giữ làm mã tính giá, đồng thời điền vào mã kế toán nếu cột mã kế toán trống; "Ngày tính giá" → `first_priced_at` (không đọc được → để trống). Tên trùng trong dữ liệu cũ không bị chặn | - |
 | BR-45 | Quyền theo sheet khi tải file: Phòng SO được mọi sheet và cả hai loại tải; Xưởng chỉ được "Cập nhật hàng loạt" với sheet "1. Input NSM" và "2. Input tieu hao" của xưởng mình; "Chuyển dữ liệu ban đầu" chỉ Phòng SO | Sheet '<sheet>' chỉ Phòng SO được cập nhật, đã bỏ qua. |
 | BR-46 | Thay bằng đăng nhập của ứng dụng (2026-10-13): mỗi người dùng app bằng tài khoản riêng; chức năng không còn khối chọn nhóm / nhập mã / chọn tên. Mã quy tắc giữ trống | - |
-| BR-47 | Quyền theo vai trò: tài khoản làm được một thao tác khi có ít nhất một vai trò cho phép thao tác đó. Sales → UC-15, UC-16, UC-17. Xưởng (XS1, XS4) → UC-11, UC-12, UC-13, UC-14, UC-18, UC-20, UC-21, UC-23, UC-24, UC-25, UC-26, UC-28, UC-34 (theo BR-45), UC-45 (theo BR-69). Kế toán → UC-28. Xưởng còn được UC-47, UC-48 (sửa 2026-11-05: bổ sung). Sales còn được UC-50, UC-51, UC-53 (sửa 2026-11-10: bổ sung). Phòng SO → mọi UC thay đổi dữ liệu. Quản trị viên làm như Phòng SO. Tài khoản không có vai trò nào của chức năng chỉ xem được | Tài khoản của bạn chưa có vai trò cho thao tác '<thao tác>'. Hãy nhờ quản trị viên cấp vai trò ở trang /admin. |
+| BR-47 | Quyền theo vai trò: tài khoản làm được một thao tác khi có ít nhất một vai trò cho phép thao tác đó. Sales → UC-15, UC-16, UC-17. Xưởng (XS1, XS4) → UC-11, UC-12, UC-13, UC-14, UC-18, UC-20, UC-21, UC-23, UC-24, UC-25, UC-26, UC-28, UC-34 (theo BR-45), UC-45 (theo BR-69). Kế toán → UC-28. Xưởng còn được UC-47, UC-48 (sửa 2026-11-05: bổ sung). Sales còn được UC-50, UC-51, UC-53 (sửa 2026-11-10: bổ sung). Sales còn được UC-55..UC-63; UC-55..UC-64 kể cả xem chỉ dành cho Sales và Phòng SO (BR-84) (sửa 2026-11-10, đợt 2: bổ sung). Phòng SO → mọi UC thay đổi dữ liệu. Quản trị viên làm như Phòng SO. Tài khoản không có vai trò nào của chức năng chỉ xem được | Tài khoản của bạn chưa có vai trò cho thao tác '<thao tác>'. Hãy nhờ quản trị viên cấp vai trò ở trang /admin. |
 | BR-48 | Vai trò Xưởng S1 / Xưởng S4 chỉ thao tác trên dữ liệu có `factory_code` bằng xưởng của vai trò: thao tác chỉ được phép khi có ít nhất một vai trò cho phép thao tác đó mà đúng xưởng (Sales, Kế toán, Phòng SO không giới hạn xưởng) | Bạn chỉ được thao tác dữ liệu của xưởng <xưởng>. |
 | BR-49 | Mọi thao tác làm thay đổi dữ liệu ghi một dòng nhật ký (4.19): lúc, tài khoản đăng nhập (tên đăng nhập + họ tên), thao tác, đối tượng, nội dung trước → sau, lý do. Các cột "người làm" khác (người tạo, người xử lý...) ghi họ tên của tài khoản. Khi không có tài khoản (chạy bằng mã hệ thống) ghi "system" / "Hệ thống" | - |
 | BR-50 | Cấu hình công đoạn: stage_code và sequence duy nhất trong xưởng; đúng một công đoạn `is_packaging` = Có; `cumulative_stages` chỉ gồm mã công đoạn có của xưởng và có `sequence` lớn hơn; `blend_slot` "Tỷ lệ dây chuyền X" với X là dây chuyền chải thô của xưởng; dây chuyền chải thô có `max_passes` từ 1 đến 3. Không xoá công đoạn đang có NSM hoặc tiêu hao khác 0 (chỉ đổi tên / cấu hình) | Cấu hình công đoạn không hợp lệ: <chi tiết>. |
@@ -1231,6 +1549,22 @@ thường - BR-70); lịch sử ghi event "Sửa NSM". Mã đã khoá: nút lưu
 | BR-81 | Lưu tháng Z (bổ sung 2026-11-10): mỗi tháng (`period`) chỉ có một bản đang dùng. Lưu một tháng đã có → bản cũ (4.21) và mọi dòng của nó (4.21.1) được đặt cờ xoá, rồi lưu bản mới; nhật ký ghi tháng, số mã cũ → mới. Không bao giờ xoá thật | - |
 | BR-82 | Ghép dòng kế toán với giá app (bổ sung 2026-11-10): tìm các dòng giá (4.13) có `accounting_code` bằng mã kế toán (bỏ khoảng trắng hai đầu, không phân biệt hoa thường); (sửa 2026-11-10, sau khi chạy thật: trước đây chỉ ghép mã giống hệt) không có dòng nào giống hệt → tìm các dòng giá có mã kế toán cùng **18 ký tự đầu** (mã bỏ hậu tố D / E / FCD / FCE / P), cột Ghi chú giá app ghi "ghép theo 18 ký tự đầu (<mã trên app>)"; có nhiều dòng → ưu tiên dòng Thường, rồi theo mã dòng, ghi "Mã kế toán có ở <n> dòng giá"; không có → vào bảng "chưa có trên app". **Giá app của tháng** = Tổng (và 5 khoản) mới nhất của dòng trong lịch sử giá (4.15) có `effective_date` ≤ ngày cuối tháng đã chọn; dòng không có lịch sử nào trước ngày đó → dùng giá hiện tại, cột Ngày giá app ghi "giá hiện tại". Chênh lệch = Giá app − Giá kế toán chế biến; Chênh lệch % = Chênh lệch ÷ Giá kế toán chế biến × 100 (Giá kế toán ≤ 0 → "-"). **Chênh bình quân theo sản lượng** = Σ(Chênh lệch × Số lượng) ÷ Σ(Giá kế toán chế biến × Số lượng) × 100, chỉ trên các mã so được và không phải sản lượng nhỏ | - |
 | BR-83 | Cảnh báo đối chiếu (bổ sung 2026-11-10), chỉ để hiển thị, không chặn: **Sản lượng nhỏ** khi Số lượng < mức Sản lượng nhỏ (mặc định 100 kg); **Lệch nhiều** khi |Chênh lệch %| > mức Lệch nhiều (mặc định 10%); một mã có thể có cả hai. Hai mức nhập trên màn hình (số > 0), không lưu; đổi mức thì ô số liệu, bảng, biểu đồ đổi theo | Mức cảnh báo phải là số lớn hơn 0. |
+| BR-84 | Quyền phần đợt 2 (bổ sung 2026-11-10): UC-55..UC-64 - **kể cả xem** - chỉ tài khoản có vai trò Sales hoặc Phòng SO (và quản trị viên); phía xử lý kiểm tra ở mọi thao tác, kể cả đọc dữ liệu. Tài khoản khác mở Screen 11-13 chỉ thấy thông báo | Chỉ Sales hoặc Phòng SO được xem và thao tác giá nguyên liệu, giá báo khách. |
+| BR-85 | Nhóm giá nguyên liệu (bổ sung 2026-11-10): Tên bắt buộc, ≤ 100 ký tự, không trùng nhóm khác chưa xoá (so không phân biệt hoa thường, gộp khoảng trắng) và khác "Cotton (phương án)"; Loại bắt buộc; Loại = Cotton theo xuất xứ thì Xuất xứ bắt buộc (USA / Brazil / Australia), Loại = Xơ thì Xuất xứ để trống; Ghi chú ≤ 500 | Vui lòng nhập tên nhóm. / Tên nhóm tối đa 100 ký tự. / Đã có nhóm giá '<tên>'. / Nhóm cotton phải chọn xuất xứ. / Ghi chú tối đa 500 ký tự. |
+| BR-86 | Đọc file kho (bổ sung 2026-11-10), theo 5.10: **Tháng** = tháng của ngày "Từ ngày dd-mm-yyyy" ở cột CF_APE_DATE (dòng đầu có giá trị); không đọc được → Sales chọn ở ô Tháng. **Phần:** ICA_NAME (bỏ dấu, viết hoa, bỏ khoảng trắng hai đầu) = "BONG" hoặc "XO" → Nguyên liệu; = "DO CTY SX" → Sợi thành phẩm; còn lại ("MUA NGOAI", "SOI HOAN KHO"...) → Phụ liệu. Ô số trống = 0; ô số không phải số → loại ("Cột <cột> không phải số."); mã trùng trong file → loại mọi dòng trùng ("Mã '<mã>' bị trùng trong file."). **Loại hàng gợi ý** cho mã nguyên liệu mới: phần mã sau 18 ký tự đầu có chữ "D" → Nội địa; có chữ "R" mà không có "D" → Xuất khẩu; trống hoặc khác → Chung (ví dụ ...IDR, ...ID → Nội địa; ...IR → Xuất khẩu; MN1000143812806001 → Chung) | (như cột Rule) |
+| BR-87 | Lưu tháng kho (bổ sung 2026-11-10): mỗi tháng chỉ một bản đang dùng; lưu một tháng đã có → bản cũ (4.24) và dòng của nó (4.24.1) đặt cờ xoá rồi lưu bản mới. Mỗi mã Nguyên liệu chưa có trong 4.23 được thêm với Cách dùng = "Chưa khai báo", Loại hàng theo BR-86; mã đã có chỉ cập nhật tên hàng, giữ khai báo. Không bao giờ xoá thật | - |
+| BR-88 | Khai báo tháng (bổ sung 2026-11-10): mở tháng M chưa có bản lưu → bản nháp chép mọi giá trị từ bản đã lưu gần nhất trước M (`copied_from`); chưa có bản nào → hệ số 110%, F&I 0,03, phương án trống, hồi phế trống (= 0). Lưu: hệ số > 0; F&I ≥ 0; hồi phế ≥ 0 và mỗi nhóm một dòng; phương án: mỗi xuất xứ một dòng, tỷ lệ > 0, tổng đúng 100% (khi có ít nhất một dòng). Lưu tháng M không đổi tháng khác | Hệ số phải lớn hơn 0. / F&I không được âm. / Hồi phế của nhóm '<nhóm>' không được âm. / Nhóm '<nhóm>' bị khai báo hồi phế hai lần. / Xuất xứ '<xuất xứ>' bị lặp trong phương án. / Tổng tỷ lệ phương án pha bông phải bằng 100% (hiện là <x>%). |
+| BR-89 | Tỷ giá tháng (bổ sung 2026-11-10): tỷ giá của tháng M = dòng tỷ giá (4.9) có `effective_date` lớn nhất ≤ ngày cuối tháng M (cùng ngày: dòng nhập sau cùng). Mọi đổi VND ↔ USD của phần đợt 2 trong tháng M dùng tỷ giá này (giá trị kho, hàng về ghi VND, norm, kết quả VND). BR-22 (tỷ giá đang dùng cho bảng giá) không đổi | Chưa có tỷ giá cho tháng <mm/yyyy>. Phòng SO thêm tỷ giá ở màn Dữ liệu nền. |
+| BR-90 | Đọc / sửa lô hàng sắp về (bổ sung 2026-11-10), theo 5.11: SUPPLIER trống → bỏ dòng (không báo); TYPE trống → loại ("Thiếu mô tả hàng (TYPE)."); Quantity không phải số > 0 → loại ("Số lượng phải lớn hơn 0."); Unit price trống, 0 hoặc không phải số → loại ("Chưa có đơn giá."); Unit price > 100 → tiền tệ VND (đ/kg), ngược lại USD/kg; Giá nhập kho có ghi thì phải là số > 0 ("Giá nhập kho phải lớn hơn 0."); ETA AT WAREHOUSE không phải ngày → loại ("Chưa có ngày về kho."); **Xưởng:** WAREHOUSE (bỏ khoảng trắng, viết hoa) bắt đầu bằng "MILL4" → S4, "MILL1" → S1, khác → loại ("Không nhận ra kho '<kho>'."); **Loại hàng:** WAREHOUSE có "KDNĐ" / "KDND" → Nội địa, có "SXXK" → Xuất khẩu, còn lại → Chung. Nhà cung cấp ≤ 200, mô tả ≤ 300, ghi chú ≤ 500 ký tự | (như cột Rule) |
+| BR-91 | Lưu hàng sắp về (bổ sung 2026-11-10): lưu file → mọi lô đang có (kể cả lô nhập / sửa tay) đặt cờ xoá rồi lưu các lô của file (file là gốc). Nhóm giá của lô = khai báo 4.27 của cặp (Nhà cung cấp, Mô tả) sau khi viết hoa, bỏ dấu, gộp khoảng trắng; cặp chưa có → thêm với "Chưa khai báo". Lô thuộc cặp "Chưa khai báo" / "Không tính" không vào giá bình quân | - |
+| BR-92 | Giá nguyên liệu bình quân tháng M (bổ sung 2026-11-10), cho nhóm g và loại hàng t (Nội địa / Xuất khẩu): **Tồn** = dòng Nguyên liệu của tháng kho M−1 có mã khai báo "Tính theo nhóm" g và Loại hàng t hoặc Chung, SL_CUOI > 0: SL = SL_CUOI, giá trị USD = GT_CUOI ÷ tỷ giá M. **Hàng về** = lô xưởng S4 có ngày về kho trong tháng M, cặp khai báo nhóm g, Loại hàng t hoặc Chung: SL = quantity, giá USD/kg = Giá nhập kho, trống thì Unit price (VND thì ÷ tỷ giá M). **Giá BQ** = Σ giá trị ÷ Σ SL; **Giá tính** = Giá BQ − hồi phế của g tháng M. Không có SL nào → nhóm không có giá. **Cotton (phương án)** = Σ (tỷ lệ phương án của xuất xứ o × Giá BQ của tồn + hàng về mọi nhóm cotton xuất xứ o) − hồi phế của "Cotton (phương án)"; phương án trống hoặc một xuất xứ không có giá → không có giá. Thiếu tháng kho M−1 → không tính được | Nhóm '<nhóm>' (<loại hàng>) chưa có giá tháng <mm/yyyy>: không có tồn và hàng về. / Chưa khai báo phương án pha bông tháng <mm/yyyy>. / Chưa có file kho tháng <mm/yyyy> (tháng trước tháng tính). Vui lòng tải ở thẻ File kho. |
+| BR-93 | Gợi ý nhóm giá cho thành phần (bổ sung 2026-11-10): nhóm đã chọn ở lần tính báo giá gần nhất (chưa xoá) có cùng tên nguyên liệu (viết hoa, gộp khoảng trắng); chưa có thì: tên nguyên liệu bắt đầu bằng "CM", "CD" hoặc chứa "COTTON" → "Cotton (phương án)"; còn lại để trống, Sales chọn | - |
+| BR-94 | Giá nguyên liệu của 1 kg sợi (bổ sung 2026-11-10): **Tiêu hao sản xuất** của thành phần i = tiêu hao lũy kế (BR-19) của lượt chải thô của thành phần (theo chi tiết tính giá đã lưu của bản NSM); thành phần "Không chải thô" = tiêu hao lũy kế lớn nhất trong các công đoạn của sợi. **Giá NL** = Σ tỷ lệ_i × Giá tính_i (BR-92, theo loại hàng đã chọn) ÷ (1 − tiêu hao_i) (USD/kg) | - |
+| BR-95 | Giá báo khách (bổ sung 2026-11-10), tháng M, tỷ giá M (BR-89): **Norm** = Tổng VND/kg của dòng Thường (hoặc dòng Thí nghiệm cùng bản NSM khi chọn Thí nghiệm) tại lúc tính ÷ tỷ giá M; **Giá vốn mới** = Giá NL (BR-94) + Norm × hệ số. **Sợi tồn** = dòng Sợi thành phẩm của tháng kho M−1 có 18 ký tự đầu của mã bằng 18 ký tự đầu của mã kế toán đã chọn và SL_CUOI > 0: SL tồn = Σ SL_CUOI, giá tồn = Σ GT_CUOI ÷ tỷ giá M ÷ SL tồn. **Giá vốn BQ** = (SL tồn × giá tồn + SL đơn × Giá vốn mới) ÷ (SL tồn + SL đơn); không có mã kế toán hoặc không có sợi tồn → = Giá vốn mới. **FOB** = Giá vốn BQ ÷ (1 − GP% − Commission%); **CIF** = FOB + F&I. GP = FOB × GP%, Commission = FOB × Commission%. Kết quả VND = USD × tỷ giá M. Giữ đủ số lẻ khi tính (BR-21), hiển thị theo BR-23 | - |
+| BR-96 | Kiểm tra trước khi tính báo giá (bổ sung 2026-11-10): Sợi bắt buộc và dòng Thường đã có giá (trạng thái Đã tính giá / Có mã kế toán); chọn Thí nghiệm thì dòng Thí nghiệm phải có giá; Tháng, Loại hàng bắt buộc; SL đơn > 0; hệ số > 0; GP ≥ 0; Commission ≥ 0; GP + Commission < 100%; CIF thì F&I ≥ 0; mọi thành phần có nhóm giá và nhóm có giá tháng M (BR-92); mã kế toán ≤ 50 ký tự; khách hàng ≤ 100; ghi chú ≤ 500 | Vui lòng chọn sợi. / Sợi <mã> chưa có giá. / Số lượng đơn hàng phải lớn hơn 0. / Hệ số phải lớn hơn 0. / GP và Commission không được âm. / Tổng GP và Commission phải nhỏ hơn 100%. / F&I không được âm. / Thành phần '<nguyên liệu>' chưa chọn nhóm giá. / (câu BR-92) |
+| BR-97 | Lưu lần tính báo giá (bổ sung 2026-11-10): số báo giá = `BG-<năm của ngày lưu>-<số thứ tự 4 chữ số trong năm>` (lớn nhất đã có, kể cả đã xoá, + 1); lưu mọi số đầu vào, tỷ giá, giá từng thành phần và kết quả; số đã lưu không tính lại khi dữ liệu nền, khai báo hay file kho đổi. Không sửa lần đã lưu (dùng lại để tính lần mới); xoá = cờ xoá, chỉ người tính hoặc Phòng SO (quản trị viên) | Chỉ người tính hoặc Phòng SO được xoá báo giá này. |
+| BR-98 | Gợi ý mã kế toán khi tính báo giá (bổ sung 2026-11-10): (1) mã kế toán của mọi dòng giá cùng mã gốc với sợi đã chọn; (2) mã của dòng Sợi thành phẩm trong tháng kho M−1 có tên hàng (VAT_TU) đọc theo BR-76 cùng chi số, cùng xơ và tỷ lệ với tên chuẩn của sợi; mỗi gợi ý hiện "<mã> - <tên> (tồn <SL> kg)". Sales gõ / dán mã khác được (viết hoa, bỏ khoảng trắng) | - |
+| BR-99 | So giá xuất kho tháng M (bổ sung 2026-11-10): **Nguyên liệu:** dòng Nguyên liệu tháng kho M có SL_XUAT > 0 và mã khai báo "Tính theo nhóm": đơn giá xuất = GT_XUAT ÷ SL_XUAT ÷ tỷ giá M; giá so = Giá BQ (trước hồi phế) của nhóm và loại hàng của mã tháng M (BR-92, cần tháng kho M−1; mã "Chung" so với Nội địa); chưa có → Ghi chú "chưa có giá BQ tháng <mm/yyyy>". Mã "Chưa khai báo" → Ghi chú "chưa khai báo nhóm", không so; "Không tính" → không hiện. **Sợi thành phẩm:** dòng có SL_XUAT > 0: so với Giá vốn BQ của lần tính báo giá gần nhất (theo ngày lưu, chưa xoá) có 18 ký tự đầu của mã kế toán trùng; không có → "chưa tính giá báo khách". Chênh lệch = đơn giá xuất − giá so; Chênh lệch % = Chênh lệch ÷ giá so × 100; **Lệch nhiều** khi |Chênh lệch %| > mức (mặc định 10%). Phụ liệu không so | Mức cảnh báo phải là số lớn hơn 0. |
 
 ## 8. Screens (Màn hình)
 
@@ -1318,6 +1652,23 @@ thường - BR-70); lịch sử ghi event "Sửa NSM". Mã đã khoá: nút lưu
   - Screen 10: bộ lọc (Tháng, Xưởng, Sản lượng nhỏ kg, Lệch nhiều %, 2 công tắc) → 5 ô số liệu → bảng đối chiếu chỉ xem với đủ 5
     khoản app / kế toán → biểu đồ cột 20 mã lệch nhiều nhất → bảng mã chưa có trên app → khối "Tải file Z" ở cuối → bảng các tháng đã lưu.
   - Hỏi xác nhận: "Lưu N tháng" (file Z), "Xoá tên" theo khách. Không hỏi: Thêm tên, Lưu tên, Dùng sợi này.
+- **Bổ sung 2026-11-10, đợt 2 (chốt: 1a nhưng đặt trên Yêu cầu tính giá, 2a, 3a, 4a, 5a, 6 theo đề xuất):**
+  - Menu nhóm **Sales**: Tính giá báo khách → Giá nguyên liệu → Nguyên liệu sắp về → Yêu cầu tính giá (3 màn mới đứng trên). Tài
+    khoản không có vai trò Sales / Phòng SO mở các màn này chỉ thấy câu BR-84.
+  - Screen 11: 5 thẻ theo thứ tự Giá bình quân (mở đầu tiên) | File kho | Khai báo | Khai báo tháng | So giá xuất. Thẻ Giá bình quân:
+    ô Tháng tính → dòng thông tin (file kho, tỷ giá, phương án) → cảnh báo mã / lô chưa khai báo → bảng chọn dòng (Nhóm, Nội địa / XK,
+    SL tồn, Giá tồn, SL về, Giá về, Giá BQ, Hồi phế, Giá tính USD, Giá tính VND, Ghi chú) → bảng chi tiết của dòng chọn. Thẻ File kho:
+    ô tải file, "Kiểm tra file", ô số liệu + bảng dòng bị loại, ô Tháng, "Lưu tháng <mm/yyyy>" → bảng các tháng đã lưu. Thẻ Khai báo:
+    khối nhóm giá (bảng chọn dòng + form thêm / sửa) → khối mã kho (ô số liệu Chưa khai báo, công tắc, bảng sửa trong ô, nút lưu). Thẻ
+    Khai báo tháng: ô Tháng → 3 ô số → bảng sửa trong ô phương án bông → bảng sửa trong ô hồi phế → nút lưu. Thẻ So giá xuất: bộ lọc →
+    4 ô số liệu → bảng Nguyên liệu → bảng Sợi thành phẩm (chỉ xem, không biểu đồ).
+  - Screen 12: bộ lọc → 3 ô số liệu → bảng lô sửa trong ô + "Lưu thay đổi lô" → khối khai báo nhóm (bảng sửa trong ô + nút) → khối
+    nhập file → bảng các lần nhập.
+  - Screen 13: khối Tính giá (các ô như UC-62, bảng thành phần sửa được cột Nhóm giá) → "Tính thử", "Lưu lần tính" → kết quả: 3 ô số
+    to Giá vốn BQ, FOB, CIF (USD/kg, kèm VND) + bảng thành phần + bảng chi tiết USD/kg | VND/kg → khối "Các lần đã tính" ngay bên dưới
+    (bộ lọc, bảng chọn dòng, "Xuất Excel", chi tiết, "Dùng lại để tính mới", "Xoá lần tính").
+  - Hỏi xác nhận: Lưu tháng kho, Lưu lô từ file, Xoá nhóm, Xoá lần tính. Không hỏi: Lưu khai báo (nhóm, mã kho, tháng, nhóm hàng
+    về), Lưu thay đổi lô, Lưu lần tính, Tính thử.
 - **Ô số liệu:** Screen 1, 3, 6, 7, 10. **Biểu đồ:** Screen 7, Screen 10.
 - **Hộp thoại xác nhận** trước khi: Huỷ yêu cầu, Từ chối, Xoá nhóm tiêu hao, Xoá dòng CK/PP, "Lưu đóng gói" (nội dung theo BR-62), mọi nút "… và tính lại" (Screen
   5), "Lưu hệ số", "Lưu thay đổi" nhóm tiêu hao (có tính lại), "Lưu N dòng hợp lệ". Không hỏi lại khi: Gửi yêu cầu, Lưu sửa
@@ -1453,6 +1804,29 @@ không có vai trò phù hợp (BR-47, BR-48); phía xử lý vẫn kiểm tra l
   "Lưu N tháng" (hỏi xác nhận; nút chỉ bật với Sales / Phòng SO); danh sách các tháng đã lưu (Tháng, File, Sheet, Số mã, Tổng số
   lượng, Người tải, Lúc tải).
 - **After actions:** thông báo UC-53; ô Tháng chọn tháng vừa lưu.
+
+### Screen 11: Giá nguyên liệu (đợt 2, bổ sung 2026-11-10)
+- **Purpose:** Sales / Phòng SO tải file kho S4 hằng tháng, khai báo nhóm giá, mã kho, khai báo tháng; xem giá nguyên liệu bình quân
+  và so đơn giá xuất kho. Chỉ Sales, Phòng SO (BR-84).
+- **Inputs / blocks:** các thẻ: **Giá bình quân** (UC-59) | **File kho** (UC-56; bảng các tháng đã lưu: Tháng, File, Số mã NL / sợi /
+  phụ liệu, Người tải, Lúc tải) | **Khai báo** (UC-55 nhóm giá, UC-57 mã kho) | **Khai báo tháng** (UC-58) | **So giá xuất** (UC-64).
+- **Buttons:** "Kiểm tra file", "Lưu tháng <mm/yyyy>" (hỏi xác nhận), "Thêm nhóm", "Lưu nhóm", "Xoá nhóm" (hỏi xác nhận), "Lưu khai
+  báo mã kho", "Lưu khai báo tháng".
+- **After actions:** thông báo của UC; lưu file kho xong có mã mới → chuyển sang thẻ Khai báo với công tắc "Chỉ hiện mã chưa khai báo".
+
+### Screen 12: Nguyên liệu sắp về (đợt 2)
+- **Purpose:** theo dõi các lô nguyên liệu sẽ về nhà máy (nhập file theo dõi của Sales hoặc sửa tay) để tính giá bình quân. Chỉ
+  Sales, Phòng SO (BR-84).
+- **Blocks:** bộ lọc + ô số liệu (Số lô, Tổng SL kg, Lô chưa có nhóm) → bảng lô sửa trong ô (UC-61) → khối "Khai báo nhóm cho nhà cung
+  cấp + mô tả" (UC-61) → khối "Nhập file" (UC-60) → danh sách các lần nhập (File, Sheet, Số lô, Bị loại, Người nhập, Lúc nhập).
+- **Buttons:** "Lưu thay đổi lô", "Lưu khai báo nhóm", "Kiểm tra file", "Lưu <n> lô" (hỏi xác nhận).
+
+### Screen 13: Tính giá báo khách (đợt 2)
+- **Purpose:** Sales tính giá bán (giá vốn có nguyên liệu, FOB / CIF) cho một sợi, lưu lại, xem và xuất các lần đã tính. Chỉ Sales,
+  Phòng SO (BR-84).
+- **Blocks:** khối "Tính giá" (UC-62) → khối kết quả → khối "Các lần đã tính" (UC-63).
+- **Buttons:** "Tính thử", "Lưu lần tính", "Xuất Excel", "Dùng lại để tính mới", "Xoá lần tính" (hỏi xác nhận).
+- **After actions:** lưu xong bảng "Các lần đã tính" chọn sẵn lần vừa lưu.
 
 ## 9. Acceptance criteria (Tiêu chí nghiệm thu)
 - [ ] AC-01 (UC-34, BR-20): Cho trước file S4 hiện tại được chuyển dữ liệu ban đầu, khi app tính giá mã S4-2017 thì Tổng =
@@ -1713,8 +2087,68 @@ không có vai trò phù hợp (BR-47, BR-48); phía xử lý vẫn kiểm tra l
 - [ ] AC-117 (BR-82, sửa 2026-11-10): Dòng giá có mã kế toán "S41602000010000000" (không hậu tố), file Z có
   "S41602000010000000FCE" → ghép được, ghi chú "ghép theo 18 ký tự đầu (S41602000010000000)"; khi có thêm dòng giá mang đúng
   mã "S41602000010000000FCE" thì dòng đó được ưu tiên, không có ghi chú ghép.
+- [ ] AC-118 (BR-86, BR-87, UC-56): File `GIÁ SỢI 4 THÁNG 10.xlsx` → tháng 2026-10 (đọc từ "Từ ngày 01-10-2026"); nhóm "Bông", "Xơ "
+  là Nguyên liệu, "Do cty sx" là Sợi thành phẩm, "Mua ngoài", "Sợi hòan kho" là Phụ liệu; dòng tổng cuối (ITT_CODE trống) bỏ qua;
+  MN1100153210200005IDR có SL_CUOI 356.255,52 kg, GT_CUOI 17.809.296.933 đ; mọi mã nguyên liệu vào khai báo mã kho với "Chưa khai báo";
+  lưu lại tháng 2026-10 → bản cũ có cờ xoá, khai báo mã kho giữ nguyên.
+- [ ] AC-119 (BR-86): Loại hàng gợi ý: MN1001203812233001IDR → Nội địa; MN1001203812233001IR → Xuất khẩu;
+  MN1001203811643001ID → Nội địa; MN1000143812806001 → Chung.
+- [ ] AC-120 (BR-92, UC-59): Tháng tính 2026-11, tỷ giá tháng 11 = 25.800, file kho tháng 10; khai báo: Cotton USA (USA) gồm
+  MN1100153210200005IDR, Cotton Brazil (Brazil) gồm MN1100153211801002IDR; hàng về kho S4 tháng 11: cotton USA 140.000 kg giá nhập kho
+  2,15799, Brazil 300.000 kg 1,99799; phương án USA 31% + Brazil 69%; hồi phế "Cotton (phương án)" 0,18 → Giá BQ USA 1,9998, Brazil
+  1,9758, Cotton (phương án) BQ 1,9832, Giá tính 1,8032 USD/kg (khớp file "Giá nguyên liệu").
+- [ ] AC-121 (BR-92, BR-90): Nhóm "Poly nguyên sinh – Indorama" gồm MN1001203812233001IDR (Nội địa) và ...IR (Xuất khẩu); lô Indorama
+  50.000 kg, Unit price 1,255, Giá nhập kho 1,28, kho "MILL 4" (Chung), về 06/11/2026; hồi phế 0,07 → Nội địa: BQ 1,1822, Giá tính
+  1,1122; Xuất khẩu: BQ 1,2810. Đổi kho của lô thành "MILL 4 (SXXK)" → lô chỉ vào Xuất khẩu, Nội địa BQ = 1,0608.
+- [ ] AC-122 (BR-88, UC-58): Đã lưu tháng 2026-11 (hệ số 110%, F&I 0,03, phương án USA 31% + Brazil 69%, hồi phế cotton 0,18) → mở
+  2026-12 hiện bản nháp "Chép từ tháng 11/2026" cùng số; sửa hồi phế cotton 0,20 và lưu → tháng 11 vẫn 0,18.
+- [ ] AC-123 (BR-88): Phương án USA 31% + Brazil 59% → "Tổng tỷ lệ phương án pha bông phải bằng 100% (hiện là 90%)."; hệ số 0 → "Hệ số
+  phải lớn hơn 0."; không lưu gì. (BR-85, UC-55, UC-57) Thêm nhóm loại Cotton không chọn xuất xứ → "Nhóm cotton phải chọn xuất
+  xứ."; thêm "poly nguyên sinh – indorama" khi đã có "Poly nguyên sinh – Indorama" → "Đã có nhóm giá 'poly nguyên sinh – indorama'.";
+  mã kho chọn "Tính theo nhóm" mà để trống nhóm → "Mã <mã>: vui lòng chọn nhóm giá."; xoá nhóm đang gán 2 mã → 2 mã về "Chưa khai báo".
+- [ ] AC-124 (BR-90, BR-91, UC-60): File `Ke hoach xo ve NM - 06.11.xlsx` → đọc sheet "Update Fiber arrival 06.11"; lô Indorama 50.000
+  kg ETA AT WAREHOUSE 06/11/2026, MILL 4 → S4, Chung, Unit price 1,255 USD; dòng "FOC sample" không đơn giá → loại "Chưa có đơn giá.";
+  dòng GDI Unit price 21.800 → VND; kho "MILL 4 (KDNĐ)" → Nội địa, "MILL 4 (SXXK)" → Xuất khẩu, "MILL 1" → S1. Sửa tay một lô rồi
+  nhập lại file → mọi lô cũ (kể cả lô sửa tay) có cờ xoá, chỉ lô của file hiện.
+- [ ] AC-125 (BR-91, UC-61): Khai báo cặp "PT Indorama Polychem Indonesia + 100% Polyester Staple Fiber" → "Poly nguyên sinh –
+  Indorama": mọi lô cùng cặp có nhóm đó, kể cả lô của lần nhập sau; cặp mới chưa khai báo hiện trong khối khai báo và lô của nó không
+  vào giá BQ (cảnh báo UC-59 đếm lô đó). Lô không ghi Giá nhập kho → giá BQ dùng Unit price.
+- [ ] AC-126 (BR-94, BR-95, UC-62): Sợi 2 thành phần: cotton 60% tiêu hao 15% nhóm "Cotton (phương án)" (giá tính 1,8032), PE 40%
+  tiêu hao 8% nhóm Indorama Nội địa (1,1122); dòng Thường 20.000 VND/kg; tỷ giá 25.800; hệ số 110%; mã kế toán có sợi tồn tháng trước
+  1.000 kg, giá trị 64.500.000 đ (2,5 USD/kg); SL đơn 4.000 kg; GP 10%, Commission 2%, CIF, F&I 0,03 → Giá NL 1,7564; Norm × hệ số
+  0,8527; Giá vốn mới 2,6091; Giá vốn BQ 2,5873; FOB 2,9401; CIF 2,9701 USD/kg; FOB VND = 2,9401 × 25.800 = 75.855 đ/kg.
+- [ ] AC-127 (BR-95): Cùng dữ liệu AC-126, chọn Thí nghiệm (dòng TN = 60.000 VND/kg với hệ số TN 3) → Norm × hệ số = 60.000 ÷ 25.800 ×
+  1,10 = 2,5581; không có mã kế toán → Giá vốn BQ = Giá vốn mới; chọn FOB → không hiện F&I, không có Giá CIF.
+- [ ] AC-128 (BR-96, BR-92): GP 90% + Commission 10% → "Tổng GP và Commission phải nhỏ hơn 100%."; thành phần chưa chọn nhóm → "Thành
+  phần '<nguyên liệu>' chưa chọn nhóm giá."; nhóm không có tồn và hàng về → câu BR-92; chưa có file kho tháng trước → câu BR-92; chưa có
+  tỷ giá tháng → câu BR-89; không lưu gì.
+- [ ] AC-129 (BR-97, UC-63, 5.12): Lưu lần tính đầu năm 2026 → "BG-2026-0001", lần sau "BG-2026-0002"; danh sách hiện lần vừa lưu; xuất
+  Excel đủ cột 5.12; sau đó đổi hồi phế / tỷ giá / tải lại file kho → số đã lưu không đổi; người khác (Sales) xoá → câu BR-97; người
+  tính xoá → cờ xoá, không còn trong danh sách.
+- [ ] AC-130 (BR-84): Tài khoản Xưởng, Kế toán, người xem không vai trò mở Screen 11-13 → thấy câu BR-84, không thấy số liệu; gọi đọc
+  dữ liệu phía xử lý cũng bị từ chối; Sales và Phòng SO dùng được đủ.
+- [ ] AC-131 (BR-99, UC-64): Tháng kho 2026-10 với tỷ giá 25.800: MN1001203812233001IDR xuất 57.543 kg, 1.574.888.613 đ → đơn giá xuất
+  1,0608 USD/kg; chưa có tháng kho 2026-09 → Ghi chú "chưa có giá BQ tháng 10/2026"; S41602000010000000FCE xuất 127.909,94 kg,
+  10.499.588.485 đ → 3,1816 USD/kg (82.086 đ/kg) so với báo giá gần nhất cùng 18 ký tự đầu (giá vốn BQ 2,90 → Chênh lệch 9,71%, không
+  Lệch nhiều với mức 10%; mức 5% → Lệch nhiều); mã sợi chưa có báo giá → "chưa tính giá báo khách"; phụ liệu (FDY, DTY...) không hiện.
+- [ ] AC-132 (giữ nguyên): Tính giá gia công, bảng giá (USD theo tỷ giá đang dùng BR-22), So sánh 2 sợi, Đối chiếu giá kế toán, Hồi phế
+  (4.7) và các màn hình cũ chạy như trước; thêm tỷ giá ngày 01/11/2026 không đổi giá VND đã lưu; mọi test cũ giữ xanh.
 
 ## 10. Open questions (Câu hỏi mở)
+- Mở rộng 2026-11-10 (đợt 2): giá nguyên liệu bình quân và giá báo khách - nhóm giá nguyên liệu, file kho S4 hằng tháng, khai báo mã
+  kho, khai báo tháng (hồi phế nguyên liệu, phương án bông, hệ số, F&I), tỷ giá tháng, hàng sắp về, tính / lưu giá báo khách (FOB /
+  CIF, GP, Commission), so giá xuất kho (4.22-4.28, 5.10-5.12, UC-55..UC-64, BR-84..BR-99, Screen 11-13, AC-118..AC-132). Kế hoạch:
+  `docs/plans/yarn_costing-extension-20261110-material-price.md`.
+- Giả định (đợt 2, 2026-11-10): giá trị kho (VND) và giá VND của hàng về đổi sang USD bằng tỷ giá của tháng tính M (BR-89); tiêu hao
+  sản xuất của thành phần = tiêu hao lũy kế của lượt chải thô (thành phần không chải thô: tiêu hao lũy kế lớn nhất của sợi) (BR-94);
+  sợi tồn cộng mọi mã cùng 18 ký tự đầu, cả đuôi D và E (BR-95); so giá xuất nguyên liệu tháng M dùng giá BQ tháng M (cần file kho
+  tháng M−1) (BR-99); lần tính báo giá đã lưu không tính lại (BR-97); hiện chỉ kho S4 (S1 chủ yếu xơ thí nghiệm); số báo giá đánh
+  theo năm; phụ liệu không so giá.
+- Giả định (triển khai, đợt 2, 2026-11-10): file kho không đọc được tháng ("Từ ngày ...") thì Sales chọn tháng trên màn trước khi
+  lưu; danh sách "Sợi" của màn Tính giá báo khách là các dòng Thường đã có giá của S4; mã kế toán gõ / dán được viết hoa, bỏ khoảng
+  trắng; sửa tay một lô giữ Xưởng và Loại hàng đang chọn trên bảng (chỉ khi nhập file mới đọc lại từ cột WAREHOUSE); các thao tác
+  đọc của đợt 2 không dùng bộ nhớ nhanh vì kết quả phụ thuộc tài khoản (BR-84); "Tính thử" báo lỗi ngay trong khối Tính giá, phần
+  còn lại của màn vẫn hiện.
 - Sửa 2026-11-10 (sau khi chạy với dữ liệu thật, người dùng đồng ý): mã kế toán trên app hơn một nửa không có hậu tố D / E / FCD /
   FCE / P như file Z, nên BR-82 ghép thêm theo 18 ký tự đầu khi không có mã giống hệt. Tháng 09/2026: 13/89 mã → 47/89 mã.
 - Mở rộng 2026-11-10: yêu cầu của Sales sau buổi training (đợt 1): gợi ý sợi Trùng / Gần giống khi nhập tên (UC-49, BR-76, BR-77),
@@ -1952,3 +2386,12 @@ không có vai trò phù hợp (BR-47, BR-48); phía xử lý vẫn kiểm tra l
 | Quyền theo vai trò, hộp thoại | `frontend/features/yarn_costing/components/` (permissions: tắt nút theo vai trò, dialogs, flash, display, labels, columns, recalc_diff, factory_picker) |
 | Logs | mọi service ghi log các bước vào `logs/app.log` (không còn khung nhật ký trên màn hình) |
 | Tests | `backend/features/yarn_costing/tests/` (conftest + helpers: tài khoản đăng nhập thử; test_calculation: khớp S4-2017 và S1-1310; test_rules; test_pricing_services; test_master_services; test_import_services; test_carding_services; test_new_app: BR-61..BR-65, UC-42, UC-43, AC-62..AC-77; test_component_import: BR-66..BR-69, UC-44, UC-45, AC-78..AC-85) |
+| Đợt 2 (2026-11-10) - dữ liệu 4.22-4.28 | `models/material_price.py` (MaterialPriceGroup, StockItemSetting, StockMonth, StockLine, MonthlyMaterialSetting, ArrivalLot, ArrivalImport, ArrivalMapping, Quote, QuoteComponent; giá trị tính: GroupAverage, StockOutCompareRow, MonthInputs); enum mới trong `models/enums.py`; bảng `repositories/material_price_repository.py` (+ `load_month_inputs`) |
+| BR-84 | `business/access_business.py::MaterialAccessRule`, `AccessBusiness.ensure_material_access`; quyền UC-55..UC-64 trong `models/access.py`; màn hình: `components/material_ui.py::material_denied` |
+| BR-85, BR-88, BR-89, BR-92, BR-99 | `business/material_price_business.py` (`ensure_group_valid`, `draft` / `setting_of` / `ensure_setting_valid`, `rate_of_month`, `averages` / `month_view` / `undeclared`, `compare_stock_out`) |
+| BR-86, BR-87, BR-90, BR-91 | `business/material_stock_business.py` (`period_of`, `section_of`, `market_of`, `read_stock_rows`, `merge_settings`, `warehouse_of`, `check_lot`, `read_arrival_rows`, `new_mappings`) |
+| BR-93..BR-98 | `business/quote_business.py` (`suggest_group`, `component_loss`, `ensure_valid`, `material_components`, `yarn_stock`, `calculate`, `next_number`, `ensure_can_delete`, `accounting_suggestions`, `filter`) |
+| 5.10, 5.11, 5.12 | `builders/material_file_builders.py` (StockFileReaderBuilder, ArrivalFileReaderBuilder, QuoteExportFileBuilder); DTO: `dto/material_dto.py`, `builders/material_dto_builders.py` |
+| UC-55..UC-64 | services `get_material_setup`, `save_price_group`, `import_stock_file`, `list_stock_months`, `save_stock_item_settings`, `get_monthly_setting`, `save_monthly_setting`, `get_material_averages`, `import_arrival_file`, `list_arrivals`, `save_arrival_lots`, `save_arrival_mappings`, `get_quote_form`, `calculate_quote`, `list_quotes`, `export_quotes`, `delete_quote`, `get_stock_out_comparison` (không `@cached_query` vì kết quả phụ thuộc tài khoản - BR-84) |
+| Screen 11, 12, 13 | `pages/material_price_page.py::MaterialPricePage`, `pages/arrival_page.py::ArrivalPage`, `pages/quote_page.py::QuotePage`; thứ tự menu Sales trong `manifest.py`; `components/material_ui.py` |
+| AC-118..AC-132 | `test_material_price.py` trong thư mục kiểm thử của chức năng (số liệu thật của 3 file Sales: cotton phương án 1,8032, poly Indorama 1,1122 / 1,2810, FOB 2,9401, CIF 2,9701) |

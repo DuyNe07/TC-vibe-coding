@@ -46,6 +46,16 @@ class FactoryScopeRule(BaseBusinessRule[FactoryScopeCheck]):
         return f"Bạn chỉ được thao tác dữ liệu của xưởng {target.factories_text}."
 
 
+class MaterialAccessRule(BaseBusinessRule[PermissionCheck]):
+    """BR-84 (đợt 2, bổ sung 2026-11-10): giá nguyên liệu và giá báo khách - kể cả xem - chỉ Sales / Phòng SO."""
+
+    code = "BR-84"
+    message = "Chỉ Sales hoặc Phòng SO được xem và thao tác giá nguyên liệu, giá báo khách."
+
+    def is_satisfied_by(self, target: PermissionCheck) -> bool:
+        return target.allowed
+
+
 class AccessBusiness(BaseBusiness[PermissionCheck]):
     def rules(self) -> Sequence[BaseBusinessRule[PermissionCheck]]:
         return (RolePermissionRule(),)
@@ -65,6 +75,15 @@ class AccessBusiness(BaseBusiness[PermissionCheck]):
         FactoryScopeRule().check(
             FactoryScopeCheck(role_factories=tuple(ROLE_FACTORY.get(r) for r in permitted), target_factory=factory_code)
         )
+
+    def ensure_material_access(self, user: CurrentUser | None, use_case: str) -> None:
+        """BR-84: every use case UC-55..UC-64 (reads included) needs the Sales or Phòng SO role (admin / system code pass)."""
+        if user is None or user.is_admin:
+            return
+        allowed = USE_CASE_PERMISSIONS.get(use_case, (SO_ROLE,))
+        permitted = any(r == SO_ROLE or r in allowed for r in user.roles_in(FEATURE_KEY))
+        action = USE_CASE_ACTIONS.get(use_case, use_case)
+        MaterialAccessRule().check(PermissionCheck(use_case=use_case, action=action, allowed=permitted))
 
     def is_so(self, user: CurrentUser | None) -> bool:
         """Phòng SO: người dùng có vai trò SO, quản trị viên hoặc mã hệ thống (không có người dùng)."""
