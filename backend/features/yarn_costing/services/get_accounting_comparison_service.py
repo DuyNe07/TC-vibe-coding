@@ -4,6 +4,7 @@ from decimal import Decimal
 
 from backend.core.base import BaseService
 from backend.features.yarn_costing.business.accounting_cost_business import (
+    CORE_NOTE,
     CURRENT_PRICE,
     WARN_GAP,
     WARN_SMALL,
@@ -51,7 +52,7 @@ class GetAccountingComparisonService(BaseService[GetAccountingComparisonRequest,
         missing: list[AccountingMissingRowDTO] = []
         for line in sorted(lines, key=lambda x: (x.factory_code.value, x.accounting_code)):
             kt = line.conversion_unit_cost
-            pairs = by_code.get(line.accounting_code.strip().upper(), [])
+            pairs, by_core = self.business.match(line.accounting_code, by_code)
             if not pairs:
                 missing.append(
                     AccountingMissingRowDTO(
@@ -66,6 +67,8 @@ class GetAccountingComparisonService(BaseService[GetAccountingComparisonRequest,
             yarn, price_line = pairs[0]
             cost, price_date = self.business.price_at(price_line, history.get(price_line.line_code, []), end)
             notes = [] if price_date else [CURRENT_PRICE]
+            if by_core:
+                notes.append(f"{CORE_NOTE} ({price_line.accounting_code})")
             if len(pairs) > 1:
                 notes.append(f"Mã kế toán có ở {len(pairs)} dòng giá")
             gap = self.business.gap_percent(cost.total, kt)

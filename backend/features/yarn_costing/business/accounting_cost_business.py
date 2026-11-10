@@ -23,6 +23,8 @@ MSG_LEVEL = "Mức cảnh báo phải là số lớn hơn 0."
 WARN_SMALL = "⚠ Sản lượng nhỏ"
 WARN_GAP = "🔴 Lệch nhiều"
 CURRENT_PRICE = "giá hiện tại"
+CORE_LENGTH = 18  # BR-82 (sửa 2026-11-10): mã kế toán bỏ hậu tố D / E / FCD / FCE / P
+CORE_NOTE = "ghép theo 18 ký tự đầu"
 LINE_ORDER = {LineType.THUONG: 0, LineType.THI_NGHIEM: 1, LineType.CHIET_KHAU: 2, LineType.PHU_PHI: 3}
 HUNDRED = Decimal(100)
 
@@ -130,6 +132,19 @@ class AccountingCostBusiness(BaseBusiness[AccountingCostLine]):
         for pairs in found.values():
             pairs.sort(key=lambda p: (LINE_ORDER[p[1].line_type], p[1].line_code))
         return found
+
+    def match(
+        self, code: str, by_code: dict[str, list[tuple[Yarn, PriceLine]]]
+    ) -> tuple[list[tuple[Yarn, PriceLine]], bool]:
+        """BR-82: exact code first; else the price lines whose code has the same first 18 characters
+        (returns (pairs, matched by core))."""
+        code = code.strip().upper()
+        if code in by_code:
+            return by_code[code], False
+        core = code[:CORE_LENGTH]
+        pairs = [p for key, found in by_code.items() if key[:CORE_LENGTH] == core for p in found]
+        pairs.sort(key=lambda p: (LINE_ORDER[p[1].line_type], p[1].line_code))
+        return pairs, bool(pairs)
 
     def price_at(
         self, line: PriceLine, history: Sequence[PriceHistory], end: date
