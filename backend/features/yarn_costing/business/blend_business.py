@@ -183,7 +183,8 @@ class BlendBusiness(BaseBusiness[ParsedBlend]):
                 ),
                 None,
             )
-            if wanted and self.names.comparable_name(yarn.yarn_name) == wanted:
+            names = [yarn.yarn_name, *(o.name for o in yarn.old_names)]  # BR-108: tên cũ cũng được so
+            if wanted and any(self.names.comparable_name(n) == wanted for n in names):
                 same.append(Suggestion(yarn=yarn, kind="trung"))
                 continue
             if wanted and alias_hit is not None:

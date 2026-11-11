@@ -51,6 +51,24 @@ from backend.features.yarn_costing.dto.master_dto import (
     SaveStageConfigRequest,
     UpdateTrialFactorRequest,
 )
+from backend.features.yarn_costing.dto.name_dto import (
+    CheckYarnNameRequest,
+    ExportRenameListRequest,
+    GetNameCheckRequest,
+    ImportRenameFileRequest,
+    NameCheckResponse,
+    NameSaveResponse,
+    NormalizeNamesRequest,
+    NormalizeNamesResponse,
+    RenameImportResponse,
+    RenameYarnRequest,
+    RenameYarnResponse,
+    ResolvePendingResponse,
+    ResolvePendingWordRequest,
+    SaveNameDictionaryRequest,
+    SaveNamePartsRequest,
+    YarnNameCheckResponse,
+)
 from backend.features.yarn_costing.dto.price_dto import (
     CreateAdjustmentLineRequest,
     DeleteAdjustmentLineRequest,
@@ -105,6 +123,15 @@ from backend.features.yarn_costing.dto.sales_dto import (
     YarnSuggestionResponse,
 )
 from backend.features.yarn_costing.services.add_exchange_rate_service import AddExchangeRateService
+from backend.features.yarn_costing.services.check_yarn_name_service import CheckYarnNameService
+from backend.features.yarn_costing.services.export_rename_list_service import ExportRenameListService
+from backend.features.yarn_costing.services.get_name_check_service import GetNameCheckService
+from backend.features.yarn_costing.services.import_rename_file_service import ImportRenameFileService
+from backend.features.yarn_costing.services.normalize_names_service import NormalizeNamesService
+from backend.features.yarn_costing.services.rename_yarn_service import RenameYarnService
+from backend.features.yarn_costing.services.resolve_pending_word_service import ResolvePendingWordService
+from backend.features.yarn_costing.services.save_name_dictionary_service import SaveNameDictionaryService
+from backend.features.yarn_costing.services.save_name_parts_service import SaveNamePartsService
 from backend.features.yarn_costing.services.analyze_yarn_name_service import AnalyzeYarnNameService
 from backend.features.yarn_costing.services.apply_rate_version_service import ApplyRateVersionService
 from backend.features.yarn_costing.services.cancel_yarn_request_service import CancelYarnRequestService
@@ -412,3 +439,41 @@ class YarnCostingController(BaseController):
     def get_accounting_comparison(self, request: GetAccountingComparisonRequest) -> AccountingComparisonResponse:
         """UC-54 Đối chiếu giá app với giá thành kế toán."""
         return GetAccountingComparisonService().handle(request)
+
+    # ---- tên sợi (bổ sung 2026-11-11) ----
+    @cached_query
+    def check_yarn_name(self, request: CheckYarnNameRequest) -> YarnNameCheckResponse:
+        """BR-101 / BR-102 Tên ghép / gõ tay và kết quả kiểm tra (Screen 2, đổi tên)."""
+        return CheckYarnNameService().handle(request)
+
+    def get_name_check(self, request: GetNameCheckRequest) -> NameCheckResponse:
+        """UC-65 Tên nghi sai + từ điển, chữ mới, nhóm sợi / từ khoá (khởi tạo lần đầu - BR-103)."""
+        return GetNameCheckService().handle(request)
+
+    def save_name_dictionary(self, request: SaveNameDictionaryRequest) -> NameSaveResponse:
+        """UC-66 Lưu từ điển tên chuẩn."""
+        return SaveNameDictionaryService().handle(request)
+
+    def resolve_pending_word(self, request: ResolvePendingWordRequest) -> ResolvePendingResponse:
+        """UC-67 Thêm chữ mới vào từ điển / sửa chữ sai trong mọi tên."""
+        return ResolvePendingWordService().handle(request)
+
+    def rename_yarn(self, request: RenameYarnRequest) -> RenameYarnResponse:
+        """UC-68 Đổi tên một sợi."""
+        return RenameYarnService().handle(request)
+
+    def export_rename_list(self, request: ExportRenameListRequest) -> FileDownloadDTO:
+        """UC-69 Tải danh sách tên nghi sai để sửa."""
+        return ExportRenameListService().handle(request)
+
+    def import_rename_file(self, request: ImportRenameFileRequest) -> RenameImportResponse:
+        """UC-69 Đổi tên hàng loạt bằng file."""
+        return ImportRenameFileService().handle(request)
+
+    def save_name_parts(self, request: SaveNamePartsRequest) -> NameSaveResponse:
+        """UC-70 Lưu nhóm sợi / từ khoá của ô ghép tên."""
+        return SaveNamePartsService().handle(request)
+
+    def normalize_names(self, request: NormalizeNamesRequest) -> NormalizeNamesResponse:
+        """UC-71 Chuẩn hoá viết hoa và xử lý tên trùng."""
+        return NormalizeNamesService().handle(request)

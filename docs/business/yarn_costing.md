@@ -299,6 +299,10 @@ Mỗi yêu cầu của Sales tạo một mã sợi (bản NSM gốc). Mỗi ĐCN
 | not_produced_by, not_produced_at | text, datetime | No | Người và lúc đánh dấu Không sản xuất; mã đang có: trống; bỏ đánh dấu → xoá trống (nhật ký giữ lại) | |
 | customer_name | text ≤ 100 | No | (bổ sung 2026-11-10) Khách hàng Sales nhập khi gửi yêu cầu; mã đang có: trống | Salponpat |
 | duplicate_reason | text ≤ 500 | Yes khi có sợi Trùng cùng xưởng lúc gửi (BR-78) | (bổ sung 2026-11-10) Lý do Sales vẫn gửi yêu cầu mới dù đã có sợi Trùng; mã đang có: trống | Khách cần sợi chạy máy compact riêng |
+| old_names | danh sách (name, changed_by, changed_at, reason) | No (mặc định rỗng) | (bổ sung 2026-11-11) Các tên trước khi đổi (BR-105..BR-107), dùng để tìm kiếm (BR-108) | BAMBO 40/1 SIRO COMPACT |
+| unknown_word_reason | text ≤ 500 | Yes khi tên có chữ lạ lúc gửi (BR-101) | (bổ sung 2026-11-11) Lý do Sales giữ chữ không có trong từ điển; mã đang có: trống | Tên thương hiệu xơ mới của khách |
+| name_mode | list of values: Ghép / Gõ tay / trống | No | (bổ sung 2026-11-11) Cách Sales nhập tên khi gửi (BR-102); mã đang có: trống | Ghép |
+| merged_accounting_codes | danh sách text | No (mặc định rỗng) | (bổ sung 2026-11-11) Mã kế toán chuyển từ mã trùng tên đã loại (BR-107), chỉ để tra cứu / ghép (BR-108), không làm khoá bản NSM | S41603600010000000 |
 
 #### 4.12.1 Thành phần nguyên liệu của sợi (Yarn component)
 | Field | Type | Required | Description | Example |
@@ -461,6 +465,37 @@ Mỗi tháng chỉ có một bản đang dùng; tải lại tháng đó thì b�
 | conversion_unit_cost | decimal (tính) | Chi phí chế biến = (total_amount − material_amount) ÷ quantity (đ/kg) - BR-80 | 19.680 |
 | labor_unit … overhead_unit | decimal (tính) | Từng khoản ÷ quantity (đ/kg) | |
 
+### 4.29 Từ điển tên chuẩn (Name dictionary) - bổ sung 2026-11-11
+| Field | Type | Required | Description | Example |
+|---|---|---|---|---|
+| word | text ≤ 50, viết hoa, không dấu, không trùng | Yes | Chữ | COTTON / COTTTON |
+| kind | list of values: Chữ chuẩn / Cách viết sai | Yes | Loại | Cách viết sai |
+| correct_word | text (một Chữ chuẩn) | Khi kind = Cách viết sai | Chữ đúng để gợi ý / sửa | COTTON |
+| source | list of values: Khởi tạo / Phòng SO / Tự thêm khi tính giá | Yes | Nguồn (BR-103, BR-104) | Khởi tạo |
+| created_by, created_at | text, datetime | Yes | | |
+Xoá = cờ xoá.
+
+### 4.30 Chữ mới chờ duyệt (Pending word) - bổ sung 2026-11-11
+| Field | Type | Description | Example |
+|---|---|---|---|
+| word | text, không trùng | Chữ lạ app ghi lại (BR-104) | HEALCA |
+| uses | danh sách (yarn_code, typed_by, reason, at) | Mỗi lần Sales gửi / sửa tên có chữ này | S4-2100, Sales A, "Tên thương hiệu" |
+| count | integer | Số lần gặp | 3 |
+| status | list of values: Chờ duyệt / Đã thêm / Đã sửa / Tự thêm | Trạng thái | Chờ duyệt |
+| resolved_word | text | Chữ đúng khi Đã sửa | — |
+| resolved_by, resolved_at | text, datetime | Người, lúc duyệt | |
+
+### 4.31 Nhóm sợi và từ khoá của ô ghép tên (Name part) - bổ sung 2026-11-11
+| Field | Type | Required | Description | Example |
+|---|---|---|---|---|
+| kind | list of values: Nhóm sợi / Từ khoá | Yes | Loại | Từ khoá |
+| text | text ≤ 100, viết hoa, không trùng trong cùng loại | Yes | Chữ hiện ra và ghép vào tên | SIRO |
+| fiber_count | integer 1-5 | Nhóm sợi | Số xơ = số ô tỷ lệ (1 = không có tỷ lệ) | 2 (CVC) |
+| sequence | integer | Từ khoá | Thứ tự ghép (nhỏ trước) | 10 |
+| source | list of values: Khởi tạo / Phòng SO / Sales thêm - mới | Yes | Nguồn; "Sales thêm - mới" = nhóm lạ app tự thêm (BR-102) | Khởi tạo |
+| reviewed | Có / Không | Yes | Phòng SO đã xem (nhóm Sales thêm: Không) | Không |
+Xoá = cờ xoá (không làm đổi tên đã có).
+
 ## 5. Input / output files (File nhập / xuất)
 
 ### 5.1 Quy định chung cho file tải lên (UC-33, UC-34)
@@ -618,6 +653,13 @@ xưởng đó (để người dùng sửa rồi tải lên lại). Sheet "4. Ban
 - **Kết quả kiểm tra:** mỗi tháng đọc được: số mã S1, số mã S4, tổng số lượng, dòng bị loại kèm lý do (BR-80), và "Tháng này đã có
   bản lưu ngày <dd/mm/yyyy> của <người>, lưu sẽ thay bản đó." nếu tháng đã có (BR-81).
 
+### 5.13 File sửa tên hàng loạt (UC-69 out / in, bổ sung 2026-11-11)
+- **Tải về:** sheet `Sua ten` gồm các tên nghi sai đang lọc trên màn (UC-65), cột: Xưởng, Mã, Trạng thái, Tên hiện tại, Lý do nghi sai,
+  Gợi ý, **Tên mới** (trống), **Lý do sửa** (trống).
+- **Tải lên:** theo BR-41; đọc sheet `Sua ten` (không có → "File không có sheet 'Sua ten'."), dòng tiêu đề 1, cột bắt buộc Xưởng, Mã,
+  Tên mới, Lý do sửa (thiếu → "File thiếu cột bắt buộc: <danh sách>."). Dòng Tên mới trống bỏ qua. Mỗi dòng kiểm tra như đổi một tên
+  (BR-105); dòng lỗi liệt kê kèm lý do (BR-43); bấm "Lưu" thì lưu các dòng hợp lệ.
+
 ## 6. Use cases (Nghiệp vụ)
 Mọi UC làm thay đổi dữ liệu đều chạy bằng tài khoản đã đăng nhập (BR-46: thay bằng đăng nhập của ứng dụng) có vai trò phù hợp
 (BR-47, BR-48) và ghi nhật ký theo tài khoản (BR-49). Xem, tra cứu, xuất file chỉ cần được cấp quyền mở chức năng.
@@ -766,16 +808,19 @@ Mọi UC làm thay đổi dữ liệu đều chạy bằng tài khoản đã đ�
 - **Bổ sung 2026-11-10:** form có thêm ô **Khách hàng** (không bắt buộc, ≤ 100 ký tự) → `customer_name`. Khi gõ tên, app hiện gợi ý
   (UC-49). Nếu có sợi "Trùng" ở đúng xưởng đang chọn thì phải nhập "Lý do gửi yêu cầu mới" (BR-78) → `duplicate_reason`; Sales cũng
   có thể bấm "Dùng sợi này" trên gợi ý thay vì gửi (UC-50).
-- **Rules applied:** BR-01, BR-02, BR-03, BR-04, BR-05, BR-06, BR-52, BR-60, BR-63, BR-76, BR-77, BR-78
+- **Bổ sung 2026-11-11 (sửa: trước đây chỉ gõ tay):** tên nhập bằng **ô ghép tên** (mặc định) hoặc **gõ tay** (BR-102); tên luôn lưu
+  viết hoa; trước khi gửi kiểm tra BR-101 (chặn thiếu / thừa ngoặc, tỷ lệ ≠ 100; chữ lạ phải chọn gợi ý hoặc ghi lý do →
+  `unknown_word_reason`); chữ lạ được ghi vào "Chữ mới chờ duyệt" (BR-104); nhóm sợi lạ khi gõ tay được thêm vào danh sách (BR-102).
+- **Rules applied:** BR-01, BR-02, BR-03, BR-04, BR-05, BR-06, BR-52, BR-60, BR-63, BR-76, BR-77, BR-78, BR-101, BR-102, BR-104
 
 ### UC-16: Sửa yêu cầu
 - **Actor:** Sales
 - **Trigger:** Screen 2, chọn yêu cầu "Chờ xưởng xem", sửa Tên sợi / Loại đóng gói, bấm "Lưu sửa đổi". (Không đổi xưởng
   được; muốn đổi xưởng: huỷ và tạo yêu cầu mới.)
 - **Main flow:** kiểm tra BR-07, BR-01, BR-06 (không tính chính nó); lưu, giữ nguyên mã. (bổ sung 2026-11-10) Sửa được cả ô
-  Khách hàng; không kiểm tra lại BR-78 khi sửa.
+  Khách hàng; không kiểm tra lại BR-78 khi sửa. (bổ sung 2026-11-11) Tên sửa cũng qua ô ghép tên / gõ tay và BR-101, lưu viết hoa.
 - **Output:** "Đã cập nhật yêu cầu <mã>."
-- **Rules applied:** BR-01, BR-06, BR-07
+- **Rules applied:** BR-01, BR-06, BR-07, BR-101, BR-102, BR-104
 
 ### UC-17: Huỷ yêu cầu
 - **Actor:** Sales
@@ -1145,6 +1190,72 @@ thường - BR-70); lịch sử ghi event "Sửa NSM". Mã đã khoá: nút lưu
   giá thành kế toán. Sales hoặc Phòng SO tải file Z ở khối bên dưới."
 - **Rules applied:** BR-22, BR-23, BR-82, BR-83
 
+### UC-65: Kiểm tra tên sợi (bổ sung 2026-11-11)
+- **Actor:** Sales, Phòng SO
+- **Trigger:** Screen 14, thẻ "Tên nghi sai": bộ lọc Xưởng (S1 / S4 / Cả hai), Loại lỗi (nhiều lựa chọn), tìm theo mã / tên. Không lưu.
+- **Main flow:** xét mọi mã gốc (trừ Đã huỷ, Từ chối) theo BR-100.
+- **Output:** ô số liệu theo loại lỗi (Chữ lạ, Thiếu / thừa ngoặc, Tỷ lệ ≠ 100, Chưa đọc được thành phần, Chữ thường, Trùng tên); bảng chọn
+  dòng: Xưởng, Mã, Trạng thái, Tên hiện tại, Lỗi, Gợi ý tên (đã thay chữ sai theo gợi ý, viết hoa); chọn dòng → khối đổi tên (UC-68)
+  điền sẵn Gợi ý tên; nút "Tải danh sách để sửa" (5.13).
+- **Rules applied:** BR-100, BR-109
+
+### UC-66: Quản lý từ điển tên chuẩn (bổ sung 2026-11-11)
+- **Actor:** Phòng SO (xem: Sales)
+- **Trigger:** Screen 14, thẻ "Từ điển": bảng sửa trong ô (Chữ, Loại, Chữ đúng, Nguồn - chỉ xem), thêm / xoá dòng, "Lưu từ điển".
+- **Main flow:** chữ viết hoa, bỏ dấu, bỏ khoảng trắng hai đầu; kiểm tra BR-103 (không trùng; Cách viết sai phải có Chữ đúng là một Chữ
+  chuẩn); dòng xoá = cờ xoá; ghi nhật ký.
+- **Output:** "Đã lưu từ điển: <a> chữ thêm, <b> sửa, <c> xoá."
+- **Errors:** "Chữ '<chữ>' bị trùng." / "Chữ '<chữ>' là cách viết sai, vui lòng chọn chữ đúng." / "Chữ đúng '<chữ>' chưa có trong từ điển."
+- **Rules applied:** BR-103, BR-109
+
+### UC-67: Duyệt chữ mới (bổ sung 2026-11-11)
+- **Actor:** Phòng SO (xem: Sales)
+- **Trigger:** Screen 14, thẻ "Chữ mới chờ duyệt": bảng chọn dòng (Chữ, Số lần, Lần cuối, Người gõ, Mã yêu cầu, Lý do, Trạng thái, Gợi ý);
+  chọn một chữ → nút "Thêm vào từ điển" hoặc ô "Sửa thành" (danh sách Chữ chuẩn, điền sẵn gợi ý) + nút "Sai, sửa thành" (hỏi xác nhận,
+  hiện số tên và nhóm tiêu hao sẽ đổi).
+- **Main flow:** Thêm → chữ thành Chữ chuẩn (nguồn Phòng SO), trạng thái Đã thêm. Sai → thêm Cách viết sai (chữ → chữ đúng), sửa chữ đó
+  trong mọi tên theo BR-106, trạng thái Đã sửa.
+- **Output:** "Đã thêm '<chữ>' vào từ điển." / "Đã sửa '<sai>' thành '<đúng>' trong <n> tên sợi và <m> nhóm tiêu hao."
+- **Errors:** BR-106.
+- **Rules applied:** BR-104, BR-106, BR-109
+
+### UC-68: Đổi tên một sợi (bổ sung 2026-11-11)
+- **Actor:** Phòng SO (mọi trạng thái trừ Đã huỷ, Từ chối); Sales (chỉ sợi Chờ xưởng xem, Chưa tính được)
+- **Trigger:** Screen 14, khối "Đổi tên sợi": chọn mã (danh sách chọn có tìm kiếm, hoặc chọn từ bảng UC-65), ô Tên mới (điền sẵn gợi ý), ô
+  Lý do (bắt buộc), app hiện ngay kết quả kiểm tra BR-101 và nhóm tiêu hao cũ → mới; nút "Đổi tên".
+- **Main flow:** kiểm tra BR-105; lưu tên mới cho mã gốc và mọi bản ĐCNSM; thêm tên cũ vào `old_names`; đổi nhóm tiêu hao theo BR-105;
+  chữ lạ ghi vào chữ mới (BR-104); ghi nhật ký (tên cũ → mới, lý do). Không tính lại giá.
+- **Output:** "Đã đổi tên <mã>: '<cũ>' → '<mới>'."
+- **Errors:** BR-105, BR-101, BR-06.
+- **Rules applied:** BR-06, BR-101, BR-104, BR-105, BR-108, BR-109
+
+### UC-69: Đổi tên hàng loạt bằng file (bổ sung 2026-11-11)
+- **Actor:** Phòng SO; Sales (chỉ dòng của sợi chưa tính giá - BR-109)
+- **Trigger:** Screen 14, khối "Sửa tên bằng Excel": "Tải danh sách để sửa" (5.13, theo bộ lọc UC-65); ô tải file + "Kiểm tra file" → bảng
+  dòng hợp lệ (Mã, Tên cũ, Tên mới, Lý do, Nhóm tiêu hao cũ → mới) và dòng bị loại → "Lưu <n> tên" (hỏi xác nhận).
+- **Main flow:** mỗi dòng như UC-68; hai dòng trong file cho ra cùng một tên cùng xưởng → loại cả hai ("Tên mới '<tên>' bị trùng trong
+  file."); dòng hợp lệ được lưu, dòng lỗi giữ nguyên.
+- **Output:** "Đã đổi tên <n> sợi, bị loại <z> dòng."
+- **Rules applied:** BR-41, BR-43, BR-105, BR-109
+
+### UC-70: Quản lý nhóm sợi và từ khoá của ô ghép tên (bổ sung 2026-11-11)
+- **Actor:** Phòng SO (xem: Sales)
+- **Trigger:** Screen 14, thẻ "Nhóm sợi & từ khoá": hai bảng sửa trong ô - Nhóm sợi (Nhóm, Số xơ, Nguồn, Đã xem) và Từ khoá (Từ khoá, Thứ tự,
+  Nguồn); thêm / xoá dòng; công tắc "Chỉ hiện nhóm Sales mới thêm"; nút "Lưu".
+- **Main flow:** chữ viết hoa; không trùng trong cùng loại; Số xơ 1-5; Thứ tự là số; dòng xoá = cờ xoá; ghi nhật ký.
+- **Output:** "Đã lưu <a> nhóm sợi, <b> từ khoá."
+- **Errors:** "Nhóm '<nhóm>' bị trùng." / "Số xơ phải từ 1 đến 5." / "Từ khoá '<từ>' bị trùng."
+- **Rules applied:** BR-102, BR-103, BR-109
+
+### UC-71: Chuẩn hoá viết hoa và xử lý tên trùng (một lượt, bổ sung 2026-11-11)
+- **Actor:** Phòng SO
+- **Trigger:** Screen 14, thẻ "Chuẩn hoá viết hoa": nút "Xem trước" → ô số liệu (Tên sẽ đổi, Nhóm trùng, Mã giữ, Mã loại, Mã loại có mã kế
+  toán) + bảng tên sẽ đổi (Xưởng, Mã, Tên cũ, Tên mới) + bảng đề xuất giữ / loại (BR-107) + "Tải đề xuất (Excel)" → nút "Chuẩn hoá" (hỏi
+  xác nhận).
+- **Main flow:** theo BR-107; ghi nhật ký từng mã. Chạy lại khi không còn gì để đổi → "Mọi tên đã viết hoa, không có tên trùng."
+- **Output:** "Đã chuẩn hoá <n> tên; loại <k> mã trùng tên (<t> mã kế toán chuyển sang mã giữ)."
+- **Rules applied:** BR-06, BR-72, BR-107, BR-108, BR-109
+
 ## 7. Business rules (Quy tắc nghiệp vụ)
 | ID | Rule | Error message shown to user (VI) |
 |---|---|---|
@@ -1194,7 +1305,7 @@ thường - BR-70); lịch sử ghi event "Sửa NSM". Mã đã khoá: nút lưu
 | BR-44 | Đọc sheet "1. Input NSM": mã chuẩn hoá = bỏ khoảng trắng quanh "-" ("S4 - 586" → "S4-586"), hậu tố "(ĐCNSM…)" chuẩn hoá thành " (ĐCNSMn)" (không số → n = 1) và tạo bản ĐCNSM trỏ về mã gốc; mã trống → cấp mã mới theo BR-05; mã đã có trong app → cập nhật tên, thành phần nguyên liệu (BR-58), NSM, đóng gói nếu bản chưa khoá (đã khoá → loại dòng với thông báo BR-32); mã chưa có → tạo mới với mã đó. Mã trùng trong file → mọi dòng trùng bị loại. Tên không hợp lệ (BR-01) → loại dòng. Thiếu đóng gói / thiếu tiêu hao → vẫn tạo, trạng thái "Chưa tính được" (BR-16). Sheet "4. Bang gia da tinh": mã kế toán không trống → gán cho dòng Thường của mã đó (bản bị khoá); mã tính giá không dạng "<xưởng>-N" và không có ở sheet NSM → loại dòng "Không có dữ liệu NSM cho mã '<mã>'."; mã tính giá dạng mã kế toán (không theo "<xưởng>-N") có ở sheet NSM → giữ làm mã tính giá, đồng thời điền vào mã kế toán nếu cột mã kế toán trống; "Ngày tính giá" → `first_priced_at` (không đọc được → để trống). Tên trùng trong dữ liệu cũ không bị chặn | - |
 | BR-45 | Quyền theo sheet khi tải file: Phòng SO được mọi sheet và cả hai loại tải; Xưởng chỉ được "Cập nhật hàng loạt" với sheet "1. Input NSM" và "2. Input tieu hao" của xưởng mình; "Chuyển dữ liệu ban đầu" chỉ Phòng SO | Sheet '<sheet>' chỉ Phòng SO được cập nhật, đã bỏ qua. |
 | BR-46 | Thay bằng đăng nhập của ứng dụng (2026-10-13): mỗi người dùng app bằng tài khoản riêng; chức năng không còn khối chọn nhóm / nhập mã / chọn tên. Mã quy tắc giữ trống | - |
-| BR-47 | Quyền theo vai trò: tài khoản làm được một thao tác khi có ít nhất một vai trò cho phép thao tác đó. Sales → UC-15, UC-16, UC-17. Xưởng (XS1, XS4) → UC-11, UC-12, UC-13, UC-14, UC-18, UC-20, UC-21, UC-23, UC-24, UC-25, UC-26, UC-28, UC-34 (theo BR-45), UC-45 (theo BR-69). Kế toán → UC-28. Xưởng còn được UC-47, UC-48 (sửa 2026-11-05: bổ sung). Sales còn được UC-50, UC-51, UC-53 (sửa 2026-11-10: bổ sung). Phòng SO → mọi UC thay đổi dữ liệu. Quản trị viên làm như Phòng SO. Tài khoản không có vai trò nào của chức năng chỉ xem được | Tài khoản của bạn chưa có vai trò cho thao tác '<thao tác>'. Hãy nhờ quản trị viên cấp vai trò ở trang /admin. |
+| BR-47 | Quyền theo vai trò: tài khoản làm được một thao tác khi có ít nhất một vai trò cho phép thao tác đó. Sales → UC-15, UC-16, UC-17. Xưởng (XS1, XS4) → UC-11, UC-12, UC-13, UC-14, UC-18, UC-20, UC-21, UC-23, UC-24, UC-25, UC-26, UC-28, UC-34 (theo BR-45), UC-45 (theo BR-69). Kế toán → UC-28. Xưởng còn được UC-47, UC-48 (sửa 2026-11-05: bổ sung). Sales còn được UC-50, UC-51, UC-53 (sửa 2026-11-10: bổ sung). Sales còn được UC-68, UC-69 với mã chưa tính giá (BR-109) (sửa 2026-11-11: bổ sung). Phòng SO → mọi UC thay đổi dữ liệu. Quản trị viên làm như Phòng SO. Tài khoản không có vai trò nào của chức năng chỉ xem được | Tài khoản của bạn chưa có vai trò cho thao tác '<thao tác>'. Hãy nhờ quản trị viên cấp vai trò ở trang /admin. |
 | BR-48 | Vai trò Xưởng S1 / Xưởng S4 chỉ thao tác trên dữ liệu có `factory_code` bằng xưởng của vai trò: thao tác chỉ được phép khi có ít nhất một vai trò cho phép thao tác đó mà đúng xưởng (Sales, Kế toán, Phòng SO không giới hạn xưởng) | Bạn chỉ được thao tác dữ liệu của xưởng <xưởng>. |
 | BR-49 | Mọi thao tác làm thay đổi dữ liệu ghi một dòng nhật ký (4.19): lúc, tài khoản đăng nhập (tên đăng nhập + họ tên), thao tác, đối tượng, nội dung trước → sau, lý do. Các cột "người làm" khác (người tạo, người xử lý...) ghi họ tên của tài khoản. Khi không có tài khoản (chạy bằng mã hệ thống) ghi "system" / "Hệ thống" | - |
 | BR-50 | Cấu hình công đoạn: stage_code và sequence duy nhất trong xưởng; đúng một công đoạn `is_packaging` = Có; `cumulative_stages` chỉ gồm mã công đoạn có của xưởng và có `sequence` lớn hơn; `blend_slot` "Tỷ lệ dây chuyền X" với X là dây chuyền chải thô của xưởng; dây chuyền chải thô có `max_passes` từ 1 đến 3. Không xoá công đoạn đang có NSM hoặc tiêu hao khác 0 (chỉ đổi tên / cấu hình) | Cấu hình công đoạn không hợp lệ: <chi tiết>. |
@@ -1231,6 +1342,16 @@ thường - BR-70); lịch sử ghi event "Sửa NSM". Mã đã khoá: nút lưu
 | BR-81 | Lưu tháng Z (bổ sung 2026-11-10): mỗi tháng (`period`) chỉ có một bản đang dùng. Lưu một tháng đã có → bản cũ (4.21) và mọi dòng của nó (4.21.1) được đặt cờ xoá, rồi lưu bản mới; nhật ký ghi tháng, số mã cũ → mới. Không bao giờ xoá thật | - |
 | BR-82 | Ghép dòng kế toán với giá app (bổ sung 2026-11-10): tìm các dòng giá (4.13) có `accounting_code` bằng mã kế toán (bỏ khoảng trắng hai đầu, không phân biệt hoa thường); (sửa 2026-11-10, sau khi chạy thật: trước đây chỉ ghép mã giống hệt) không có dòng nào giống hệt → tìm các dòng giá có mã kế toán cùng **18 ký tự đầu** (mã bỏ hậu tố D / E / FCD / FCE / P), cột Ghi chú giá app ghi "ghép theo 18 ký tự đầu (<mã trên app>)"; có nhiều dòng → ưu tiên dòng Thường, rồi theo mã dòng, ghi "Mã kế toán có ở <n> dòng giá"; không có → vào bảng "chưa có trên app". **Giá app của tháng** = Tổng (và 5 khoản) mới nhất của dòng trong lịch sử giá (4.15) có `effective_date` ≤ ngày cuối tháng đã chọn; dòng không có lịch sử nào trước ngày đó → dùng giá hiện tại, cột Ngày giá app ghi "giá hiện tại". Chênh lệch = Giá app − Giá kế toán chế biến; Chênh lệch % = Chênh lệch ÷ Giá kế toán chế biến × 100 (Giá kế toán ≤ 0 → "-"). **Chênh bình quân theo sản lượng** = Σ(Chênh lệch × Số lượng) ÷ Σ(Giá kế toán chế biến × Số lượng) × 100, chỉ trên các mã so được và không phải sản lượng nhỏ | - |
 | BR-83 | Cảnh báo đối chiếu (bổ sung 2026-11-10), chỉ để hiển thị, không chặn: **Sản lượng nhỏ** khi Số lượng < mức Sản lượng nhỏ (mặc định 100 kg); **Lệch nhiều** khi |Chênh lệch %| > mức Lệch nhiều (mặc định 10%); một mã có thể có cả hai. Hai mức nhập trên màn hình (số > 0), không lưu; đổi mức thì ô số liệu, bảng, biểu đồ đổi theo | Mức cảnh báo phải là số lớn hơn 0. |
+| BR-100 | Kiểm tra tên sợi (bổ sung 2026-11-11). Tên viết hoa, bỏ dấu, gộp khoảng trắng. **Chữ** = chuỗi chữ cái liền nhau (không chứa chữ số) dài ≥ 2; chuỗi có chữ số (50D, 32F, 1.2D, 30/1) không xét. Lỗi: (1) **Chữ lạ** - chữ không phải Chữ chuẩn của từ điển (4.29); gợi ý = Chữ đúng nếu chữ là một Cách viết sai, ngược lại Chữ chuẩn gần nhất (khác tối đa 2 ký tự, chữ ≥ 4 ký tự; nhiều chữ cùng gần → chữ dùng nhiều nhất), không có thì không gợi ý; (2) **Thiếu / thừa ngoặc** - số "(" khác số ")" hoặc ")" đứng trước "(" tương ứng; (3) **Tỷ lệ ≠ 100** - nhóm số trong ngoặc dạng `(a/b)`, `(a/b/c)` có tổng khác 100; (4) **Chưa đọc được thành phần** (BR-76); (5) **Chữ thường** - tên khác bản viết hoa của nó; (6) **Trùng tên** - hai mã gốc cùng xưởng (trừ Đã huỷ, Từ chối, Không sản xuất) có tên viết hoa, gộp khoảng trắng giống nhau. **Gợi ý tên** = tên viết hoa với mọi chữ lạ có gợi ý được thay bằng gợi ý | - |
+| BR-101 | Kiểm tra tên khi gửi / sửa yêu cầu và khi đổi tên (bổ sung 2026-11-11): tên lưu viết hoa, gộp khoảng trắng. **Chặn** khi thiếu / thừa ngoặc hoặc tỷ lệ ≠ 100 (BR-100 (2)(3)); BR-01 giữ nguyên. **Chữ lạ** (BR-100 (1)): app hiện từng chữ kèm gợi ý và nút "Dùng <gợi ý>" (thay chữ trong tên); còn chữ lạ chưa thay → bắt buộc ô "Lý do giữ chữ lạ" (≤ 500 ký tự) mới gửi / lưu được | Tên sợi bị thiếu hoặc thừa dấu ngoặc. / Tỷ lệ '<a/b>' cộng lại <x>, phải bằng 100. / Tên có chữ chưa có trong từ điển: <danh sách>. Vui lòng chọn chữ gợi ý hoặc nhập lý do giữ chữ lạ. / Lý do tối đa 500 ký tự. |
+| BR-102 | Ô ghép tên (bổ sung 2026-11-11): Sales chọn **Nhóm sợi** (4.31), nhập **Chi số** (số > 0, tối đa 2 chữ số thập phân), **Tỷ lệ** (số ô = Số xơ của nhóm, chỉ hiện khi Số xơ ≥ 2; mỗi ô số > 0, tổng 100), chọn **Từ khoá** (nhiều lựa chọn). Tên = `<Nhóm> <chi số>/1` + (` (a/b/...)` khi có tỷ lệ) + (` <từ khoá...>` theo Thứ tự tăng dần); `name_mode` = Ghép. Nút "Gõ tay" chuyển sang ô tên tự do (`name_mode` = Gõ tay), kiểm tra BR-101; khi gửi, nhóm sợi đọc từ tên (BR-02) chưa có trong danh sách → app tự thêm Nhóm sợi (Số xơ = số tỷ lệ đọc được, không có = 1; nguồn "Sales thêm - mới", Đã xem = Không) | Vui lòng chọn nhóm sợi. / Chi số phải lớn hơn 0. / Tổng tỷ lệ phải bằng 100 (hiện là <x>). |
+| BR-103 | Khởi tạo (bổ sung 2026-11-11), một lần khi bảng còn trống: **Từ điển** = mọi chữ (BR-100) xuất hiện trong ≥ 3 tên mã gốc (mọi trạng thái, cả hai xưởng) → Chữ chuẩn, nguồn Khởi tạo. **Nhóm sợi** = mọi `yarn_group` (BR-02) của mã gốc đang dùng, Số xơ = số phần tỷ lệ thường gặp nhất của nhóm (không có tỷ lệ = 1). **Từ khoá** = các chữ / cụm đứng sau chi số dùng ≥ 5 lần (MVS, SIRO, COMPACT, RE-PE, BCI, RECYCLE, FD, SUPIMA, SLUB, ...), Thứ tự theo vị trí xuất hiện trung bình trong tên. Phòng SO sửa lại sau. Từ điển: một chữ chỉ có một dòng; Cách viết sai phải trỏ tới Chữ chuẩn | Chữ '<chữ>' bị trùng. / Chữ '<chữ>' là cách viết sai, vui lòng chọn chữ đúng. / Chữ đúng '<chữ>' chưa có trong từ điển. |
+| BR-104 | Chữ mới chờ duyệt (bổ sung 2026-11-11): mỗi lần gửi / sửa yêu cầu hoặc đổi tên còn chữ lạ (BR-101) → mỗi chữ ghi / cộng vào 4.30 (mã, người, lý do, lúc), trạng thái Chờ duyệt. **Tự thêm:** khi một mã được tính giá lần đầu (UC-21 lưu giá, trạng thái → Đã tính giá), các chữ của tên nó đang Chờ duyệt thành Chữ chuẩn (nguồn Tự thêm khi tính giá), trạng thái Tự thêm. Phòng SO vẫn duyệt / xoá được (UC-66, UC-67) | - |
+| BR-105 | Đổi tên một sợi (bổ sung 2026-11-11): **Quyền** BR-109. Mã Đã huỷ / Từ chối không đổi được. Lý do bắt buộc ≤ 500. Tên mới qua BR-01, BR-101, viết hoa; giống tên hiện tại → "Tên mới giống tên hiện tại."; trùng mã gốc khác cùng xưởng → BR-06. **Không được đổi chi số, công nghệ (MVS / Ring), compact** (BR-02, BR-03) → "Đổi tên làm đổi <chi số / công nghệ / compact> - hãy tạo yêu cầu mới.". Áp cho mã gốc và mọi bản ĐCNSM; tên cũ thêm vào `old_names`. **Nhóm tiêu hao:** nhóm mới K' = BR-04(tên mới); K' = K cũ → không đổi; K' khác: nếu nhóm K chỉ dùng cho mã này (và bản ĐCNSM của nó) và K' chưa có ở xưởng → đổi tên nhóm K thành K' (cả chỗ nhóm sợi pha khác dùng K làm thành phần); nếu K' đã có → "Nhóm tiêu hao '<K'>' đã có; đổi tên sẽ làm đổi tiêu hao. Phòng SO xử lý nhóm tiêu hao trước."; nếu K còn dùng cho mã khác → "Nhóm tiêu hao '<K>' còn dùng cho <n> sợi khác. Hãy sửa chữ sai cho cả nhóm ở thẻ Chữ mới chờ duyệt / Từ điển.". Giá, mã tính giá, mã kế toán, NSM, thành phần không đổi; không tính lại giá; bản NSM khoá (BR-32) vẫn đổi được tên theo quyền BR-109 | Tên mới giống tên hiện tại. / Đổi tên làm đổi <...> - hãy tạo yêu cầu mới. / Nhóm tiêu hao '<K'>' đã có; ... / Nhóm tiêu hao '<K>' còn dùng cho <n> sợi khác. ... / Vui lòng nhập lý do. |
+| BR-106 | Sửa chữ sai trong mọi tên ("Sai, sửa thành", bổ sung 2026-11-11): chữ W → W' (đều viết hoa, so nguyên chữ) trong: tên mọi mã (mọi trạng thái, hai xưởng; tên cũ vào `old_names`, lý do "Sửa chính tả W → W'"), `loss_group_key` của mã, tên nhóm tiêu hao (`group_key`, `yarn_group_label`, `material`), thành phần nhóm sợi pha (`component_group_key`), `material_tech_key` và tên nguyên liệu của thành phần sợi (4.12.1). Kiểm tra trước, có lỗi thì không đổi gì: tên mới trùng mã khác cùng xưởng (BR-06) hoặc nhóm tiêu hao mới trùng nhóm đang có → liệt kê. Tiêu hao, giá không đổi; ghi nhật ký số tên / nhóm đã đổi | Không sửa được vì sẽ trùng: <danh sách>. |
+| BR-107 | Chuẩn hoá viết hoa (UC-71, bổ sung 2026-11-11): **Nhóm trùng** = các mã gốc cùng xưởng có tên viết hoa, gộp khoảng trắng giống nhau, trạng thái khác Đã huỷ, Từ chối, Không sản xuất. **Mã giữ** = mã đứng đầu khi sắp: trạng thái (Có mã kế toán, Đã tính giá, Chưa tính được, Chờ xưởng xem), nhiều mã kế toán hơn, nhiều bản ĐCNSM hơn, nhiều tên theo khách hơn, nhiều dòng giá hơn, số mã nhỏ hơn. **Mã loại**: Chờ xưởng xem → Từ chối; còn lại → Không sản xuất theo BR-72 nhưng được cả mã có mã kế toán; lý do "Trùng tên với <mã giữ>"; tên theo khách (4.20) chuyển sang mã giữ (bỏ cặp đã có); mã kế toán của mã loại thêm vào `merged_accounting_codes` của mã giữ. Sau đó mọi tên có chữ thường được viết hoa (tên cũ vào `old_names`, lý do "Chuẩn hoá viết hoa"). Chạy trong một lần, lỗi ở một mã thì không đổi gì | - |
+| BR-108 | Tên cũ và mã kế toán gộp (bổ sung 2026-11-11): ô tìm / chọn dòng giá (UC-27 tìm kiếm, UC-52) tìm được theo `old_names` và `merged_accounting_codes`; gợi ý Trùng theo tên (BR-77 (b)) so cả tên cũ; ghép mã kế toán (BR-82) coi `merged_accounting_codes` như mã kế toán của dòng Thường của mã giữ | - |
+| BR-109 | Quyền (bổ sung 2026-11-11): UC-65 xem: Sales, Phòng SO; UC-66, UC-67, UC-70, UC-71: Phòng SO (Sales chỉ xem các thẻ đó); UC-68, UC-69: Phòng SO với mọi mã (trừ Đã huỷ, Từ chối), Sales chỉ mã Chờ xưởng xem, Chưa tính được; quản trị viên như Phòng SO | Sales chỉ đổi được tên sợi chưa tính giá (Chờ xưởng xem, Chưa tính được). Mã <mã> đang '<trạng thái>'. |
 
 ## 8. Screens (Màn hình)
 
@@ -1318,6 +1439,16 @@ thường - BR-70); lịch sử ghi event "Sửa NSM". Mã đã khoá: nút lưu
   - Screen 10: bộ lọc (Tháng, Xưởng, Sản lượng nhỏ kg, Lệch nhiều %, 2 công tắc) → 5 ô số liệu → bảng đối chiếu chỉ xem với đủ 5
     khoản app / kế toán → biểu đồ cột 20 mã lệch nhiều nhất → bảng mã chưa có trên app → khối "Tải file Z" ở cuối → bảng các tháng đã lưu.
   - Hỏi xác nhận: "Lưu N tháng" (file Z), "Xoá tên" theo khách. Không hỏi: Thêm tên, Lưu tên, Dùng sợi này.
+- **Bổ sung 2026-11-11, tên sợi (chốt "ok"):**
+  - Menu: Screen 14 "Kiểm tra tên sợi" đứng đầu nhóm **Phòng SO**.
+  - Screen 2: khối nhập tên có lựa chọn (•) Ghép tên / ( ) Gõ tay, mỗi lần mở form về Ghép tên; Ghép: Nhóm sợi (danh sách chọn có tìm),
+    Chi số, các ô Tỷ lệ (theo Số xơ), Từ khoá (nhiều lựa chọn) → dòng "➜ Tên sợi: ..."; Gõ tay: ô Tên sợi; dưới tên: các chữ lạ mỗi chữ một
+    nút "Dùng <gợi ý>" + ô "Lý do giữ chữ lạ"; lỗi ngoặc / tỷ lệ hiện ngay.
+  - Screen 14: 5 thẻ Tên nghi sai | Chữ mới chờ duyệt | Từ điển | Nhóm sợi & từ khoá | Chuẩn hoá viết hoa. Thẻ Tên nghi sai: bộ lọc (Xưởng,
+    Loại lỗi - mặc định mọi loại trừ "Chữ thường", tìm mã / tên) → 6 ô số liệu theo loại lỗi → bảng chọn dòng → khối "Đổi tên sợi" → khối "Sửa
+    tên bằng Excel". Không biểu đồ.
+  - Hỏi xác nhận: "Lưu <n> tên" (file), "Sai, sửa thành", "Chuẩn hoá". Không hỏi: Đổi tên một mã, Lưu từ điển, Lưu nhóm / từ khoá, Thêm vào
+    từ điển, Gửi yêu cầu.
 - **Ô số liệu:** Screen 1, 3, 6, 7, 10. **Biểu đồ:** Screen 7, Screen 10.
 - **Hộp thoại xác nhận** trước khi: Huỷ yêu cầu, Từ chối, Xoá nhóm tiêu hao, Xoá dòng CK/PP, "Lưu đóng gói" (nội dung theo BR-62), mọi nút "… và tính lại" (Screen
   5), "Lưu hệ số", "Lưu thay đổi" nhóm tiêu hao (có tính lại), "Lưu N dòng hợp lệ". Không hỏi lại khi: Gửi yêu cầu, Lưu sửa
@@ -1354,6 +1485,9 @@ không có vai trò phù hợp (BR-47, BR-48); phía xử lý vẫn kiểm tra l
   "Sợi trùng", "Sợi gần giống" (UC-49) chọn được một dòng → nút "Dùng sợi này" (UC-50) hiện các dòng giá của sợi đó; ô "Lý do gửi
   yêu cầu mới" hiện và bắt buộc khi có sợi Trùng ở xưởng đang chọn (BR-78). Bảng yêu cầu có thêm cột Khách hàng, Lý do gửi khi đã
   có sợi trùng.
+- **Bổ sung 2026-11-11:** ô Tên sợi thay bằng **ô ghép tên** (Nhóm sợi, Chi số, Tỷ lệ, Từ khoá → dòng "Tên sợi: ...") với nút chuyển "Gõ
+  tay" / "Ghép tên" (BR-102); dưới tên: các chữ lạ kèm nút "Dùng <gợi ý>" và ô "Lý do giữ chữ lạ" (BR-101); thông báo chặn thiếu ngoặc /
+  tỷ lệ ≠ 100.
 - **After actions:** thông báo có mã mới; yêu cầu mới ở đầu danh sách.
 
 ### Screen 3: Nhập NSM & tính giá
@@ -1453,6 +1587,14 @@ không có vai trò phù hợp (BR-47, BR-48); phía xử lý vẫn kiểm tra l
   "Lưu N tháng" (hỏi xác nhận; nút chỉ bật với Sales / Phòng SO); danh sách các tháng đã lưu (Tháng, File, Sheet, Số mã, Tổng số
   lượng, Người tải, Lúc tải).
 - **After actions:** thông báo UC-53; ô Tháng chọn tháng vừa lưu.
+
+### Screen 14: Kiểm tra tên sợi (bổ sung 2026-11-11)
+- **Purpose:** rà và sửa tên sợi sai, quản lý từ điển tên chuẩn, nhóm sợi / từ khoá của ô ghép tên, chuẩn hoá viết hoa. Sales, Phòng SO
+  (thao tác theo BR-109).
+- **Blocks:** thẻ **Tên nghi sai** (UC-65) + khối "Đổi tên sợi" (UC-68) + khối "Sửa tên bằng Excel" (UC-69) | **Chữ mới chờ duyệt** (UC-67) |
+  **Từ điển** (UC-66) | **Nhóm sợi & từ khoá** (UC-70) | **Chuẩn hoá viết hoa** (UC-71).
+- **Buttons:** "Đổi tên", "Tải danh sách để sửa", "Kiểm tra file", "Lưu <n> tên" (hỏi xác nhận), "Thêm vào từ điển", "Sai, sửa thành" (hỏi
+  xác nhận), "Lưu từ điển", "Lưu" (nhóm / từ khoá), "Xem trước", "Tải đề xuất (Excel)", "Chuẩn hoá" (hỏi xác nhận).
 
 ## 9. Acceptance criteria (Tiêu chí nghiệm thu)
 - [ ] AC-01 (UC-34, BR-20): Cho trước file S4 hiện tại được chuyển dữ liệu ban đầu, khi app tính giá mã S4-2017 thì Tổng =
@@ -1713,8 +1855,58 @@ không có vai trò phù hợp (BR-47, BR-48); phía xử lý vẫn kiểm tra l
 - [ ] AC-117 (BR-82, sửa 2026-11-10): Dòng giá có mã kế toán "S41602000010000000" (không hậu tố), file Z có
   "S41602000010000000FCE" → ghép được, ghi chú "ghép theo 18 ký tự đầu (S41602000010000000)"; khi có thêm dòng giá mang đúng
   mã "S41602000010000000FCE" thì dòng đó được ưu tiên, không có ghi chú ghép.
+- [ ] AC-133 (BR-103, UC-66): Dữ liệu có "COTTON" ở 5 tên, "COTTTON" ở 1 tên → lần mở đầu: COTTON là Chữ chuẩn (Khởi tạo), COTTTON không có;
+  Phòng SO thêm "COTTTON" loại Cách viết sai, Chữ đúng COTTON; thêm "COTTON" lần nữa → "Chữ 'COTTON' bị trùng."; Cách viết sai không chọn
+  Chữ đúng → câu BR-103.
+- [ ] AC-134 (BR-100, UC-65): Tên "Cottton/modal 40/1 (50/50)" (COTTON, MODAL là Chữ chuẩn) → lỗi Chữ lạ (gợi ý COTTON, khác 1 ký tự) và
+  Chữ thường; chữ "XYZQ" không gần chữ chuẩn nào → Chữ lạ, không gợi ý; "BAMBO 40/1 SIRO COMPACT" với BAMBOO chuẩn → gợi ý tên "BAMBOO 40/1 SIRO COMPACT"; "CVC 16/1 (" → Thiếu /
+  thừa ngoặc; "CVC 30/1 (60/30)" → Tỷ lệ ≠ 100; "50D/32F" không bị coi là chữ lạ; hai mã S4 "Cvc 30/1 (60/40)" và "CVC 30/1 (60/40)" → Trùng
+  tên.
+- [ ] AC-135 (BR-101, BR-104, UC-15): Gửi "CVC 30/1 (60/40" → chặn câu thiếu ngoặc; "COTTTON/PE 30/1 (60/40)" (COTTTON là Cách viết sai) →
+  hiện nút "Dùng COTTON", chưa thay và không lý do → chặn câu chữ lạ; bấm "Dùng COTTON" → gửi được, tên lưu "COTTON/PE 30/1 (60/40)"; gửi
+  "HEALCA/PE 30/1 (50/50)" có lý do → lưu, `unknown_word_reason` = lý do, HEALCA vào Chữ mới (số lần 1, Chờ duyệt); tên gõ "cvc 30/1" lưu
+  "CVC 30/1".
+- [ ] AC-136 (BR-105, UC-68): Phòng SO đổi "BAMBO 40/1 SIRO COMPACT" (S4, nhóm BAMBO SIRO COMPACT chỉ mã này dùng) → "BAMBOO 40/1 SIRO
+  COMPACT", lý do "sai chính tả": tên đổi ở mã gốc và bản ĐCNSM, `old_names` có tên cũ, nhóm tiêu hao đổi tên thành "BAMBOO SIRO COMPACT"
+  (tiêu hao giữ nguyên), giá không đổi, nhật ký ghi cũ → mới; đổi sang "BAMBOO 30/1 SIRO COMPACT" → câu đổi chi số; đổi sang tên trùng mã khác
+  cùng xưởng → câu BR-06; nhóm còn dùng cho mã khác → câu BR-105.
+- [ ] AC-137 (BR-109, BR-108): Sales đổi tên mã "Chưa tính được" → được; đổi tên mã "Có mã kế toán" → câu BR-109; sau khi đổi, tìm "BAMBO 40/1"
+  ở bảng giá và gợi ý sợi (UC-49) vẫn ra mã đó.
+- [ ] AC-138 (UC-69, 5.13): Tải danh sách nghi sai → file có cột Tên mới, Lý do sửa trống; điền 3 dòng (1 hợp lệ, 1 thiếu lý do, 1 đổi chi số) →
+  kiểm tra: 1 hợp lệ, 2 bị loại kèm lý do; lưu → chỉ dòng hợp lệ đổi tên.
+- [ ] AC-139 (BR-104): Mã S4-2100 tên có HEALCA (Chờ duyệt) được xưởng tính giá lần đầu → HEALCA thành Chữ chuẩn nguồn "Tự thêm khi tính giá",
+  trạng thái Tự thêm.
+- [ ] AC-140 (BR-106, UC-67): Chữ mới "VICOSE" (1 tên "COTTON/VICOSE 30/1 (50/50)", nhóm tiêu hao "COTTON/VICOSE (50/50)" có thành phần trỏ
+  nhóm "VICOSE - Ring") → "Sai, sửa thành VISCOSE": tên, nhóm tiêu hao, tên thành phần đổi thành VISCOSE; từ điển có VICOSE → VISCOSE; nếu
+  "COTTON/VISCOSE 30/1 (50/50)" đã có cùng xưởng → báo trùng, không đổi gì.
+- [ ] AC-141 (BR-102): Ô ghép tên: nhóm CVC (2 xơ), chi số 30, tỷ lệ 60 / 40, từ khoá BCI (thứ tự 30), SIRO (10), COMPACT (20) → "CVC 30/1
+  (60/40) SIRO COMPACT BCI"; nhóm PE (1 xơ) → không có ô tỷ lệ, "PE 30/1 MVS"; tỷ lệ 60 / 30 → câu tổng tỷ lệ.
+- [ ] AC-142 (BR-102, UC-70): Gõ tay "HEMP/LINEN 20/1 (50/50)" (nhóm HEMP/LINEN chưa có) → gửi xong, danh sách nhóm có HEMP/LINEN, Số xơ 2, nguồn
+  "Sales thêm - mới", Đã xem = Không; Phòng SO lọc "Chỉ hiện nhóm Sales mới thêm" thấy nhóm đó.
+- [ ] AC-143 (BR-107, UC-71): Hai mã S4 "Cotton/Modal 40/1 (50/50)" (Đã tính giá, có 1 tên theo khách) và "COTTON/MODAL 40/1 (50/50)" (Có mã kế
+  toán) → xem trước: giữ mã Có mã kế toán, loại mã kia (Không sản xuất, lý do "Trùng tên với <mã giữ>"), tên theo khách chuyển sang mã giữ;
+  sau chuẩn hoá mọi tên viết hoa, tên cũ trong `old_names`.
+- [ ] AC-144 (BR-107, BR-108): Hai mã CM 36/1 cùng Có mã kế toán (S41603600010000000FC giữ, S41603600010000000 loại) → mã loại thành Không sản
+  xuất dù có mã kế toán; mã giữ có `merged_accounting_codes` = [S41603600010000000]; đối chiếu giá kế toán (UC-54) và tìm theo mã kế toán ra mã giữ.
+- [ ] AC-145 (BR-109): Sales mở Screen 14 xem được mọi thẻ nhưng nút Lưu từ điển, Sai sửa thành, Chuẩn hoá bị tắt; Kế toán / Xưởng không có vai trò
+  Sales / SO: đổi tên bị từ chối.
+- [ ] AC-146 (giữ nguyên): Gửi yêu cầu tên hợp lệ không có chữ lạ chạy như trước (BR-06, BR-76..BR-78 giữ nguyên); giá, NSM, mã kế toán của mọi
+  mã không đổi sau đổi tên / chuẩn hoá; mọi test cũ giữ xanh.
+
 
 ## 10. Open questions (Câu hỏi mở)
+- Mở rộng 2026-11-11: kiểm tra chính tả và sửa tên sợi - từ điển tên chuẩn, bảng tên nghi sai, chữ mới chờ duyệt (tự ghi lại, tự thêm khi tính
+  giá), đổi tên một sợi / hàng loạt bằng Excel (giữ tên cũ để tìm), ô ghép tên khi Sales gửi yêu cầu (nhóm lạ tự thêm), chặn sai khi gửi,
+  chuẩn hoá viết hoa một lượt + loại mã trùng tên (4.12 thêm trường, 4.29-4.31, 5.13, UC-65..UC-71, UC-15 / UC-16 sửa, BR-100..BR-109, Screen
+  14, AC-133..AC-146). Kế hoạch: `docs/plans/yarn_costing-extension-20261111-yarn-name.md`; đề xuất giữ / loại đã duyệt:
+  `docs/plans/yarn_costing-de-xuat-ten-trung-20261111.xlsx`.
+- Giả định (2026-11-11): chữ = chuỗi chữ cái không chứa chữ số, dài ≥ 2; đổi tên không được đổi chi số / công nghệ / compact; mã trùng đang
+  Chờ xưởng xem được loại bằng Từ chối; gợi ý chữ gần nhất chỉ cho chữ ≥ 4 ký tự, khác tối đa 2 ký tự.
+- Giả định (triển khai, 2026-11-11): từ điển, nhóm sợi / từ khoá khởi tạo khi màn "Kiểm tra tên sợi" được mở lần đầu; khi từ
+  điển còn trống, app chưa kiểm tra chữ lạ và ô ghép tên chỉ cho gõ tay. "Tự thêm khi tính giá" (BR-104) được xét mỗi lần mở màn
+  "Kiểm tra tên sợi". Tên có khoá nhóm tiêu hao cũ không theo BR-04 thì giữ nhóm đó khi đổi tên. Trùng điều kiện ở BR-107: giữ mã
+  tạo trước (chạy thử trên dữ liệu thật 2026-11-11 ra đúng đề xuất đã duyệt; 19 mã trong file đề xuất đã ở Đã huỷ / Từ chối /
+  Không sản xuất nên không cần xử lý → còn loại 76 mã, 13 mã có mã kế toán; viết hoa 647 tên).
 - Sửa 2026-11-10 (sau khi chạy với dữ liệu thật, người dùng đồng ý): mã kế toán trên app hơn một nửa không có hậu tố D / E / FCD /
   FCE / P như file Z, nên BR-82 ghép thêm theo 18 ký tự đầu khi không có mã giống hệt. Tháng 09/2026: 13/89 mã → 47/89 mã.
 - Mở rộng 2026-11-10: yêu cầu của Sales sau buổi training (đợt 1): gợi ý sợi Trùng / Gần giống khi nhập tên (UC-49, BR-76, BR-77),
@@ -1952,3 +2144,10 @@ không có vai trò phù hợp (BR-47, BR-48); phía xử lý vẫn kiểm tra l
 | Quyền theo vai trò, hộp thoại | `frontend/features/yarn_costing/components/` (permissions: tắt nút theo vai trò, dialogs, flash, display, labels, columns, recalc_diff, factory_picker) |
 | Logs | mọi service ghi log các bước vào `logs/app.log` (không còn khung nhật ký trên màn hình) |
 | Tests | `backend/features/yarn_costing/tests/` (conftest + helpers: tài khoản đăng nhập thử; test_calculation: khớp S4-2017 và S1-1310; test_rules; test_pricing_services; test_master_services; test_import_services; test_carding_services; test_new_app: BR-61..BR-65, UC-42, UC-43, AC-62..AC-77; test_component_import: BR-66..BR-69, UC-44, UC-45, AC-78..AC-85) |
+| Tên sợi (2026-11-11) - dữ liệu | `models/yarn.py` (OldName, `old_names`, `unknown_word_reason`, `name_mode`, `merged_accounting_codes`); `models/name_check.py` (NameWord, PendingWord, NamePart + NameCheck, SuspectName, DuplicateDecision); enum trong `models/enums.py`; `repositories/name_check_repository.py` |
+| BR-100..BR-107 | `business/name_check_business.py` (`check`, `suspects`, `ensure_request_name`, `build_name`, `new_group`, `initial_words`, `initial_parts`, `plan_rename`, `loss_group_change`, `renamed_group`, `replace_everywhere`, `duplicate_plan`, `upper_changes`) |
+| BR-108 | `builders/price_rows_builder.py` (tìm theo tên cũ, mã gộp), `business/blend_business.py::suggest` (Trùng theo tên cũ), `business/accounting_cost_business.py::lines_by_code`, `business/quote_business.py::accounting_suggestions`; nhãn chọn sợi ở `pages/compare_page.py`, `pages/quote_page.py` |
+| BR-109 | `models/access.py` (UC-65..UC-71), `NameCheckBusiness.ensure_can_rename` |
+| UC-15 / UC-16 (sửa), UC-65..UC-71 | `services/create_yarn_request_service.py`, `update_yarn_request_service.py`, `check_yarn_name_service.py`, `get_name_check_service.py`, `save_name_dictionary_service.py`, `resolve_pending_word_service.py`, `rename_yarn_service.py`, `export_rename_list_service.py`, `import_rename_file_service.py`, `save_name_parts_service.py`, `normalize_names_service.py`; file 5.13: `builders/name_file_builders.py` |
+| Screen 2 (sửa), Screen 14 | `components/name_input.py` (ô ghép tên / gõ tay, chữ lạ), `pages/yarn_request_page.py`, `pages/name_check_page.py` |
+| AC-133..AC-146 | `test_yarn_name.py` trong thư mục kiểm thử của chức năng |

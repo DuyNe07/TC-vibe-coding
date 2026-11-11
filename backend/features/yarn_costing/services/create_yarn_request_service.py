@@ -6,12 +6,18 @@ from backend.features.yarn_costing.business.access_business import AccessBusines
 from backend.features.yarn_costing.business.blend_business import BlendBusiness
 from backend.features.yarn_costing.business.master_business import MasterBusiness
 from backend.features.yarn_costing.business.name_business import YarnNameBusiness, collapse_spaces
+from backend.features.yarn_costing.business.name_check_business import NameCheckBusiness, upper_name
 from backend.features.yarn_costing.business.request_business import RequestBusiness
 from backend.features.yarn_costing.constants import FACTORY_NAMES
 from backend.features.yarn_costing.dto.request_dto import CreateYarnRequestRequest, YarnResponse
 from backend.features.yarn_costing.models.enums import YarnOrigin, YarnStatus
 from backend.features.yarn_costing.models.yarn import Yarn
 from backend.features.yarn_costing.repositories.customer_name_repository import CustomerYarnNameRepository
+from backend.features.yarn_costing.repositories.name_check_repository import (
+    NamePartRepository,
+    NameWordRepository,
+    PendingWordRepository,
+)
 from backend.features.yarn_costing.repositories.packaging_type_repository import PackagingTypeRepository
 from backend.features.yarn_costing.repositories.rate_version_repository import RateVersionRepository
 from backend.features.yarn_costing.repositories.recalc_batch_repository import AuditLogRepository
@@ -35,14 +41,18 @@ class CreateYarnRequestService(BaseService[CreateYarnRequestRequest, YarnRespons
     def execute(self, request: CreateYarnRequestRequest) -> YarnResponse:
         factory = request.factory_code
         self.access.ensure_allowed(self.current_user, "UC-15", factory.value)
-        name = collapse_spaces(request.yarn_name)
+        name = upper_name(request.yarn_name)  # BR-101 (bổ sung 2026-11-11): tên lưu viết hoa
         parsed = self.names.analyze(name)
         self.names.ensure_valid(parsed)
+        yarns = self.repository.list_all()
+        checks = NameCheckBusiness()
+        standard, misspellings = NameWordRepository().lookups(checks.word_uses(yarns))
+        name_check = checks.check(name, standard, misspellings)
+        word_reason = checks.ensure_request_name(name_check, request.unknown_word_reason)
         version = RateVersionRepository().current(factory.value)
         packaging = {p.code: p for p in PackagingTypeRepository().for_factory(factory.value)}
         chosen = packaging.get(request.packaging_code.strip())
         self.master.require(chosen is not None and self.master.is_selectable(chosen, version), PACKAGING_MESSAGE)
-        yarns = self.repository.list_all()
         customer = collapse_spaces(request.customer_name)
         reason = (request.duplicate_reason or "").strip()
         self.master.require(len(customer) <= CUSTOMER_MAX and len(reason) <= REASON_MAX, MSG_LENGTH)
@@ -63,6 +73,8 @@ class CreateYarnRequestService(BaseService[CreateYarnRequestRequest, YarnRespons
             origin=YarnOrigin.YEU_CAU_SALES,
             requested_by=label,
             customer_name=customer,
+            unknown_word_reason=word_reason,
+            name_mode=request.name_mode,
         )
         self.requests.ensure_unique_name(yarn, yarns)
         # BR-78: a Trùng yarn in the chosen factory needs a reason
@@ -72,6 +84,12 @@ class CreateYarnRequestService(BaseService[CreateYarnRequestRequest, YarnRespons
         if same_here:
             yarn = yarn.model_copy(update={"duplicate_reason": reason})
         self.repository.store(yarns, [yarn])
+        if name_check.unknown:  # BR-104
+            PendingWordRepository().record([u.word for u in name_check.unknown], code, label, word_reason)
+        parts = NamePartRepository()
+        new_group = checks.new_group(name, parts.list_all()) if parts.list_all() else None
+        if new_group is not None:  # BR-102: a yarn group Sales typed that the builder does not know yet
+            parts.add(new_group)
         AuditLogRepository().add(
             self.access.audit_entry(
                 self.current_user,
