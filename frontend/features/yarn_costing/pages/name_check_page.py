@@ -27,6 +27,7 @@ from backend.features.yarn_costing.dto.name_dto import (
     SaveNamePartsRequest,
 )
 from backend.features.yarn_costing.dto.reference_dto import GetReferenceDataRequest
+from backend.features.yarn_costing.dto.request_dto import ListYarnsRequest, YarnStatus
 from frontend.core.base_page import BasePage
 from frontend.core.components import data_table, download_button, editable_table, file_upload, panel, stat_row
 from frontend.core.formatting import format_number
@@ -125,18 +126,36 @@ class NameCheckPage(BasePage):
         with panel(
             "Đổi tên sợi", icon="✏️", description="Giá, mã tính giá, mã kế toán không đổi; tên cũ được giữ để tìm kiếm."
         ):
-            code = st.text_input(
-                "Mã sợi",
-                value=picked.yarn_code if picked else "",
-                key=self.key(f"r_code.{picked.yarn_code if picked else ''}"),
+            # sửa 2026-11-11: chọn được MỌI mã gốc (trừ Đã huỷ / Từ chối), tìm theo mã hoặc tên; hiện tên hiện tại
+            yarns = {
+                y.yarn_code: y
+                for y in feature.list_yarns(ListYarnsRequest()).items
+                if y.revision_no == 0 and y.status not in (YarnStatus.DA_HUY, YarnStatus.TU_CHOI)
+            }
+            code_key = self.key(f"r_code.{picked.yarn_code if picked else ''}")
+            if picked and picked.yarn_code in yarns and code_key not in st.session_state:
+                st.session_state[code_key] = picked.yarn_code  # a row chosen in the table above fills the picker
+            code = st.selectbox(
+                "Sợi cần đổi tên",
+                list(yarns),
+                index=None,
+                placeholder="Gõ mã hoặc tên sợi (mọi sợi, không chỉ sợi nghi sai)",
+                format_func=lambda c: (
+                    f"{c} - {yarns[c].yarn_name} ({yarns[c].factory_code.value} · {yarns[c].status.value})"
+                ),
+                key=code_key,
             )
-            if not code.strip():
-                st.caption("Chọn một dòng ở bảng trên hoặc nhập mã sợi.")
+            if not code:
+                st.caption("Chọn một sợi ở ô trên, hoặc chọn một dòng ở bảng tên nghi sai.")
                 return
+            current = yarns[code]
+            st.markdown(
+                f"**Tên hiện tại:** {current.yarn_name} · **Trạng thái:** {current.status.value} · "
+                f"**Nhóm tiêu hao:** {current.loss_group_key or '-'}"
+            )
             scope = self.key(f"r_name.{code}")
-            initial = (picked.suggested_name or picked.yarn_name) if picked and picked.yarn_code == code else ""
-            if picked and picked.yarn_code == code:
-                st.caption(f"Tên hiện tại: {picked.yarn_name}")
+            suggestion = picked.suggested_name if picked and picked.yarn_code == code else ""
+            initial = suggestion or current.yarn_name
             new_name, _, word_reason, check = name_input(
                 feature, scope, initial=initial, allow_builder=False, label="Tên mới"
             )
