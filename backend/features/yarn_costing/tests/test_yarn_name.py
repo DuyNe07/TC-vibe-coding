@@ -540,3 +540,20 @@ def test_ac146_valid_request_unchanged() -> None:
         CreateYarnRequestService().handle(
             CreateYarnRequestRequest(factory_code=S4, yarn_name="cvc 30/1 (60/40) mvs", packaging_code="Type 3")
         )
+
+
+# ---- Fix 2026-11-11: any yarn can be renamed, not only the suspect ones; the picker shows the current name ----
+def test_fix_rename_any_yarn_listed_with_current_name() -> None:
+    from backend.features.yarn_costing.dto.request_dto import ListYarnsRequest
+    from backend.features.yarn_costing.services.list_yarns_service import ListYarnsService
+
+    words("CVC", "MVS", "PE")
+    put("S4-970", "CVC 30/1 (60/40) MVS", loss_key="CVC (60/40) MVS")
+    assert all(s.yarn_code != "S4-970" for s in check_page(issues=[]).suspects)  # a correct name: not a suspect
+    listed = {y.yarn_code: y for y in ListYarnsService().handle(ListYarnsRequest()).items}
+    assert listed["S4-970"].yarn_name == "CVC 30/1 (60/40) MVS"
+    assert listed["S4-970"].loss_group_key == "CVC (60/40) MVS"
+    done = RenameYarnService().handle(
+        RenameYarnRequest(yarn_code="S4-970", new_name="CVC 30/1 (60/40) MVS PE", reason="theo khách")
+    )
+    assert done.saved and yarn("S4-970").yarn_name == "CVC 30/1 (60/40) MVS PE"
