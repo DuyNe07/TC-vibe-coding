@@ -141,3 +141,47 @@ class Incoterm(StrEnum):
 class PriceCurrency(StrEnum):
     USD = "USD"
     VND = "VND"
+
+
+# ---- Tên sợi (bổ sung 2026-11-11): từ điển, chữ mới, nhóm sợi / từ khoá ----
+class NameWordKind(StrEnum):
+    CHUAN = "Chữ chuẩn"
+    SAI = "Cách viết sai"
+
+
+class NameWordSource(StrEnum):
+    KHOI_TAO = "Khởi tạo"
+    PHONG_SO = "Phòng SO"
+    TU_THEM = "Tự thêm khi tính giá"
+
+
+class PendingWordStatus(StrEnum):
+    CHO_DUYET = "Chờ duyệt"
+    DA_THEM = "Đã thêm"
+    DA_SUA = "Đã sửa"
+    TU_THEM = "Tự thêm"
+
+
+class NamePartKind(StrEnum):
+    NHOM = "Nhóm sợi"
+    TU_KHOA = "Từ khoá"
+
+
+class NamePartSource(StrEnum):
+    KHOI_TAO = "Khởi tạo"
+    PHONG_SO = "Phòng SO"
+    SALES_MOI = "Sales thêm - mới"
+
+
+class NameMode(StrEnum):
+    GHEP = "Ghép"
+    GO_TAY = "Gõ tay"
+
+
+class NameIssueKind(StrEnum):
+    CHU_LA = "Chữ lạ"
+    NGOAC = "Thiếu / thừa ngoặc"
+    TY_LE = "Tỷ lệ ≠ 100"
+    KHONG_DOC = "Chưa đọc được thành phần"
+    CHU_THUONG = "Chữ thường"
+    TRUNG = "Trùng tên"

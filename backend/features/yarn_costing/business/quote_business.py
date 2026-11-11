@@ -240,8 +240,11 @@ class QuoteBusiness(BaseBusiness[Quote]):
             by_core[core] = by_core.get(core, ZERO) + line.closing_qty
         found: dict[str, tuple[str, str, Decimal]] = {}
         for member in family:
-            for line in member.lines:
-                code = (line.accounting_code or "").strip().upper()
+            codes = [line.accounting_code or "" for line in member.lines] + list(
+                member.merged_accounting_codes
+            )  # BR-108
+            for raw in codes:
+                code = raw.strip().upper()
                 if code and code not in found:
                     found[code] = (code, member.yarn_name, by_core.get(code[:CORE_LENGTH], ZERO))
         blend = BlendBusiness()

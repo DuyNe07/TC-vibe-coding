@@ -83,6 +83,24 @@ from backend.features.yarn_costing.dto.material_dto import (
     StockMonthListResponse,
     StockOutComparisonResponse,
 )
+from backend.features.yarn_costing.dto.name_dto import (
+    CheckYarnNameRequest,
+    ExportRenameListRequest,
+    GetNameCheckRequest,
+    ImportRenameFileRequest,
+    NameCheckResponse,
+    NameSaveResponse,
+    NormalizeNamesRequest,
+    NormalizeNamesResponse,
+    RenameImportResponse,
+    RenameYarnRequest,
+    RenameYarnResponse,
+    ResolvePendingResponse,
+    ResolvePendingWordRequest,
+    SaveNameDictionaryRequest,
+    SaveNamePartsRequest,
+    YarnNameCheckResponse,
+)
 from backend.features.yarn_costing.dto.price_dto import (
     CreateAdjustmentLineRequest,
     DeleteAdjustmentLineRequest,
@@ -145,6 +163,7 @@ from backend.features.yarn_costing.services.check_nsm_anomalies_service import C
 from backend.features.yarn_costing.services.check_price_anomalies_service import CheckPriceAnomaliesService
 from backend.features.yarn_costing.services.check_request_submit_service import CheckRequestSubmitService
 from backend.features.yarn_costing.services.check_siro_anomalies_service import CheckSiroAnomaliesService
+from backend.features.yarn_costing.services.check_yarn_name_service import CheckYarnNameService
 from backend.features.yarn_costing.services.compare_price_lines_service import ComparePriceLinesService
 from backend.features.yarn_costing.services.correct_yarn_nsm_service import CorrectYarnNsmService
 from backend.features.yarn_costing.services.create_adjustment_line_service import CreateAdjustmentLineService
@@ -164,12 +183,14 @@ from backend.features.yarn_costing.services.download_not_produced_template_servi
 from backend.features.yarn_costing.services.download_template_service import DownloadTemplateService
 from backend.features.yarn_costing.services.export_price_lines_service import ExportPriceLinesService
 from backend.features.yarn_costing.services.export_quotes_service import ExportQuotesService
+from backend.features.yarn_costing.services.export_rename_list_service import ExportRenameListService
 from backend.features.yarn_costing.services.get_accounting_comparison_service import GetAccountingComparisonService
 from backend.features.yarn_costing.services.get_dashboard_service import GetDashboardService
 from backend.features.yarn_costing.services.get_legacy_comparison_service import GetLegacyComparisonService
 from backend.features.yarn_costing.services.get_material_averages_service import GetMaterialAveragesService
 from backend.features.yarn_costing.services.get_material_setup_service import GetMaterialSetupService
 from backend.features.yarn_costing.services.get_monthly_setting_service import GetMonthlySettingService
+from backend.features.yarn_costing.services.get_name_check_service import GetNameCheckService
 from backend.features.yarn_costing.services.get_quote_form_service import GetQuoteFormService
 from backend.features.yarn_costing.services.get_recalc_diff_service import GetRecalcDiffService
 from backend.features.yarn_costing.services.get_reference_data_service import GetReferenceDataService
@@ -179,6 +200,7 @@ from backend.features.yarn_costing.services.import_accounting_file_service impor
 from backend.features.yarn_costing.services.import_arrival_file_service import ImportArrivalFileService
 from backend.features.yarn_costing.services.import_component_file_service import ImportComponentFileService
 from backend.features.yarn_costing.services.import_not_produced_file_service import ImportNotProducedFileService
+from backend.features.yarn_costing.services.import_rename_file_service import ImportRenameFileService
 from backend.features.yarn_costing.services.import_stock_file_service import ImportStockFileService
 from backend.features.yarn_costing.services.import_workbook_service import ImportWorkbookService
 from backend.features.yarn_costing.services.list_accounting_months_service import ListAccountingMonthsService
@@ -192,12 +214,17 @@ from backend.features.yarn_costing.services.list_quotes_service import ListQuote
 from backend.features.yarn_costing.services.list_recalc_batches_service import ListRecalcBatchesService
 from backend.features.yarn_costing.services.list_stock_months_service import ListStockMonthsService
 from backend.features.yarn_costing.services.list_yarns_service import ListYarnsService
+from backend.features.yarn_costing.services.normalize_names_service import NormalizeNamesService
 from backend.features.yarn_costing.services.recalculate_not_priced_service import RecalculateNotPricedService
 from backend.features.yarn_costing.services.reject_yarn_request_service import RejectYarnRequestService
+from backend.features.yarn_costing.services.rename_yarn_service import RenameYarnService
+from backend.features.yarn_costing.services.resolve_pending_word_service import ResolvePendingWordService
 from backend.features.yarn_costing.services.save_arrival_lots_service import SaveArrivalLotsService
 from backend.features.yarn_costing.services.save_arrival_mappings_service import SaveArrivalMappingsService
 from backend.features.yarn_costing.services.save_customer_name_service import SaveCustomerNameService
 from backend.features.yarn_costing.services.save_monthly_setting_service import SaveMonthlySettingService
+from backend.features.yarn_costing.services.save_name_dictionary_service import SaveNameDictionaryService
+from backend.features.yarn_costing.services.save_name_parts_service import SaveNamePartsService
 from backend.features.yarn_costing.services.save_packaging_types_service import SavePackagingTypesService
 from backend.features.yarn_costing.services.save_price_group_service import SavePriceGroupService
 from backend.features.yarn_costing.services.save_process_routes_service import SaveProcessRoutesService
@@ -535,3 +562,41 @@ class YarnCostingController(BaseController):
     def get_stock_out_comparison(self, request: GetStockOutComparisonRequest) -> StockOutComparisonResponse:
         """UC-64 So đơn giá xuất kho với giá bình quân."""
         return GetStockOutComparisonService().handle(request)
+
+    # ---- tên sợi (bổ sung 2026-11-11) ----
+    @cached_query
+    def check_yarn_name(self, request: CheckYarnNameRequest) -> YarnNameCheckResponse:
+        """BR-101 / BR-102 Tên ghép / gõ tay và kết quả kiểm tra (Screen 2, đổi tên)."""
+        return CheckYarnNameService().handle(request)
+
+    def get_name_check(self, request: GetNameCheckRequest) -> NameCheckResponse:
+        """UC-65 Tên nghi sai + từ điển, chữ mới, nhóm sợi / từ khoá (khởi tạo lần đầu - BR-103)."""
+        return GetNameCheckService().handle(request)
+
+    def save_name_dictionary(self, request: SaveNameDictionaryRequest) -> NameSaveResponse:
+        """UC-66 Lưu từ điển tên chuẩn."""
+        return SaveNameDictionaryService().handle(request)
+
+    def resolve_pending_word(self, request: ResolvePendingWordRequest) -> ResolvePendingResponse:
+        """UC-67 Thêm chữ mới vào từ điển / sửa chữ sai trong mọi tên."""
+        return ResolvePendingWordService().handle(request)
+
+    def rename_yarn(self, request: RenameYarnRequest) -> RenameYarnResponse:
+        """UC-68 Đổi tên một sợi."""
+        return RenameYarnService().handle(request)
+
+    def export_rename_list(self, request: ExportRenameListRequest) -> FileDownloadDTO:
+        """UC-69 Tải danh sách tên nghi sai để sửa."""
+        return ExportRenameListService().handle(request)
+
+    def import_rename_file(self, request: ImportRenameFileRequest) -> RenameImportResponse:
+        """UC-69 Đổi tên hàng loạt bằng file."""
+        return ImportRenameFileService().handle(request)
+
+    def save_name_parts(self, request: SaveNamePartsRequest) -> NameSaveResponse:
+        """UC-70 Lưu nhóm sợi / từ khoá của ô ghép tên."""
+        return SaveNamePartsService().handle(request)
+
+    def normalize_names(self, request: NormalizeNamesRequest) -> NormalizeNamesResponse:
+        """UC-71 Chuẩn hoá viết hoa và xử lý tên trùng."""
+        return NormalizeNamesService().handle(request)

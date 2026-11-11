@@ -40,6 +40,7 @@ from frontend.features.yarn_costing.components.labels import (
     factory_label,
     label_of,
 )
+from frontend.features.yarn_costing.components.name_input import name_input
 from frontend.features.yarn_costing.components.permissions import action_state, explain
 
 
@@ -82,7 +83,7 @@ class YarnRequestPage(BasePage):
     def _create_form(self, feature: YarnCostingController, reference: ReferenceDataResponse) -> None:
         factories = reference.factories
         with panel("Tạo yêu cầu tính giá", icon="📝"):
-            c1, c2, c_customer, c3 = st.columns([1, 3, 2, 2])
+            c1, c_customer, c3 = st.columns([1, 2, 2])
             factory = c1.selectbox(
                 "Xưởng",
                 factory_codes(factories),
@@ -90,9 +91,6 @@ class YarnRequestPage(BasePage):
                 placeholder="Chọn xưởng",
                 format_func=lambda c: factory_label(factories, c),
                 key=self.key("new_factory"),
-            )
-            name = c2.text_input(
-                "Tên sợi", max_chars=200, placeholder="Ví dụ: CVC 30/1 (60/40) MVS", key=self.key("new_name")
             )
             customer = c_customer.text_input(
                 "Khách hàng", max_chars=100, placeholder="Không bắt buộc", key=self.key("new_customer")
@@ -109,6 +107,8 @@ class YarnRequestPage(BasePage):
                 disabled=not factory,
                 key=self.key(f"new_pack.{factory}"),
             )
+            # BR-101 / BR-102 (bổ sung 2026-11-11): ô ghép tên / gõ tay + chữ lạ
+            name, name_mode, word_reason, name_check = name_input(feature, self.key("new_name"))
             if factory and name.strip():
                 analysis = feature.analyze_yarn_name(AnalyzeYarnNameRequest(factory_code=factory, yarn_name=name))
                 if analysis.valid:
@@ -142,7 +142,7 @@ class YarnRequestPage(BasePage):
             no_role, no_role_why = action_state("UC-15", factory)
             reasons = [*([no_role_why] if no_role_why else []), *check.reasons]
             allowed = check.allowed and not no_role
-            missing = not (factory and name.strip() and pack)
+            missing = not (factory and name.strip() and pack) or bool(name_check and name_check.problem)
             button_col, reason_col = st.columns([1, 4], vertical_alignment="center")
             if button_col.button(
                 "Gửi yêu cầu",
@@ -159,10 +159,13 @@ class YarnRequestPage(BasePage):
                         packaging_code=pack,
                         customer_name=customer,
                         duplicate_reason=reason,
+                        unknown_word_reason=word_reason,
+                        name_mode=name_mode,
                     )
                 )
                 set_flash(self.state, result.message)
-                st.session_state.pop(self.key("new_name"), None)
+                for widget in [k for k in st.session_state if str(k).startswith(self.key("new_name"))]:
+                    st.session_state.pop(widget, None)
                 st.session_state.pop(self.key("new_customer"), None)
                 st.rerun()
             with reason_col:
@@ -315,7 +318,10 @@ class YarnRequestPage(BasePage):
                     f"'{label_of(STATUS_LABELS, item.status)}'."
                 )
             c1, c2 = st.columns([3, 2])
-            name = c1.text_input("Tên sợi", value=item.yarn_name, max_chars=200, key=self.key(f"edit_name.{code}"))
+            with c1:  # BR-101 (bổ sung 2026-11-11): gõ tay + kiểm tra chữ lạ
+                name, name_mode, word_reason, _ = name_input(
+                    feature, self.key(f"edit_name.{code}"), initial=item.yarn_name, allow_builder=False
+                )
             customer = c1.text_input(
                 "Khách hàng", value=item.customer_name, max_chars=100, key=self.key(f"edit_customer.{code}")
             )
@@ -344,7 +350,12 @@ class YarnRequestPage(BasePage):
             ):
                 result = feature.update_yarn_request(
                     UpdateYarnRequestRequest(
-                        yarn_code=code, yarn_name=name, packaging_code=pack or "", customer_name=customer
+                        yarn_code=code,
+                        yarn_name=name,
+                        packaging_code=pack or "",
+                        customer_name=customer,
+                        unknown_word_reason=word_reason,
+                        name_mode=name_mode,
                     )
                 )
                 set_flash(self.state, result.message)

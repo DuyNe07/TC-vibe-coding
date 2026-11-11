@@ -34,6 +34,8 @@ class ComparePage(BasePage):
             r.line_code: f"{r.line_code} - {r.yarn_name} ({r.factory_code})"
             + (f" · {r.customer_names_text}" if r.customer_names_text else "")
             + (f" · KT {r.accounting_code}" if r.accounting_code else "")
+            + (f" · tên cũ {r.old_names_text}" if r.old_names_text else "")  # BR-108
+            + (f" · KT gộp {', '.join(r.merged_accounting_codes)}" if r.merged_accounting_codes else "")
             for r in rows
         }
         codes = list(labels)

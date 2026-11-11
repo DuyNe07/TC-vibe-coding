@@ -103,6 +103,15 @@ class PriceLine(BaseValueObject):
         return bool(self.accounting_code)
 
 
+class OldName(BaseValueObject):
+    """4.12 old_names (bổ sung 2026-11-11): a name the yarn had before a rename (BR-105..BR-107)."""
+
+    name: str
+    changed_by: str = ""
+    changed_at: datetime = Field(default_factory=utc_now)
+    reason: str = ""
+
+
 class Yarn(BaseEntity):
     factory_code: FactoryCode
     yarn_code: str = Field(min_length=1, max_length=60)
@@ -142,6 +151,10 @@ class Yarn(BaseEntity):
     pending_accounting_code: str | None = None  # BR-70: waits for the first Thường line, never locks the yarn
     customer_name: str = ""  # 4.12 (bổ sung 2026-11-10): khách hàng Sales nhập khi gửi yêu cầu
     duplicate_reason: str = ""  # BR-78: lý do gửi yêu cầu mới khi đã có sợi Trùng cùng xưởng
+    old_names: list[OldName] = Field(default_factory=list)  # BR-105..BR-108 (bổ sung 2026-11-11)
+    unknown_word_reason: str = ""  # BR-101: lý do giữ chữ lạ khi gửi
+    name_mode: str = ""  # BR-102: "Ghép" / "Gõ tay" / "" (mã cũ)
+    merged_accounting_codes: list[str] = Field(default_factory=list)  # BR-107: mã kế toán của mã trùng tên đã loại
 
     @property
     def is_locked(self) -> bool:

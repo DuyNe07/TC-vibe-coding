@@ -10,6 +10,7 @@ from frontend.features.yarn_costing.pages.excel_import_page import ExcelImportPa
 from frontend.features.yarn_costing.pages.loss_group_page import LossGroupPage
 from frontend.features.yarn_costing.pages.master_data_page import MasterDataPage
 from frontend.features.yarn_costing.pages.material_price_page import MaterialPricePage
+from frontend.features.yarn_costing.pages.name_check_page import NameCheckPage
 from frontend.features.yarn_costing.pages.nsm_pricing_page import NsmPricingPage
 from frontend.features.yarn_costing.pages.price_list_page import PriceListPage
 from frontend.features.yarn_costing.pages.quote_page import QuotePage
@@ -35,6 +36,7 @@ FEATURE = FeatureManifest(
         YarnRequestPage,
         NsmPricingPage,
         LossGroupPage,
+        NameCheckPage,  # bổ sung 2026-11-11: đầu nhóm Phòng SO
         MasterDataPage,
         ExcelImportPage,
         UserAuditPage,

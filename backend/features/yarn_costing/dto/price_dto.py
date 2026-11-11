@@ -76,6 +76,8 @@ class PriceLineRowDTO(BaseDTO):
     order_ref: str = ""
     is_locked: bool = False
     customer_names_text: str = ""  # bổ sung 2026-11-10: "<khách>: <tên>; …"
+    old_names_text: str = ""  # BR-108 (bổ sung 2026-11-11): tên cũ
+    merged_accounting_codes: list[str] = []  # BR-107 / BR-108
 
 
 class PriceLineListResponse(BaseResponseDTO):

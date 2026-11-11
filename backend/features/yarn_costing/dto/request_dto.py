@@ -8,6 +8,13 @@ from backend.features.yarn_costing.dto.common_dto import YarnComponentDTO
 from backend.features.yarn_costing.models.enums import FactoryCode, NsmMode, Technology, YarnOrigin, YarnStatus
 
 
+class OldNameDTO(BaseDTO):
+    name: str
+    changed_by: str = ""
+    changed_at: datetime | None = None
+    reason: str = ""
+
+
 class YarnDTO(BaseDTO):
     """Every field of 4.12 + is_locked."""
 
@@ -48,6 +55,10 @@ class YarnDTO(BaseDTO):
     pending_accounting_code: str | None = None  # BR-70: "Mã kế toán chờ"
     customer_name: str = ""  # 4.12 (bổ sung 2026-11-10)
     duplicate_reason: str = ""  # BR-78
+    old_names: list[OldNameDTO] = []  # BR-105..BR-108 (bổ sung 2026-11-11)
+    unknown_word_reason: str = ""
+    name_mode: str = ""
+    merged_accounting_codes: list[str] = []
     total_vnd: Decimal | None = None
     usd_per_kg: Decimal | None = None
 
@@ -81,6 +92,8 @@ class CreateYarnRequestRequest(BaseRequestDTO):
     packaging_code: str = ""
     customer_name: str = ""  # bổ sung 2026-11-10 (không bắt buộc)
     duplicate_reason: str = ""  # BR-78
+    unknown_word_reason: str = ""  # BR-101 (bổ sung 2026-11-11)
+    name_mode: str = ""  # BR-102: "Ghép" / "Gõ tay"
 
 
 class UpdateYarnRequestRequest(BaseRequestDTO):
@@ -88,6 +101,8 @@ class UpdateYarnRequestRequest(BaseRequestDTO):
     yarn_name: str
     packaging_code: str = ""
     customer_name: str | None = None  # bổ sung 2026-11-10: None = giữ nguyên
+    unknown_word_reason: str = ""  # BR-101 (bổ sung 2026-11-11)
+    name_mode: str = ""
 
 
 class CancelYarnRequestRequest(BaseRequestDTO):
