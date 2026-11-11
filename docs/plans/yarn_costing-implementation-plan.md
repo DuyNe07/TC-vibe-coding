@@ -398,3 +398,9 @@ Prompt 1 câu 4-5).
 - 2026-11-03 | test AC-84 (`test_component_import.py::test_permissions_and_locked_groups`) dùng mã kế toán chờ để làm khoá nhóm |
   từ BR-70 mã chờ không còn khoá | test khoá bằng mã kế toán trên dòng giá (đúng BR-32), giữ nguyên điều kiện kiểm tra của AC-84 |
   pytest chức năng đạt.
+- 2026-11-11 | màn "Kiểm tra tên sợi", khối "Đổi tên sợi": chỉ gõ được mã, không có danh sách chọn; tên hiện tại chỉ hiện với
+  sợi nằm trong bảng nghi sai, sợi khác ô tên mới để trống | lớp pages: ô "Mã sợi" là ô chữ tự do, tên lấy từ dòng nghi sai đã
+  chọn | đổi thành ô chọn có tìm kiếm trên mọi mã gốc (trừ Đã huỷ / Từ chối), hiện tên hiện tại, trạng thái, nhóm tiêu hao và điền
+  sẵn tên (gợi ý nếu là sợi nghi sai); chọn dòng ở bảng vẫn điền sẵn ô chọn | test `test_yarn_name.py::
+  test_fix_rename_any_yarn_listed_with_current_name` | scripts/check.py, doctor, chạy thử màn không trình duyệt trên dữ liệu tạm
+  tách biệt (sợi tên đúng chọn được, hiện tên hiện tại).
