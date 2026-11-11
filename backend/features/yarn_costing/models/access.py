@@ -53,6 +53,13 @@ USE_CASE_PERMISSIONS: Final = {
     "UC-51": (_SO, _SALES),
     "UC-53": (_SO, _SALES),
     **{f"UC-{n}": (_SO, _SALES) for n in range(55, 65)},  # đợt 2 (bổ sung 2026-11-10), BR-84 kể cả xem
+    "UC-65": (_SO, _SALES),  # tên sợi (bổ sung 2026-11-11, BR-109); UC-66, 67, 70, 71 = Phòng SO
+    "UC-68": (_SO, _SALES),  # Sales: chỉ sợi chưa tính giá (BR-109, kiểm tra ở business)
+    "UC-69": (_SO, _SALES),
+    "UC-66": (_SO,),
+    "UC-67": (_SO,),
+    "UC-70": (_SO,),
+    "UC-71": (_SO,),
     INITIAL_IMPORT_USE_CASE: (_SO,),
 }
 

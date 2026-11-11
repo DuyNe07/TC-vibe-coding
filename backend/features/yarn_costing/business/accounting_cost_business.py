@@ -129,6 +129,10 @@ class AccountingCostBusiness(BaseBusiness[AccountingCostLine]):
             for line in yarn.lines:
                 if line.accounting_code:
                     found.setdefault(line.accounting_code.strip().upper(), []).append((yarn, line))
+            regular = yarn.regular_line  # BR-108: mã kế toán gộp từ mã trùng tên đã loại → dòng Thường của mã giữ
+            if regular is not None:
+                for code in yarn.merged_accounting_codes:
+                    found.setdefault(code.strip().upper(), []).append((yarn, regular))
         for pairs in found.values():
             pairs.sort(key=lambda p: (LINE_ORDER[p[1].line_type], p[1].line_code))
         return found

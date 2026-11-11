@@ -152,6 +152,14 @@ USE_CASE_ACTIONS: Final = {
     "UC-62": "Tính giá báo khách",
     "UC-63": "Xem / xuất / xoá giá báo khách",
     "UC-64": "So giá xuất kho",
+    # tên sợi (bổ sung 2026-11-11, BR-109)
+    "UC-65": "Xem tên sợi nghi sai",
+    "UC-66": "Sửa từ điển tên chuẩn",
+    "UC-67": "Duyệt chữ mới",
+    "UC-68": "Đổi tên sợi",
+    "UC-69": "Đổi tên sợi bằng file",
+    "UC-70": "Sửa nhóm sợi / từ khoá ghép tên",
+    "UC-71": "Chuẩn hoá viết hoa tên sợi",
 }
 
 # ---- Tolerances and limits -----------------------------------------------------------------------------------------

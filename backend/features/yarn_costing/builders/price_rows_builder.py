@@ -78,12 +78,19 @@ class PriceLineRowsBuilder(BaseBuilder[list[PriceLineRowDTO]]):
     def _line_ok(self, y: Yarn, line: PriceLine) -> bool:
         r = self.request
         keyword = r.keyword.strip().casefold()
-        text = f"{line.line_code} {y.yarn_name} {line.accounting_code or ''} {self._alias_text(y)}".casefold()
+        text = (
+            f"{line.line_code} {y.yarn_name} {line.accounting_code or ''} {self._alias_text(y)} "
+            f"{self._old_text(y)} {' '.join(y.merged_accounting_codes)}"  # BR-108 (bổ sung 2026-11-11)
+        ).casefold()
         return (
             (not r.line_types or line.line_type in r.line_types)
             and (r.has_accounting_code is None or line.has_accounting_code == r.has_accounting_code)
             and (not keyword or keyword in text)
         )
+
+    def _old_text(self, y: Yarn) -> str:
+        """BR-108: tên cũ của sợi (đổi tên, chuẩn hoá viết hoa)."""
+        return "; ".join(dict.fromkeys(o.name for o in y.old_names))
 
     def _alias_text(self, y: Yarn) -> str:
         return "; ".join(f"{a.customer_name}: {a.customer_yarn_name}" for a in self.aliases.get(y.base_code, []))
@@ -135,6 +142,8 @@ class PriceLineRowsBuilder(BaseBuilder[list[PriceLineRowDTO]]):
                     order_ref=line.order_ref,
                     is_locked=y.is_locked,
                     customer_names_text=self._alias_text(y),
+                    old_names_text=self._old_text(y),
+                    merged_accounting_codes=list(y.merged_accounting_codes),
                 )
             )
         return rows
