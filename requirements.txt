@@ -10,6 +10,8 @@
 # ---- Frontend (UI) ----------------------------------------------------------
 streamlit==1.64.0          # Web UI framework (frontend/)
 plotly==7.1.0              # Interactive charts inside Streamlit pages
+matplotlib==3.11.2         # Static charts (pyplot_chart) for kinds Plotly does not cover
+seaborn==0.13.2            # Statistical plots on matplotlib (kde, violin, regression, pair...) via pyplot_chart
 
 # ---- Models, DTOs, configuration --------------------------------------------
 pydantic==2.13.5           # Base classes for models (entities) and DTOs

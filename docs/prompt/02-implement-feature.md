@@ -395,7 +395,7 @@ Read first: `CLAUDE.md`, `docs/rules/00`-`03`, `06`, `07`, `09`, the business do
                show_success(f"Đã lưu {result.saved} dòng.")
    ```
    Components: `panel`, `stat_row`, `data_table` (with `selection=` to pick rows), `editable_table`, `frame_to_records`,
-   `bar_chart` / `line_chart` / `pie_chart` (the ONLY way to draw charts),
+   the `*_chart` components (`bar_chart`, `combo_chart`, `pyplot_chart`... - the ONLY way to draw charts, rules 04),
    `file_upload`, `download_button`, `empty_state`, `section_title`, `show_success`, `show_error`; formatting:
    `format_number`, `format_currency`, `format_datetime` (`frontend.core.formatting`). Widget keys `key=self.key("...")`;
    session data `self.state`; side effects only inside `if st.button(...)` (or `st.form` + `st.form_submit_button`);

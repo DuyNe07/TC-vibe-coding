@@ -211,9 +211,9 @@ failures show what the newest framework expects. (Missing packages: `.venv/Scrip
    `.imported`), never deleted.
 4. **Soft delete.** `repository.delete()` / `clear()` only set the delete flag; reads skip deleted rows;
    `restore()` / `list_deleted()` exist. Re-check every delete in the feature against its business rules.
-5. **Big data.** Tables only through `data_table` / `editable_table`, charts only through `bar_chart` / `line_chart` /
-   `pie_chart`, Excel only through `ExcelReader` (they cap rows and points). Replace direct `st.dataframe`,
-   `st.plotly_chart`, `px.*`, `pd.read_excel` in the feature.
+5. **Big data.** Tables only through `data_table` / `editable_table`, charts only through the `*_chart`
+   components, Excel only through `ExcelReader` (they cap rows and points). Replace direct `st.dataframe`,
+   `st.plotly_chart`, `st.pyplot`, `px.*`, `plt.*`, `pd.read_excel` in the feature.
 6. **Stored data stays readable** by every app version on the shared database: new model fields get defaults; a
    renamed / removed field or a changed format gets a migration revision
    (`.venv/Scripts/python.exe scripts/migrate.py new <key> "..."`, `backend.core.migration_ops`).
