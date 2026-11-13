@@ -11,7 +11,21 @@ from backend.core.base import BaseEntity, InMemoryRepository, JsonFileRepository
 from backend.core.current_user import CurrentUser, set_current_user
 from backend.core.exceptions import ConflictError, FileProcessingError, NotFoundError
 from backend.shared.file_io import ExcelReader
-from frontend.core.components.charts import OTHER, SERIES, VALUE, prepare_bars, prepare_lines, to_long
+from frontend.core.components.charts import (
+    BIN,
+    LABEL_MAX_MARKS,
+    OTHER,
+    SERIES,
+    VALUE,
+    headroom,
+    keep_top,
+    prepare_bars,
+    prepare_histogram,
+    prepare_lines,
+    sample_rows,
+    show_labels,
+    to_long,
+)
 
 
 class Item(BaseEntity):
@@ -111,3 +125,31 @@ def test_line_preparation_thins_long_series_and_keeps_the_last_point() -> None:
     for _, part in data.groupby(SERIES):
         assert len(part) <= 1_001 and part["x"].iloc[-1] == 19_999
     assert note
+
+
+def test_histogram_bins_every_value_once_with_shared_edges() -> None:
+    rows = pd.DataFrame({"v": list(range(1_000)), "g": ["a", "b"] * 500})
+    data = prepare_histogram(to_long(rows, "v", "v", "g"), bins=10)
+    assert len(data) == 20 and data[VALUE].sum() == 1_000, "two series x 10 bins, no value lost"
+    assert list(data[data[SERIES] == "a"][BIN]) == list(data[data[SERIES] == "b"][BIN])
+
+
+def test_keep_top_groups_the_rest_and_sample_rows_caps_without_reordering() -> None:
+    frame = pd.DataFrame({"k": [f"c{i}" for i in range(40)], "v": range(40)})
+    kept, note = keep_top(frame, "k", frame["v"], 10)
+    assert kept["k"].nunique() == 10 and OTHER in set(kept["k"]) and note
+    sampled, note = sample_rows(pd.DataFrame({"i": range(10_000)}), 500)
+    assert len(sampled) == 500 and sampled["i"].is_monotonic_increasing and note
+
+
+def test_labels_are_hidden_past_the_readable_limit() -> None:
+    assert show_labels(True, LABEL_MAX_MARKS) == (True, "")
+    shown, note = show_labels(True, LABEL_MAX_MARKS + 1)
+    assert not shown and note
+    assert show_labels(False, 5) == (False, "")
+
+
+def test_headroom_leaves_space_above_and_below_printed_values() -> None:
+    assert headroom(pd.Series([0, 100])) == [0.0, 120.0]
+    low, high = headroom(pd.Series([-50, 50]))
+    assert low < -50 and high > 50

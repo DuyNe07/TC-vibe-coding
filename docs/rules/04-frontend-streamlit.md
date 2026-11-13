@@ -69,7 +69,7 @@ else:
 | `stat_row([(label, value), ...])` | KPI tiles |
 | `data_table(rows, column_config=, selection="single"/"multi", key=)` | read-only Excel-like table (sort, search, fullscreen) with empty state; with `selection` returns the ticked rows (list of dicts). Shows at most `APP_TABLE_MAX_ROWS` rows (200 000; with `selection`: `APP_SELECT_MAX_ROWS`, 10 000) and says so |
 | `editable_table(rows, key=, columns=, column_config=, disabled=, allow_add_delete=)` | grid edited like an Excel sheet; returns the edited rows (empty cells = `None`, ready for DTOs). Over `APP_EDIT_MAX_ROWS` (5 000) rows it is shown read-only with a warning and returns the rows unchanged |
-| `bar_chart(rows, x=, y=, key=, color=, horizontal=, stacked=)`, `line_chart(rows, x=, y=, key=, color=, area=)`, `pie_chart(rows, names=, values=, key=)` | the ONLY way to draw charts (see Charts below) |
+| `bar_chart(rows, x=, y=, key=, color=, horizontal=, stacked=, labels=)`, `line_chart(rows, x=, y=, key=, color=, area=, labels=)`, `pie_chart(rows, names=, values=, key=, labels=)`, `combo_chart(rows, x=, bars=, lines=, key=, secondary_y=, stacked=, labels=)`, `scatter_chart(rows, x=, y=, key=, color=, size=)`, `histogram_chart(rows, x=, key=, color=, bins=, labels=)`, `box_chart(rows, y=, key=, x=, violin=)`, `heatmap_chart(rows, x=, y=, values=, key=, labels=)`, `waterfall_chart(rows, x=, y=, key=, total=)`, `funnel_chart(rows, stage=, values=, key=)`, `treemap_chart(rows, path=, values=, key=, sunburst=)`, `pyplot_chart(rows, draw)` | the ONLY way to draw charts (see Charts below) |
 | `frame_to_records(df)` | DataFrame -> list of dicts without NaN/numpy values (always use it before building DTOs) |
 | `file_upload(label, types=, key=)` | returns `UploadedFileDTO` (bytes) or None |
 | `download_button(file_dto, label=, key=)` | download a `FileDownloadDTO` already built |
@@ -94,7 +94,7 @@ of the business document (agreed with the user at the start of Prompt 2) decides
 | Form with one submit | `with st.form(self.key("form")): ...; st.form_submit_button("Lưu")` |
 | Confirmation / details popup | `@st.dialog("Xác nhận xoá")` function called inside `if st.button(...)` |
 | Quick choices / filters | `st.segmented_control`, `st.pills`, `st.selectbox`, `st.multiselect`, `st.date_input`, `st.toggle` |
-| Charts | `bar_chart` / `line_chart` / `pie_chart` (`frontend.core.components`) |
+| Charts | the `*_chart` components of `frontend.core.components` (Charts below) |
 | Files | `file_upload(...)` / `download_button(...)` (shared components) |
 
 ### Look & feel: native Streamlit 1.64 only (less code, faster, matches the theme)
@@ -127,15 +127,34 @@ Pick the newest native element below before writing anything by hand.
 
 ### Charts (`frontend/core/components/charts.py`)
 One call per chart: rows (list of dicts or DataFrame) in, a themed Plotly chart out. Never `st.plotly_chart`,
-`st.bar_chart`, `px.*` directly in a feature: the shared component keeps big data fast and every chart consistent.
+`st.pyplot`, `st.bar_chart`, `px.*`, `plt.*` directly in a feature: the shared component keeps big data fast and every
+chart consistent.
+
+| Need | Component |
+|---|---|
+| Compare categories / months (stacked or side by side, horizontal) | `bar_chart` |
+| Change over time, filled area | `line_chart` (`area=True`) |
+| Share of a whole | `pie_chart` (donut, at most 6 slices) |
+| Bars + lines together, two scales (revenue + rate %) | `combo_chart(bars=, lines=, secondary_y=True)` |
+| Relationship between two numbers, bubbles | `scatter_chart` (`size=` = bubble) |
+| How values are spread | `histogram_chart` (counts per range), `box_chart` (`violin=True`) |
+| Two categories × one number (week × mill) | `heatmap_chart` |
+| Steps adding up to a result (price build-up, profit bridge) | `waterfall_chart` |
+| Steps of a process with drop-off | `funnel_chart` |
+| Parts of a whole by levels | `treemap_chart` (`sunburst=True` = rings) |
+| Anything else seaborn / matplotlib draws (density, regression, pair plot...) | `pyplot_chart(rows, lambda data, ax: sns.kdeplot(data=data, x=..., ax=ax))` - a picture, no hover |
+
+- Values on the chart: `labels=True` prints every value on the bars / points / slices / cells (Vietnamese format)
+  instead of only on hover. Past 60 marks (heatmap: 240 cells) they are hidden and the caption says so.
 - Data: let a `@cached_query` use case return the rows already grouped (e.g. one row per month); the component only
-  prepares for display: bars / pie are summed per category, the biggest `APP_CHART_MAX_CATEGORIES` (30) are kept and
-  the rest become "Khác"; lines keep at most `APP_CHART_MAX_POINTS` (5 000) points per series (WebGL past 1 000);
-  at most 6 series (fixed colour order `SERIES_COLORS`, checked for colour-blind separation). A caption says what
-  was trimmed.
-- Look: one y-axis only (two measures of different scale = two charts), legend only with 2+ series, Vietnamese number
-  format (`1.234.567,5`), hover tooltips, empty state when there is no data. Show the same numbers in a
-  `data_table` when users need exact values.
+  prepares for display: bars / pie / waterfall / funnel are summed per category, the biggest
+  `APP_CHART_MAX_CATEGORIES` (30) are kept and the rest become "Khác" (heatmap: per axis); lines / combo keep at most
+  `APP_CHART_MAX_POINTS` (5 000) points per series (WebGL past 1 000); scatter / box / `pyplot_chart` draw a random
+  sample of `APP_CHART_MAX_POINTS` rows; histograms are binned in Python; at most 6 series (fixed colour order
+  `SERIES_COLORS`, checked for colour-blind separation). A caption says what was trimmed.
+- Look: one y-axis, except `combo_chart(secondary_y=True)` for two measures of different scale; legend only with 2+
+  series, Vietnamese number format (`1.234.567,5`), hover tooltips, empty state when there is no data. Show the same
+  numbers in a `data_table` when users need exact values.
 - Chart design changes (colours, margins, new chart kinds) go into `charts.py` only - one place for every app.
 
 ## Rules

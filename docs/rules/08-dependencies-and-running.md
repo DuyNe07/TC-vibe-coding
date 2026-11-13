@@ -34,7 +34,7 @@ Rules:
 2. Before adding a library, check it is not already covered: Excel (pandas, openpyxl, xlrd), Word
    (python-docx, docxtpl), PDF (pypdf), public web pages (requests, lxml - via `backend/shared/web`), database
    (sqlalchemy async + asyncpg/aiosqlite - via `SqlRepository`),
-   charts (plotly, streamlit built-ins), validation (pydantic). What the app can do with them:
+   charts (plotly; matplotlib + seaborn via `pyplot_chart`), validation (pydantic). What the app can do with them:
    `docs/capabilities.md`.
 3. After adding one, run `run.ps1` again (it auto-installs) or `.venv/Scripts/python.exe -m pip install -r requirements.txt`.
 
