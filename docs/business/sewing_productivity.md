@@ -6,6 +6,7 @@
 | Icon (Biểu tượng) | 🧵 |
 | Owner (Người phụ trách) | PI - SO team |
 | Status (Trạng thái) | Implemented |
+| Run mode (Chạy ở đâu) | Local |
 | Last updated | 2026-11-13 |
 
 > Tài liệu này mô tả đợt 1. Đợt 2 (phân tích khách hàng) và đợt 3 (dữ liệu 2025) sẽ bổ sung sau, xem mục 10.
@@ -1078,6 +1079,7 @@ Phạm vi: đợt 2 (bảng dấu màu theo khách hàng, tiền CM theo khách 
 - Giả định: Sở trường đang lưu (file Line Strength mới nhất) áp cho mọi ngày, kể cả ngày trước khi tải file; app không giữ sở trường theo từng thời kỳ.
 - Giả định: Bảng dùng chung của app không đổi được cỡ chữ hay màu từng ô (xem giả định ngày 08/11/2026 ở dưới); "nổi bật, dễ đọc" cho %Efficiency và MO 8h sẽ chốt ở vòng giao diện bằng cách bảng dùng chung làm được.
 - Giả định: Cột Matches strength của bảng đơn hàng giữ nguyên cách BR-84 (Yes khi mọi nhóm sản phẩm của đơn là nhóm mạnh), cùng cách so của BR-86 nên đơn Yes thì mọi dòng của đơn được tính đúng sở trường.
+- Cập nhật 2026-11-13 (người dùng yêu cầu): app chỉ chạy trên máy người làm (Run mode Local), không gửi duyệt vào `dev`. Theo yêu cầu, nhánh của app được đặt lên bản `dev` mới nhất (có các biểu đồ mới: gộp cột + đường hai thang, ghi số trên biểu đồ...) và lưu lên GitHub để giữ an toàn, thay vì gộp vào nhánh máy cá nhân dựng trên `main`.
 - Mở rộng 2026-11-13 lần 4 (prompt 05): Overview bỏ Output vs Target (system) và Ranking, thêm khu "Products & customers" (BR-92 đến BR-96); nhận file năm cũ chỉ có `Production data`, số thợ tính từ các chuyền (BR-97, 4.3 `derived`); lưu xưởng đã giải thể Fac 1 HCM chỉ để tham khảo (BR-98). Xem `docs/plans/sewing_productivity-extension-20261113d.md`.
 - Giả định: Người dùng trả lời "1a, 2abcd, 3b, 4a, 5a" và "Fac 1 là 1 xưởng cũ đã giải thể ... chỉ để ref cho 2025" (13/11/2026). Dữ liệu 2025 do người dùng tải một lần ở Data Update (app không tự đọc file trong OneDrive). Cơ cấu hàng theo tháng dùng khoảng từ 01/01 đến "Đến ngày" như "Line trend", vì khoảng mặc định của Overview chỉ 1 tuần. Biểu đồ dùng chung tối đa 6 màu, nên 5 nhóm lớn nhất + "Other"; bảng cạnh biểu đồ có đủ mọi nhóm.
 - Mở rộng 2026-11-13 lần 3 (prompt 05): cột Output của "Line trend" có màu theo kết quả %Efficiency, By week 26 tuần gần nhất, dòng tóm tắt bộ lọc và "Back to filters" (BR-91). Xem `docs/plans/sewing_productivity-extension-20261113c.md`.
