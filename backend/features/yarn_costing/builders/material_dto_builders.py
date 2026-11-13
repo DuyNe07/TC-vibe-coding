@@ -6,6 +6,7 @@ from decimal import Decimal
 from backend.features.yarn_costing.dto.material_dto import (
     AverageRowDTO,
     AverageSourceDTO,
+    CottonShareDTO,
     PriceGroupDTO,
     QuoteComponentDTO,
     QuoteDTO,
@@ -88,6 +89,10 @@ def quote_dto(quote: Quote) -> QuoteDTO:
         note=quote.note,
         created_by=quote.created_by,
         created_at=quote.created_at if quote.quote_no else None,
+        cotton_plan=[CottonShareDTO(origin=s.origin, percent=s.percent) for s in quote.cotton_plan],
+        supima_percent=quote.supima_percent,
+        supima_coin=quote.supima_coin,
+        coin_fee_usd=quote.coin_fee_usd,
     )
 
 

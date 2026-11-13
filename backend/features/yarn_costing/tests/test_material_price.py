@@ -696,3 +696,180 @@ def test_fix_reimport_replaces_all_lots_in_one_go() -> None:
     assert len(ArrivalLotRepository().list_deleted()) == 6  # the previous lots flagged, never removed
     last = sorted(AuditLogRepository().list_all(), key=lambda a: a.created_at)[-1]
     assert last.username == "sales" and "6 → 7 lô" in last.detail
+
+
+# ---- Supima (bổ sung 2026-11-13): BR-110..BR-113, AC-147..AC-152 ----
+PIMA = "MN1100171614001009IDR"
+PIMA_ROW = (
+    "Bông",
+    PIMA,
+    "COTTON USA SJV PIMA 3.5~4.9 GC 2-2-48",
+    "17244.91",
+    "1619225117",
+    "8550",
+    "802809347",
+    "8694.91",
+    "816415770",
+)
+
+
+def supima_setup(supima_group: bool = True, loss_groups: bool = True) -> dict[str, str]:
+    from backend.features.yarn_costing.models.enums import Technology
+    from backend.features.yarn_costing.models.loss_group import LossGroup
+
+    ids = november_setup()
+    ids["pima"] = add_group("Cotton Pima")
+    ImportStockFileService().handle(ImportStockFileRequest(file=stock_file([*STOCK_ROWS, PIMA_ROW]), commit=True))
+    declare_codes({PIMA: (ids["pima"], MaterialMarket.NOI_DIA)})
+    if loss_groups:
+        from backend.features.yarn_costing.repositories.loss_group_repository import LossGroupRepository
+
+        common = {"R": D("0.002"), "W": D("0.01"), "C1": D("0.075"), "DCM": D("0.005")}
+        LossGroupRepository().save_many(
+            [
+                LossGroup(factory_code=FactoryCode.S4, group_key="CM COMPACT", yarn_group_label="CM COMPACT",
+                          technology=Technology.RING, losses={**common, "CM": D("0.145"), "S Compact": D("0.005")}),
+                LossGroup(factory_code=FactoryCode.S4, group_key="CM (SUPIMA 100%)", yarn_group_label="CM (SUPIMA 100%)",
+                          technology=Technology.RING, losses={**common, "CM": D("0.12"), "S": D("0.005")}),
+            ]
+        )  # fmt: skip
+    SaveMonthlySettingService().handle(
+        SaveMonthlySettingRequest(
+            period="2026-11",
+            norm_factor=D("1.10"),
+            default_fi=D("0.03"),
+            cotton_plan=[CottonShareDTO(origin=CottonOrigin.USA, percent=D("0.31")), CottonShareDTO(origin=CottonOrigin.BRAZIL, percent=D("0.69"))],
+            recoveries=[RecoveryDTO(group_id=COTTON_PLAN_ID, usd_per_kg=D("0.18")), RecoveryDTO(group_id=ids["indo"], usd_per_kg=D("0.07")),
+                        RecoveryDTO(group_id=ids["pima"], usd_per_kg=D("0.30"))],
+            supima_group_id=ids["pima"] if supima_group else "",
+        )
+    )  # fmt: skip
+    return ids
+
+
+def put_supima_yarn(code: str = "S4-6001", name: str = "CM 40/1 (SUPIMA 50%) COMPACT") -> Yarn:
+    yarn = Yarn(
+        factory_code=FactoryCode.S4,
+        yarn_code=code,
+        base_code=code,
+        yarn_name=name,
+        is_compact="COMPACT" in name,
+        status=YarnStatus.DA_TINH_GIA,
+        components=[YarnComponent(material_label="CM - Ring", ratio=D(1), carding_stage="C1", pass_no=1, nsm_carding=D(60))],
+        lines=[PriceLine(line_code=code, line_type=LineType.THUONG, cost=CostBreakdown(labor=D(20000)))],
+        stage_details=[StageCostDetail(sequence=1, stage_code="C1", stage_name="Chải thô", material_label="CM - Ring", pass_no=1,
+                                       run_minutes=D(1), cumulative_loss=D("0.217"))],
+    )  # fmt: skip
+    YarnRepository().save_many([yarn])
+    return yarn
+
+
+def supima_request(**changes) -> CalculateQuoteRequest:
+    values = {
+        "period": "2026-11",
+        "line_code": "S4-6001",
+        "market": MaterialMarket.NOI_DIA,
+        "order_qty": D(1000),
+        "groups": {"CM - Ring": COTTON_PLAN_ID},
+        "supima_percent": D("0.5"),
+    }
+    return CalculateQuoteRequest(**(values | changes))
+
+
+PIMA_NET = D("816415770") / D(25800) / D("8694.91") - D("0.30")  # BQ Pima tồn tháng 10 − hồi phế 0,30
+
+
+def plan_net() -> Decimal:
+    return row_of(averages(), "Cotton (phương án)", MaterialMarket.NOI_DIA).net_usd
+
+
+def test_ac147_supima_read_from_name_and_form() -> None:
+    supima_setup()
+    put_supima_yarn()
+    put_supima_yarn("S4-6002", "CM 30/1 SUPIMA")
+    put_supima_yarn("S4-6003", "CM 30/1")
+    forms = {
+        c: GetQuoteFormService().handle(GetQuoteFormRequest(line_code=c, period="2026-11"))
+        for c in ("S4-6001", "S4-6002", "S4-6003")
+    }
+    assert [forms[c].supima_percent for c in ("S4-6001", "S4-6002", "S4-6003")] == [D("0.5"), D(1), D(0)]
+    assert [(s.origin, s.percent) for s in forms["S4-6001"].cotton_plan] == [
+        (CottonOrigin.USA, D("0.31")),
+        (CottonOrigin.BRAZIL, D("0.69")),
+    ]
+
+
+def test_ac148_supima_formula_with_and_without_coin() -> None:
+    supima_setup()
+    put_supima_yarn()
+    cotton = plan_net()
+    no_coin = CalculateQuoteService().handle(supima_request()).quote
+    expected = D("0.5") * cotton / (1 - D("0.242")) + D("0.5") * PIMA_NET / (1 - D("0.217"))
+    assert round(no_coin.material_usd, 6) == round(expected, 6)
+    part = no_coin.components[0]
+    assert (part.supima_ratio, part.normal_loss, part.supima_loss) == (D("0.5"), D("0.242"), D("0.217"))
+    assert round(part.normal_net, 6) == round(cotton, 6) and no_coin.coin_fee_usd == 0 and not no_coin.supima_coin
+    coin = CalculateQuoteService().handle(supima_request(supima_coin=True)).quote
+    fee = D("0.552") * D("1.05")
+    assert coin.coin_fee_usd == fee and coin.supima_coin
+    assert round(coin.material_usd - no_coin.material_usd, 6) == round(D("0.5") * fee / (1 - D("0.217")), 6)
+    full = CalculateQuoteService().handle(supima_request(supima_percent=D(1))).quote  # 100%: the yarn's own loss
+    assert round(full.material_usd, 6) == round(PIMA_NET / (1 - D("0.217")), 6)
+
+
+def test_ac149_own_cotton_plan() -> None:
+    supima_setup()
+    put_supima_yarn()
+    usa = row_of(averages(), "Cotton USA", MaterialMarket.NOI_DIA).average
+    quote = (
+        CalculateQuoteService()
+        .handle(
+            supima_request(supima_percent=D(0), cotton_plan=[CottonShareDTO(origin=CottonOrigin.USA, percent=D(1))])
+        )
+        .quote
+    )
+    assert round(quote.components[0].net_usd, 6) == round(usa - D("0.18"), 6)
+    assert [(s.origin, s.percent) for s in quote.cotton_plan] == [(CottonOrigin.USA, D(1))]
+    assert GetMonthlySettingService().handle(GetMonthlySettingRequest(period="2026-11")).cotton_plan[0].percent == D(
+        "0.31"
+    )
+    with pytest.raises(AppError, match=r"Tổng tỷ lệ phương án bông phải bằng 100% \(hiện là 90%\)\."):
+        CalculateQuoteService().handle(
+            supima_request(cotton_plan=[CottonShareDTO(origin=CottonOrigin.USA, percent=D("0.6")),
+                                        CottonShareDTO(origin=CottonOrigin.BRAZIL, percent=D("0.3"))])
+        )  # fmt: skip
+
+
+def test_ac150_supima_checks() -> None:
+    supima_setup(supima_group=False, loss_groups=False)
+    put_supima_yarn()
+    with pytest.raises(AppError, match="Chưa khai báo nhóm giá Supima tháng 11/2026."):
+        CalculateQuoteService().handle(supima_request())
+    with pytest.raises(AppError, match="Tỷ lệ Supima phải từ 0 đến 100%."):
+        CalculateQuoteService().handle(supima_request(supima_percent=D("1.2")))
+    setting = GetMonthlySettingService().handle(GetMonthlySettingRequest(period="2026-11"))
+    pima = next(g.id for g in setting.group_options if g.name == "Cotton Pima")
+    request = SaveMonthlySettingRequest(
+        period="2026-11", norm_factor=D("1.10"), default_fi=D("0.03"), cotton_plan=setting.cotton_plan,
+        recoveries=setting.recoveries, supima_group_id=pima,
+    )  # fmt: skip
+    SaveMonthlySettingService().handle(request)
+    with pytest.raises(AppError, match=r"Chưa có nhóm tiêu hao 'CM \(SUPIMA 100%\)' ở xưởng S4\."):
+        CalculateQuoteService().handle(supima_request())
+    with pytest.raises(AppError, match="Giá Supima coin không được âm."):
+        SaveMonthlySettingService().handle(request.model_copy(update={"coin_usd": D(-1)}))
+    december = GetMonthlySettingService().handle(GetMonthlySettingRequest(period="2026-12"))
+    assert (december.supima_group_id, december.coin_usd, december.coin_tax) == (pima, D("0.552"), D("0.05"))
+
+
+def test_ac151_saved_quote_and_export_show_supima() -> None:
+    supima_setup()
+    put_supima_yarn()
+    saved = CalculateQuoteService().handle(supima_request(supima_coin=True, commit=True)).quote
+    listed = ListQuotesService().handle(ListQuotesRequest()).items[0]
+    assert (listed.supima_percent, listed.supima_coin, listed.coin_fee_usd) == (D("0.5"), True, D("0.552") * D("1.05"))
+    file = ExportQuotesService().handle(ExportQuotesRequest())
+    row = ExcelReader(sheet_name="Gia bao khach").read(UploadedFileDTO(filename=file.filename, content=file.content))[0]
+    assert row["Tỷ lệ Supima"] == 50 and row["Truyền điểm coin"] == "Có"
+    assert row["Phí coin (USD/kg)"] == pytest.approx(0.5796) and row["Phương án bông"] == "USA 31.0% + Brazil 69.0%"
+    assert saved.quote_no

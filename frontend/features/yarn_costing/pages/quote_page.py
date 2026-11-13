@@ -10,6 +10,8 @@ from backend.features.yarn_costing import YarnCostingController
 from backend.features.yarn_costing.dto.common_dto import LineType, YarnStatus
 from backend.features.yarn_costing.dto.material_dto import (
     CalculateQuoteRequest,
+    CottonOrigin,
+    CottonShareDTO,
     DeleteQuoteRequest,
     ExportQuotesRequest,
     GetQuoteFormRequest,
@@ -42,6 +44,8 @@ RESULT_KEY = "quote_result"
 PRICED = (YarnStatus.DA_TINH_GIA, YarnStatus.CO_MA_KE_TOAN)
 HUNDRED = Decimal(100)
 COMPONENT_COLUMNS = ["Nguyên liệu", "Tỷ lệ %", "Tiêu hao %", "Nhóm giá"]
+COTTON_PLAN_ID = "cotton-plan"  # nhóm cố định "Cotton (phương án)" (BR-92)
+ORIGINS = [CottonOrigin.USA, CottonOrigin.BRAZIL, CottonOrigin.AUSTRALIA]
 
 
 def dec(value: Any) -> Decimal:
@@ -163,6 +167,7 @@ class QuotePage(BasePage):
                 },
                 disabled=("Nguyên liệu", "Tỷ lệ %", "Tiêu hao %"),
             )
+            plan, supima, coin = self._cotton_block(form, line_code, edited, ids_by_name)
             c1, c2, c3, c4 = st.columns(4)
             factor = c1.number_input("Hệ số norm (%)", min_value=0.0, step=1.0, key=self.key("factor"))
             gp = c2.number_input("GP (% giá bán)", min_value=0.0, max_value=99.0, step=0.5, key=self.key("gp"))
@@ -190,6 +195,9 @@ class QuotePage(BasePage):
                 fi_usd=dec(fi),
                 groups={row["Nguyên liệu"]: ids_by_name.get(row.get("Nhóm giá") or "", "") for row in edited},
                 note=note,
+                cotton_plan=plan,
+                supima_percent=supima,
+                supima_coin=coin,
             )
             b1, b2, _ = st.columns([1, 1, 3])
             if b1.button("Tính thử", icon="🧮", key=self.key("try"), disabled=disabled, help=why):
@@ -212,6 +220,35 @@ class QuotePage(BasePage):
                 icon="📋",
             ):
                 self._quote_detail(result.quote, "result")
+
+    def _cotton_block(
+        self, form: QuoteFormResponse, line_code: str, edited: list[dict[str, Any]], ids_by_name: dict[str, str]
+    ) -> tuple[list[CottonShareDTO] | None, Decimal, bool]:
+        """BR-110 / BR-111 (bổ sung 2026-11-13): khối Pha bông - only when a component uses Cotton (phương án);
+        the Supima coin tick only when the Supima share is > 0."""
+        if not any(ids_by_name.get(r.get("Nhóm giá") or "") == COTTON_PLAN_ID for r in edited):
+            return None, Decimal(0), False
+        monthly = {s.origin: float(s.percent * HUNDRED) for s in form.cotton_plan}
+        with st.container(border=True):
+            st.markdown("**Pha bông** - phương án cho lần tính này (mặc định theo khai báo tháng) và tỷ lệ Supima")
+            cols = st.columns(5)
+            plan = []
+            for col, origin in zip(cols[:3], ORIGINS, strict=True):
+                key = self.key(f"plan.{line_code}.{origin.value}")
+                st.session_state.setdefault(key, monthly.get(origin, 0.0))
+                value = col.number_input(
+                    f"{origin.value} %", min_value=0.0, max_value=100.0, step=1.0, format="%g", key=key
+                )
+                plan.append(CottonShareDTO(origin=origin, percent=dec(value) / HUNDRED))
+            supima_key = self.key(f"supima.{line_code}")
+            st.session_state.setdefault(supima_key, float(form.supima_percent * HUNDRED))
+            supima = cols[3].number_input(
+                "Tỷ lệ Supima %", min_value=0.0, max_value=100.0, step=5.0, format="%g", key=supima_key
+            )
+            coin = False
+            if supima > 0:
+                coin = cols[4].checkbox("Truyền điểm Supima coin trên TG", key=self.key(f"coin.{line_code}"))
+        return plan, dec(supima) / HUNDRED, coin
 
     def _defaults(self, form: QuoteFormResponse) -> None:
         """Fill the inputs with the month defaults the first time (or after "Dùng lại")."""
@@ -262,6 +299,7 @@ class QuotePage(BasePage):
                     "Hồi phế": usd(c.recovery_usd),
                     "Giá tính": usd(c.net_usd),
                     "Chi phí NL/kg sợi": usd(c.cost_usd),
+                    "Cách pha": self._mix_text(c),
                 }
                 for c in q.components
             ],
@@ -272,6 +310,15 @@ class QuotePage(BasePage):
             },
             key=self.key(f"components_out.{scope}"),
         )
+        if q.cotton_plan:
+            plan_text = " + ".join(
+                f"{s.origin.value} {format_number(float(s.percent * HUNDRED), 2)}%" for s in q.cotton_plan
+            )
+            st.caption(
+                f"Phương án bông: {plan_text}"
+                + (f" · Supima {format_number(float(q.supima_percent * HUNDRED), 2)}%" if q.supima_percent else "")
+                + (" · có truyền điểm Supima coin" if q.supima_coin else "")
+            )
         stock = (
             f"Sợi tồn ({format_number(float(q.stock_qty), 2)} kg)"
             if q.stock_cost_usd is not None
@@ -279,6 +326,7 @@ class QuotePage(BasePage):
         )
         items = [
             ("Giá nguyên liệu", q.material_usd),
+            *([("Phí Supima coin (cộng vào giá Supima)", q.coin_fee_usd)] if q.supima_coin else []),
             (f"Norm (dòng {q.line_code}, {format_number(float(q.norm_vnd), 0)} đ/kg)", q.norm_vnd / rate),
             (f"Norm × hệ số {format_number(float(q.norm_factor * HUNDRED), 2)}%", q.norm_usd),
             ("Giá vốn sợi sản xuất mới", q.new_cost_usd),
@@ -386,6 +434,21 @@ class QuotePage(BasePage):
                 )
             explain(why)
 
+    @staticmethod
+    def _mix_text(c: Any) -> str:
+        """BR-111: how the cotton component is mixed ("" when it is not)."""
+        if not c.supima_ratio:
+            return ""
+        s = float(c.supima_ratio * HUNDRED)
+        supima = f"Supima {format_number(s, 2)}% · {format_number(float(c.supima_net), 4)} ÷ (1 − {format_number(float(c.supima_loss * HUNDRED), 2)}%)"
+        if c.supima_ratio >= 1:
+            return supima
+        normal = (
+            f"Bông thường {format_number(100 - s, 2)}% · {format_number(float(c.normal_net), 4)} ÷ "
+            f"(1 − {format_number(float(c.normal_loss * HUNDRED), 2)}%)"
+        )
+        return f"{normal} | {supima}"
+
     def _reuse(self, q: QuoteDTO) -> None:
         """Fill the Tính giá block with the numbers of a saved quote, then rerun."""
         state = st.session_state
@@ -402,5 +465,11 @@ class QuotePage(BasePage):
         state[self.key("commission")] = float(q.commission_percent * HUNDRED)
         state[self.key("fi")] = float(q.fi_usd)
         state[self.key("note")] = q.note
+        shares = {s.origin: float(s.percent * HUNDRED) for s in q.cotton_plan}
+        if shares:  # BR-110 / BR-111: the plan, Supima share and coin tick of the reused quote
+            for origin in ORIGINS:
+                state[self.key(f"plan.{q.line_code}.{origin.value}")] = shares.get(origin, 0.0)
+        state[self.key(f"supima.{q.line_code}")] = float(q.supima_percent * HUNDRED)
+        state[self.key(f"coin.{q.line_code}")] = q.supima_coin
         self.state.pop(RESULT_KEY)
         st.rerun()

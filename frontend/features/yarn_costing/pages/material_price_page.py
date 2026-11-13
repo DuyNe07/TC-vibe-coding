@@ -440,6 +440,33 @@ class MaterialPricePage(BasePage):
         plan_note = c3.text_input(
             "Ghi chú phương án", value=data.cotton_plan_note, max_chars=200, key=self.key(f"m_note.{period}")
         )
+        # BR-113 (bổ sung 2026-11-13): bông Supima pha trong phương án
+        supima_options = [g for g in data.group_options if g.id != "cotton-plan"]
+        s1, s2, s3 = st.columns(3)
+        supima_ids = [g.id for g in supima_options]
+        supima_group = s1.selectbox(
+            "Nhóm giá Supima",
+            supima_ids,
+            index=supima_ids.index(data.supima_group_id) if data.supima_group_id in supima_ids else None,
+            placeholder="Chọn nhóm (ví dụ Cotton Pima)",
+            format_func=lambda gid: next(g.name for g in supima_options if g.id == gid),
+            key=self.key(f"m_supima.{period}"),
+        )
+        coin = s2.number_input(
+            "Giá Supima coin (USD/kg)",
+            min_value=0.0,
+            value=float(data.coin_usd),
+            step=0.01,
+            format="%.4f",
+            key=self.key(f"m_coin.{period}"),
+        )
+        coin_tax = s3.number_input(
+            "Thuế nhà thầu coin (%)",
+            min_value=0.0,
+            value=float(data.coin_tax * HUNDRED),
+            step=0.5,
+            key=self.key(f"m_coin_tax.{period}"),
+        )
         st.markdown("**Phương án pha bông** (tổng 100%)")
         plan = editable_table(
             [{"Xuất xứ": s.origin.value, "Tỷ lệ %": float(s.percent * HUNDRED)} for s in data.cotton_plan],
@@ -482,6 +509,9 @@ class MaterialPricePage(BasePage):
                     for r in recoveries
                     if r.get("Nhóm giá") in ids
                 ],
+                supima_group_id=supima_group or "",
+                coin_usd=dec(coin),
+                coin_tax=dec(coin_tax) / HUNDRED,
             )
             run_save(self.state, lambda: feature.save_monthly_setting(request).message)
         explain(why)

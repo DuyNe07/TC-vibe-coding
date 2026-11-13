@@ -191,6 +191,11 @@ class QuoteExportFileBuilder(BaseBuilder[FileDownloadDTO]):
                     "Giá FOB (VND/kg)": rnd(q.fob_usd * q.exchange_rate),
                     "Giá CIF (VND/kg)": rnd(q.cif_usd * q.exchange_rate) if q.cif_usd is not None else None,
                     "Thành phần": parts,
+                    # bổ sung 2026-11-13 (BR-110, BR-111)
+                    "Tỷ lệ Supima": pct(q.supima_percent),
+                    "Truyền điểm coin": "Có" if q.supima_coin else "Không",
+                    "Phí coin (USD/kg)": rnd(q.coin_fee_usd, USD_DECIMALS),
+                    "Phương án bông": " + ".join(f"{s.origin.value} {pct(s.percent)}%" for s in q.cotton_plan),
                     "Ghi chú": q.note,
                 }
             )

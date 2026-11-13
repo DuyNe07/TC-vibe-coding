@@ -41,4 +41,7 @@ class GetMonthlySettingService(BaseService[GetMonthlySettingRequest, MonthlySett
             ],
             group_options=options,
             updated_by=setting.updated_by if saved else "",
+            supima_group_id=setting.supima_group_id if setting.supima_group_id in names else "",
+            coin_usd=setting.coin_usd,
+            coin_tax=setting.coin_tax,
         )
