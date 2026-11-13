@@ -680,3 +680,19 @@ def test_ac132_existing_rate_and_prices_untouched() -> None:
     assert yarn.regular_line.total_vnd == D(20000)  # VND price never changes with a rate
     assert averages().exchange_rate == D(26000)  # month 11 takes the rate of 01/11
     assert averages("2026-10").exchange_rate == D(25800)
+
+
+# ---- Fix 2026-11-13: re-importing replaces every lot exactly once, recorded under the account that saved ----
+def test_fix_reimport_replaces_all_lots_in_one_go() -> None:
+    from backend.features.yarn_costing.repositories.recalc_batch_repository import AuditLogRepository
+
+    first = arrival_file(default_arrivals())
+    with acting_as(SALES):
+        ImportArrivalFileService().handle(ImportArrivalFileRequest(file=first, commit=True))
+        bigger = [*default_arrivals(), arrival_row(INDORAMA, INDO_DESC, 10, 1.3, datetime(2026, 11, 2), "MILL 4")]
+        done = ImportArrivalFileService().handle(ImportArrivalFileRequest(file=arrival_file(bigger), commit=True))
+    assert done.valid_count == 7 and done.replace_count == 6
+    assert len(ArrivalLotRepository().list_all()) == 7  # every lot of the file, none lost
+    assert len(ArrivalLotRepository().list_deleted()) == 6  # the previous lots flagged, never removed
+    last = sorted(AuditLogRepository().list_all(), key=lambda a: a.created_at)[-1]
+    assert last.username == "sales" and "6 → 7 lô" in last.detail

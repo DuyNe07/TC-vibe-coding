@@ -63,8 +63,9 @@ class ImportArrivalFileService(BaseService[ImportArrivalFileRequest, ArrivalImpo
             )
         if not lots:
             raise YarnValidationError(MSG_NO_VALID)
-        for lot in current:  # BR-91: the file is the source - every current lot is flagged deleted
-            lot_repo.delete(lot.id)
+        # BR-91: the file is the source - every current lot is flagged deleted, in ONE write (sửa 2026-11-13: trước đây
+        # từng lô một, mỗi lô một lần đọc lại cả bảng → lưu mất 40-50 giây trên cơ sở dữ liệu dùng chung)
+        lot_repo.clear()
         label = access.user_label(self.current_user)
         ArrivalImportRepository().add(
             record.model_copy(update={"lot_count": len(lots), "rejected_count": len(rejected), "imported_by": label})
