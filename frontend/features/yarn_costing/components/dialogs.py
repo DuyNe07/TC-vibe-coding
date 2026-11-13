@@ -5,6 +5,7 @@ from collections.abc import Callable
 import streamlit as st
 from pydantic import ValidationError as PydanticValidationError
 
+from backend.core.current_user import get_current_user, set_current_user
 from backend.core.exceptions import AppError, InvalidInputError
 from frontend.core.components import show_error
 from frontend.core.session_state import SessionState
@@ -25,13 +26,17 @@ def confirm_dialog(
     Lỗi nghiệp vụ hiện ngay trong hộp thoại để người dùng sửa rồi thử lại.
     """
 
+    user = get_current_user()  # sửa 2026-11-13: the dialog reruns on its own and lost the account (audit "Hệ thống")
+
     @st.dialog(title)
     def _dialog() -> None:
+        set_current_user(user)
         st.write(question)
         yes, no = st.columns(2)
         if yes.button(confirm_label, type="primary", key=f"{key}.yes"):
             try:
-                message = action()
+                with st.spinner("Đang lưu, vui lòng chờ…"):
+                    message = action()
             except AppError as exc:
                 show_error(exc)
             except PydanticValidationError as exc:

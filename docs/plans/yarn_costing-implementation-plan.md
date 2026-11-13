@@ -404,3 +404,9 @@ Prompt 1 câu 4-5).
   sẵn tên (gợi ý nếu là sợi nghi sai); chọn dòng ở bảng vẫn điền sẵn ô chọn | test `test_yarn_name.py::
   test_fix_rename_any_yarn_listed_with_current_name` | scripts/check.py, doctor, chạy thử màn không trình duyệt trên dữ liệu tạm
   tách biệt (sợi tên đúng chọn được, hiện tên hiện tại).
+- 2026-11-13 | "Nguyên liệu sắp về": bấm "Lưu 264 lô" như không có tác dụng; bảng còn 224 lô; nhật ký ghi người lưu là "Hệ thống"
+  | (1) services: lô cũ được đánh dấu xoá từng lô một, mỗi lần đọc lại cả bảng qua mạng → lưu mất 40-50 giây không có báo hiệu,
+  người dùng bấm lại nhiều lần, các lần lưu chồng nhau; (2) components/dialogs.py: hộp xác nhận chạy lại riêng nên mất tài khoản
+  đăng nhập (nhật ký "Hệ thống", bỏ qua kiểm tra vai trò) | đánh dấu xoá cả bảng một lần (`ArrivalLotRepository.clear()`); hộp
+  xác nhận giữ tài khoản đã mở nó và hiện "Đang lưu, vui lòng chờ…" | test `test_material_price.py::
+  test_fix_reimport_replaces_all_lots_in_one_go` | scripts/check.py, doctor; tái hiện trên dữ liệu tạm tách biệt (264 lô / 4 giây).
