@@ -38,7 +38,7 @@ Mỗi dòng "Làm được" đều đã có sẵn thư viện và lớp dùng ch
 | Sửa trực tiếp trong ô như Excel, thêm/xoá dòng rồi bấm Lưu | `editable_table` |
 | Chọn một dòng để xem chi tiết / sửa | `data_table(selection="single")` |
 | Form nhập liệu (chữ, số, ngày, chọn một / nhiều, bật tắt) | `st.text_input`, `st.number_input`, `st.date_input`, `st.selectbox`... |
-| Ô số liệu tổng hợp (KPI), biểu đồ cột / đường / vùng / tròn (tự gộp nhóm nhỏ vào "Khác", tự rút gọn khi quá nhiều điểm) | `stat_row`, `bar_chart`, `line_chart`, `pie_chart` |
+| Ô số liệu tổng hợp (KPI); biểu đồ cột / đường / vùng / tròn, kết hợp cột + đường (2 trục), điểm / bong bóng, phân bố (histogram, hộp, violin), bản đồ nhiệt, thác nước, phễu, cây (treemap / sunburst), và mọi biểu đồ của seaborn / matplotlib (dạng ảnh); hiện số ngay trên cột / điểm (`labels=True`); tự gộp nhóm nhỏ vào "Khác", tự rút gọn khi quá nhiều điểm | `stat_row`, `bar_chart`, `line_chart`, `pie_chart`, `combo_chart`, `scatter_chart`, `histogram_chart`, `box_chart`, `heatmap_chart`, `waterfall_chart`, `funnel_chart`, `treemap_chart`, `pyplot_chart` |
 | Tải file lên, tải file về | `file_upload`, `download_button` |
 | Hộp thoại xác nhận, tab, khối gấp gọn | `st.dialog`, `st.tabs`, `st.expander` |
 | Mỗi chức năng là một ứng dụng: một thẻ ở Trang chủ, bấm vào thì menu bên trái hiện các màn hình của ứng dụng đó | `manifest.py` (`pages=(...)`) |

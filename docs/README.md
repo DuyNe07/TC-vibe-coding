@@ -84,7 +84,7 @@ rule A.0 of [rules/00-golden-rules.md](rules/00-golden-rules.md).
 | Make a page fast | `@cached_query` on read-only controller methods; `repository.find_by(code=...)` for lookups (rules 02, Persistence) |
 | Delete / restore a record | `repository.delete(id)` sets the delete flag (never a hard delete); `restore(id)`, `list_deleted()` |
 | Register an app / its URL | one line `("<prefix>", "<key>")` in `backend/app_registry.py` -> `/<prefix>-<app>` (rules 04, App registry) |
-| Draw a chart | `bar_chart` / `line_chart` / `pie_chart` from `frontend.core.components` (rules 04, Charts) |
+| Draw a chart | the `*_chart` components of `frontend.core.components` (bar, line, pie, combo, scatter, histogram, box, heatmap, waterfall, funnel, treemap, `pyplot_chart` for seaborn) - rules 04, Charts |
 | Add a library | Pinned line in `requirements.txt` |
 | Verify your work | `python scripts/check.py` -> `ALL CHECKS PASSED`, then `python scripts/doctor.py` -> `APP IS HEALTHY` |
 | Something fails / the app errors | Follow [rules/10-self-repair.md](rules/10-self-repair.md) (for a user-reported error: [prompt/03-fix-error.md](prompt/03-fix-error.md)) |

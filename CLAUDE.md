@@ -67,7 +67,7 @@ Rules of the gate:
 - Every app MUST be registered in `backend/app_registry.py` (one line `("<prefix>", "<key>")`, added by the scaffold):
   its URLs are `/<prefix>-<app>`; an unregistered app is hidden and its backend refuses every call.
 - Stored data is never destroyed: `repository.delete()` only sets the delete flag (`is_deleted`), `restore()` undoes.
-- Tables / charts / Excel only through the shared components (`data_table`, `bar_chart`/`line_chart`/`pie_chart`,
+- Tables / charts / Excel only through the shared components (`data_table`, the `*_chart` components,
   `ExcelReader`): they cap rows and points so a million rows never freeze the app.
 - Every class inherits its layer's base class from `backend.core.base`; one use case = one controller
   method = one service.
