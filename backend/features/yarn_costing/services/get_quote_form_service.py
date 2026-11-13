@@ -8,6 +8,7 @@ from backend.features.yarn_costing.business.material_price_business import Mater
 from backend.features.yarn_costing.business.quote_business import QuoteBusiness
 from backend.features.yarn_costing.dto.material_dto import (
     AccountingSuggestionDTO,
+    CottonShareDTO,
     GetQuoteFormRequest,
     QuoteFormComponentDTO,
     QuoteFormResponse,
@@ -61,4 +62,6 @@ class GetQuoteFormService(BaseService[GetQuoteFormRequest, QuoteFormResponse]):
             default_fi=monthly.default_fi,
             group_options=group_options(MaterialPriceGroupRepository().list_all()),
             has_trial_line=any(x.line_type == LineType.THI_NGHIEM and x.total_vnd > 0 for x in yarn.lines),
+            supima_percent=business.supima_from_name(yarn.yarn_name),  # BR-112 (bổ sung 2026-11-13)
+            cotton_plan=[CottonShareDTO(origin=s.origin, percent=s.percent) for s in monthly.cotton_plan],
         )

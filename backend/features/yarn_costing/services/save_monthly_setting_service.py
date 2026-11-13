@@ -38,7 +38,14 @@ class SaveMonthlySettingService(BaseService[SaveMonthlySettingRequest, MaterialS
             for r in request.recoveries
             if r.group_id in names
         ]
-        MaterialPriceBusiness().ensure_setting_valid(request.norm_factor, request.default_fi, plan, recoveries, names)
+        MaterialPriceBusiness().ensure_setting_valid(
+            request.norm_factor, request.default_fi, plan, recoveries, names, request.coin_usd, request.coin_tax
+        )
+        supima_group = (
+            request.supima_group_id
+            if request.supima_group_id in names and request.supima_group_id != COTTON_PLAN_ID
+            else ""
+        )
         repo = MonthlyMaterialSettingRepository()
         current = repo.for_period(request.period)
         all_settings = repo.list_all()
@@ -51,6 +58,9 @@ class SaveMonthlySettingService(BaseService[SaveMonthlySettingRequest, MaterialS
             "cotton_plan": plan,
             "recoveries": recoveries,
             "updated_by": label,
+            "supima_group_id": supima_group,  # BR-113 (bổ sung 2026-11-13)
+            "coin_usd": request.coin_usd,
+            "coin_tax": request.coin_tax,
         }
         if current is None:
             repo.add(

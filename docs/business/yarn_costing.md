@@ -540,6 +540,9 @@ Một bản cho mỗi tháng tính (BR-88).
 | cotton_plan | danh sách (origin: USA / Brazil / Australia, percent > 0) | No | Phương án pha bông, tổng 100% | USA 31%, Brazil 69% |
 | recoveries | danh sách (price_group: nhóm 4.22 hoặc "Cotton (phương án)", usd_per_kg ≥ 0) | No | Hồi phế nguyên liệu theo nhóm | Cotton (phương án) 0,18; Poly nguyên sinh – Indorama 0,07 |
 | copied_from | text `yyyy-mm` | No | Tháng được chép sang (BR-88) | 2026-10 |
+| supima_group_id | tham chiếu 4.22 | No | (bổ sung 2026-11-13) Nhóm giá của bông Supima / Pima (BR-111) | Cotton Pima |
+| coin_usd | decimal ≥ 0 (mặc định 0,552) | Yes | (bổ sung 2026-11-13) Giá 1 kg Supima coin (USD/kg) | 0,552 |
+| coin_tax | decimal ≥ 0 (mặc định 0,05) | Yes | (bổ sung 2026-11-13) Thuế nhà thầu của Supima coin, hiện dạng % | 5% |
 | updated_by, updated_at | text, datetime | No | Người và lúc lưu | |
 
 ### 4.26 Lô nguyên liệu sắp về (Arrival lot) - đợt 2
@@ -604,6 +607,10 @@ Một bản cho mỗi tháng tính (BR-88).
 | avg_cost_usd, fob_usd, cif_usd | decimal | Yes / Yes / Khi CIF | Giá vốn bình quân, giá FOB, giá CIF | 2,5873; 2,9401; 2,9701 |
 | note | text ≤ 500 | No | Ghi chú | |
 | created_by, created_at | text, datetime | Yes | Người và lúc lưu | |
+| cotton_plan | danh sách (origin, percent) | No | (bổ sung 2026-11-13) Phương án pha bông dùng cho lần tính (mặc định = khai báo tháng, Sales sửa được - BR-110); rỗng khi sợi không có bông | USA 31%, Brazil 69% |
+| supima_percent | decimal 0-1 | No (mặc định 0) | (bổ sung 2026-11-13) Tỷ lệ Supima trong phần bông (BR-111, BR-112) | 50% |
+| supima_coin | Có / Không (mặc định Không) | Yes | (bổ sung 2026-11-13) Truyền điểm Supima coin trên TG (BR-111) | Không |
+| coin_fee_usd | decimal | No | (bổ sung 2026-11-13) Phí coin = coin_usd × (1 + coin_tax) khi supima_coin = Có | 0,5796 |
 
 #### 4.28.1 Thành phần của lần tính (Quote component)
 | Field | Type | Description | Example |
@@ -613,6 +620,7 @@ Một bản cho mỗi tháng tính (BR-88).
 | price_group | text | Nhóm giá đã chọn | Cotton (phương án) |
 | average_usd, recovery_usd, net_usd | decimal | Giá BQ, hồi phế, giá tính = BQ − hồi phế (USD/kg) | 1,9832; 0,18; 1,8032 |
 | cost_usd | decimal | Tỷ lệ × giá tính ÷ (1 − tiêu hao) (USD/kg sợi) | 1,2729 |
+| supima_ratio, normal_net, normal_loss, supima_net, supima_loss | decimal | (bổ sung 2026-11-13) Phần pha Supima của thành phần bông (BR-111): tỷ lệ Supima, giá tính và tiêu hao của bông thường, giá tính (đã cộng phí coin nếu có) và tiêu hao của Supima | 50%; 1,7983; 24,20%; 3,3267; 21,70% |
 
 ### 4.29 Từ điển tên chuẩn (Name dictionary) - bổ sung 2026-11-11
 | Field | Type | Required | Description | Example |
@@ -851,7 +859,7 @@ xưởng đó (để người dùng sửa rồi tải lên lại). Sheet "4. Ban
 Một sheet `Gia bao khach`, mỗi lần tính một dòng theo bộ lọc đang chọn: Số báo giá, Tháng, Ngày tính, Người tính, Khách hàng, Mã
 dòng, Tên chuẩn, Mã kế toán, Thường / Thí nghiệm, Nội địa / Xuất khẩu, SL đơn (kg), Tỷ giá, Giá NL (USD/kg), Norm (USD/kg), Hệ số,
 Giá vốn mới, SL sợi tồn, Giá vốn sợi tồn, Giá vốn BQ, GP %, Commission %, FOB / CIF, F&I, Giá FOB (USD/kg), Giá CIF (USD/kg), Giá
-FOB (VND/kg), Giá CIF (VND/kg), Thành phần (dạng chữ: "<nguyên liệu> <tỷ lệ>% · <nhóm giá> <giá tính>; ..."), Ghi chú. Số làm tròn
+FOB (VND/kg), Giá CIF (VND/kg), Thành phần (dạng chữ: "<nguyên liệu> <tỷ lệ>% · <nhóm giá> <giá tính>; ..."), Ghi chú. (bổ sung 2026-11-13) Thêm 4 cột sau Thành phần: Tỷ lệ Supima, Truyền điểm coin (Có / Không), Phí coin (USD/kg), Phương án bông ("USA 31% + Brazil 69%"). Số làm tròn
 theo BR-23 (USD 4 chữ số).
 
 ### 5.13 File sửa tên hàng loạt (UC-69 out / in, bổ sung 2026-11-11)
@@ -1432,7 +1440,9 @@ thường - BR-70); lịch sử ghi event "Sửa NSM". Mã đã khoá: nút lưu
 - **Main flow:** kiểm tra BR-88; lưu bản của tháng (tháng khác không đổi); ghi nhật ký (trước → sau).
 - **Output:** "Đã lưu khai báo tháng <mm/yyyy>."
 - **Errors:** BR-88; BR-84.
-- **Rules applied:** BR-49, BR-84, BR-88
+- **Bổ sung 2026-11-13 (Supima):** thêm ô "Nhóm giá Supima" (danh sách nhóm 4.22), "Giá Supima coin (USD/kg)" (mặc định
+  0,552), "Thuế nhà thầu coin (%)" (mặc định 5%); tháng mới chép từ tháng trước như các ô khác (BR-88, BR-113).
+- **Rules applied:** BR-49, BR-84, BR-88, BR-113
 
 ### UC-59: Xem bảng giá nguyên liệu bình quân tháng (đợt 2)
 - **Actor:** Sales, Phòng SO
@@ -1482,7 +1492,13 @@ thường - BR-70); lịch sử ghi event "Sửa NSM". Mã đã khoá: nút lưu
   có sợi tồn cùng mã kế toán", Giá vốn bình quân, GP, Commission, **Giá FOB**, F&I, **Giá CIF**. Lưu xong: "Đã lưu báo giá <số> cho
   sợi <tên>: FOB <x> USD/kg[, CIF <y> USD/kg]."
 - **Errors:** BR-96; BR-89; BR-92 (nhóm không có giá); BR-84.
-- **Rules applied:** BR-23, BR-49, BR-84, BR-89, BR-92, BR-93, BR-94, BR-95, BR-96, BR-97, BR-98
+- **Bổ sung 2026-11-13 (pha bông, Supima):** khi có thành phần chọn nhóm "Cotton (phương án)", dưới bảng thành phần hiện khối
+  **Pha bông**: "Phương án bông cho lần tính này" (USA / Brazil / Australia %, điền sẵn khai báo tháng - BR-110) và "Tỷ lệ Supima %"
+  (điền sẵn theo tên - BR-112); khi Tỷ lệ Supima > 0 hiện thêm ô tick "Truyền điểm Supima coin trên TG" (mặc định tắt). Sợi không có
+  thành phần bông: không hiện khối này. Kết quả: bảng thành phần ghi rõ phần pha ("Bông thường 50% · 1,7983 ÷ (1 − 24,20%) | Supima
+  50% · (3,3267 + 0,5796) ÷ (1 − 21,70%)"); bảng giá thêm dòng "Phí Supima coin" khi có tick. "Dùng lại để tính mới" điền lại cả
+  phương án, tỷ lệ Supima, tick coin.
+- **Rules applied:** BR-23, BR-49, BR-84, BR-89, BR-92, BR-93, BR-94, BR-95, BR-96, BR-97, BR-98, BR-110, BR-111, BR-112
 
 ### UC-63: Xem, xuất, xoá các lần tính giá báo khách (đợt 2)
 - **Actor:** Sales, Phòng SO
@@ -1493,7 +1509,8 @@ thường - BR-70); lịch sử ghi event "Sửa NSM". Mã đã khoá: nút lưu
 - **Main flow:** xoá = cờ xoá (người tính hoặc Phòng SO); ghi nhật ký.
 - **Output:** "Đã xoá báo giá <số>."
 - **Errors:** "Chỉ người tính hoặc Phòng SO được xoá báo giá này."; BR-84.
-- **Rules applied:** BR-23, BR-49, BR-84, BR-97
+- **Bổ sung 2026-11-13:** chi tiết và file 5.12 có tỷ lệ Supima, tick coin, phí coin, phương án bông của lần tính.
+- **Rules applied:** BR-23, BR-49, BR-84, BR-97, BR-111
 
 ### UC-64: So đơn giá xuất kho với giá bình quân (đợt 2)
 - **Actor:** Sales, Phòng SO
@@ -1670,7 +1687,7 @@ thường - BR-70); lịch sử ghi event "Sửa NSM". Mã đã khoá: nút lưu
 | BR-91 | Lưu hàng sắp về (bổ sung 2026-11-10): lưu file → mọi lô đang có (kể cả lô nhập / sửa tay) đặt cờ xoá rồi lưu các lô của file (file là gốc). Nhóm giá của lô = khai báo 4.27 của cặp (Nhà cung cấp, Mô tả) sau khi viết hoa, bỏ dấu, gộp khoảng trắng; cặp chưa có → thêm với "Chưa khai báo". Lô thuộc cặp "Chưa khai báo" / "Không tính" không vào giá bình quân | - |
 | BR-92 | Giá nguyên liệu bình quân tháng M (bổ sung 2026-11-10), cho nhóm g và loại hàng t (Nội địa / Xuất khẩu): **Tồn** = dòng Nguyên liệu của tháng kho M−1 có mã khai báo "Tính theo nhóm" g và Loại hàng t hoặc Chung, SL_CUOI > 0: SL = SL_CUOI, giá trị USD = GT_CUOI ÷ tỷ giá M. **Hàng về** = lô xưởng S4 có ngày về kho trong tháng M, cặp khai báo nhóm g, Loại hàng t hoặc Chung: SL = quantity, giá USD/kg = Giá nhập kho, trống thì Unit price (VND thì ÷ tỷ giá M). **Giá BQ** = Σ giá trị ÷ Σ SL; **Giá tính** = Giá BQ − hồi phế của g tháng M. Không có SL nào → nhóm không có giá. **Cotton (phương án)** = Σ (tỷ lệ phương án của xuất xứ o × Giá BQ của tồn + hàng về mọi nhóm cotton xuất xứ o) − hồi phế của "Cotton (phương án)"; phương án trống hoặc một xuất xứ không có giá → không có giá. Thiếu tháng kho M−1 → không tính được | Nhóm '<nhóm>' (<loại hàng>) chưa có giá tháng <mm/yyyy>: không có tồn và hàng về. / Chưa khai báo phương án pha bông tháng <mm/yyyy>. / Chưa có file kho tháng <mm/yyyy> (tháng trước tháng tính). Vui lòng tải ở thẻ File kho. |
 | BR-93 | Gợi ý nhóm giá cho thành phần (bổ sung 2026-11-10): nhóm đã chọn ở lần tính báo giá gần nhất (chưa xoá) có cùng tên nguyên liệu (viết hoa, gộp khoảng trắng); chưa có thì: tên nguyên liệu bắt đầu bằng "CM", "CD" hoặc chứa "COTTON" → "Cotton (phương án)"; còn lại để trống, Sales chọn | - |
-| BR-94 | Giá nguyên liệu của 1 kg sợi (bổ sung 2026-11-10): **Tiêu hao sản xuất** của thành phần i = tiêu hao lũy kế (BR-19) của lượt chải thô của thành phần (theo chi tiết tính giá đã lưu của bản NSM); thành phần "Không chải thô" = tiêu hao lũy kế lớn nhất trong các công đoạn của sợi. **Giá NL** = Σ tỷ lệ_i × Giá tính_i (BR-92, theo loại hàng đã chọn) ÷ (1 − tiêu hao_i) (USD/kg) | - |
+| BR-94 | Giá nguyên liệu của 1 kg sợi (bổ sung 2026-11-10): **Tiêu hao sản xuất** của thành phần i = tiêu hao lũy kế (BR-19) của lượt chải thô của thành phần (theo chi tiết tính giá đã lưu của bản NSM); thành phần "Không chải thô" = tiêu hao lũy kế lớn nhất trong các công đoạn của sợi. **Giá NL** = Σ tỷ lệ_i × Giá tính_i (BR-92, theo loại hàng đã chọn) ÷ (1 − tiêu hao_i) (USD/kg); (sửa 2026-11-13) thành phần bông dùng phương án riêng (BR-110) và pha Supima (BR-111) | - |
 | BR-95 | Giá báo khách (bổ sung 2026-11-10), tháng M, tỷ giá M (BR-89): **Norm** = Tổng VND/kg của dòng Thường (hoặc dòng Thí nghiệm cùng bản NSM khi chọn Thí nghiệm) tại lúc tính ÷ tỷ giá M; **Giá vốn mới** = Giá NL (BR-94) + Norm × hệ số. **Sợi tồn** = dòng Sợi thành phẩm của tháng kho M−1 có 18 ký tự đầu của mã bằng 18 ký tự đầu của mã kế toán đã chọn và SL_CUOI > 0: SL tồn = Σ SL_CUOI, giá tồn = Σ GT_CUOI ÷ tỷ giá M ÷ SL tồn. **Giá vốn BQ** = (SL tồn × giá tồn + SL đơn × Giá vốn mới) ÷ (SL tồn + SL đơn); không có mã kế toán hoặc không có sợi tồn → = Giá vốn mới. **FOB** = Giá vốn BQ ÷ (1 − GP% − Commission%); **CIF** = FOB + F&I. GP = FOB × GP%, Commission = FOB × Commission%. Kết quả VND = USD × tỷ giá M. Giữ đủ số lẻ khi tính (BR-21), hiển thị theo BR-23 | - |
 | BR-96 | Kiểm tra trước khi tính báo giá (bổ sung 2026-11-10): Sợi bắt buộc và dòng Thường đã có giá (trạng thái Đã tính giá / Có mã kế toán); chọn Thí nghiệm thì dòng Thí nghiệm phải có giá; Tháng, Loại hàng bắt buộc; SL đơn > 0; hệ số > 0; GP ≥ 0; Commission ≥ 0; GP + Commission < 100%; CIF thì F&I ≥ 0; mọi thành phần có nhóm giá và nhóm có giá tháng M (BR-92); mã kế toán ≤ 50 ký tự; khách hàng ≤ 100; ghi chú ≤ 500 | Vui lòng chọn sợi. / Sợi <mã> chưa có giá. / Số lượng đơn hàng phải lớn hơn 0. / Hệ số phải lớn hơn 0. / GP và Commission không được âm. / Tổng GP và Commission phải nhỏ hơn 100%. / F&I không được âm. / Thành phần '<nguyên liệu>' chưa chọn nhóm giá. / (câu BR-92) |
 | BR-97 | Lưu lần tính báo giá (bổ sung 2026-11-10): số báo giá = `BG-<năm của ngày lưu>-<số thứ tự 4 chữ số trong năm>` (lớn nhất đã có, kể cả đã xoá, + 1); lưu mọi số đầu vào, tỷ giá, giá từng thành phần và kết quả; số đã lưu không tính lại khi dữ liệu nền, khai báo hay file kho đổi. Không sửa lần đã lưu (dùng lại để tính lần mới); xoá = cờ xoá, chỉ người tính hoặc Phòng SO (quản trị viên) | Chỉ người tính hoặc Phòng SO được xoá báo giá này. |
@@ -1686,6 +1703,10 @@ thường - BR-70); lịch sử ghi event "Sửa NSM". Mã đã khoá: nút lưu
 | BR-107 | Chuẩn hoá viết hoa (UC-71, bổ sung 2026-11-11): **Nhóm trùng** = các mã gốc cùng xưởng có tên viết hoa, gộp khoảng trắng giống nhau, trạng thái khác Đã huỷ, Từ chối, Không sản xuất. **Mã giữ** = mã đứng đầu khi sắp: trạng thái (Có mã kế toán, Đã tính giá, Chưa tính được, Chờ xưởng xem), nhiều mã kế toán hơn, nhiều bản ĐCNSM hơn, nhiều tên theo khách hơn, nhiều dòng giá hơn, số mã nhỏ hơn. **Mã loại**: Chờ xưởng xem → Từ chối; còn lại → Không sản xuất theo BR-72 nhưng được cả mã có mã kế toán; lý do "Trùng tên với <mã giữ>"; tên theo khách (4.20) chuyển sang mã giữ (bỏ cặp đã có); mã kế toán của mã loại thêm vào `merged_accounting_codes` của mã giữ. Sau đó mọi tên có chữ thường được viết hoa (tên cũ vào `old_names`, lý do "Chuẩn hoá viết hoa"). Chạy trong một lần, lỗi ở một mã thì không đổi gì | - |
 | BR-108 | Tên cũ và mã kế toán gộp (bổ sung 2026-11-11): ô tìm / chọn dòng giá (UC-27 tìm kiếm, UC-52, UC-62) tìm được theo `old_names` và `merged_accounting_codes`; gợi ý Trùng theo tên (BR-77 (b)) so cả tên cũ; ghép mã kế toán (BR-82, BR-95, BR-98, BR-99) coi `merged_accounting_codes` như mã kế toán của dòng Thường của mã giữ | - |
 | BR-109 | Quyền (bổ sung 2026-11-11): UC-65 xem: Sales, Phòng SO; UC-66, UC-67, UC-70, UC-71: Phòng SO (Sales chỉ xem các thẻ đó); UC-68, UC-69: Phòng SO với mọi mã (trừ Đã huỷ, Từ chối), Sales chỉ mã Chờ xưởng xem, Chưa tính được; quản trị viên như Phòng SO | Sales chỉ đổi được tên sợi chưa tính giá (Chờ xưởng xem, Chưa tính được). Mã <mã> đang '<trạng thái>'. |
+| BR-110 | Phương án bông riêng cho lần tính (bổ sung 2026-11-13): khi sợi có thành phần chọn nhóm "Cotton (phương án)", Sales sửa được tỷ lệ USA / Brazil / Australia cho lần tính đó (mặc định = phương án khai báo tháng M); mỗi tỷ lệ ≥ 0, tổng đúng 100%, ít nhất một xuất xứ > 0. Giá Cotton (phương án) của lần tính = Σ tỷ lệ × Giá BQ của xuất xứ (cách BR-92) − hồi phế "Cotton (phương án)" tháng M; xuất xứ có tỷ lệ > 0 mà không có giá → câu BR-92. Phương án dùng được lưu trong báo giá; khai báo tháng không đổi | Tổng tỷ lệ phương án bông phải bằng 100% (hiện là <x>%). |
+| BR-111 | Pha bông Supima (bổ sung 2026-11-13), cho thành phần bông (nhóm "Cotton (phương án)") có tỷ lệ Supima s > 0: giá thành phần / kg sợi = tỷ lệ thành phần × [ (1 − s) × Giá tính bông thường ÷ (1 − tiêu hao bông thường) + s × (Giá tính Supima + phí coin) ÷ (1 − tiêu hao Supima) ]. **Giá tính bông thường** = giá Cotton (phương án) của lần tính (BR-110). **Giá tính Supima** = Giá BQ của nhóm "Nhóm giá Supima" khai báo tháng M (loại hàng của lần tính) − hồi phế của nhóm đó tháng M. **Phí coin** = coin_usd × (1 + coin_tax) khi tick "Truyền điểm Supima coin trên TG", ngược lại 0. **Tiêu hao Supima** = tổng tiêu hao các công đoạn của nhóm tiêu hao "CM (SUPIMA 100%)" cùng xưởng. **Tiêu hao bông thường** = tổng tiêu hao của nhóm "CM COMPACT" (sợi compact) hoặc "CM" (còn lại) cùng xưởng. Khi s = 100%: chỉ có phần Supima, tiêu hao = tiêu hao của chính thành phần (BR-94, vì nhóm tiêu hao của sợi đã là nhóm Supima). s = 0: như BR-94 (sửa 2026-11-13: trước đây thành phần bông chỉ có một nhóm giá) | Chưa khai báo nhóm giá Supima tháng <mm/yyyy>. / Chưa có nhóm tiêu hao '<nhóm>' ở xưởng <xưởng>. / Tỷ lệ Supima phải từ 0 đến 100%. |
+| BR-112 | Đọc tỷ lệ Supima từ tên (bổ sung 2026-11-13): tên (viết hoa) có "SUPIMA n%" / "PIMA n%" (kể cả trong ngoặc, ví dụ "CM (SUPIMA 30%)") → s = n%; có chữ SUPIMA / PIMA mà không có % → s = 100%; không có → 0. Sales sửa được trước khi tính | - |
+| BR-113 | Khai báo Supima trong khai báo tháng (bổ sung 2026-11-13): Nhóm giá Supima là một nhóm 4.22 (không được là "Cotton (phương án)"); giá coin ≥ 0; thuế nhà thầu ≥ 0; mặc định 0,552 và 5% cho tháng chưa có bản lưu nào trước đó | Giá Supima coin không được âm. / Thuế nhà thầu không được âm. |
 
 ## 8. Screens (Màn hình)
 
@@ -1800,6 +1821,11 @@ thường - BR-70); lịch sử ghi event "Sửa NSM". Mã đã khoá: nút lưu
     tên bằng Excel". Không biểu đồ.
   - Hỏi xác nhận: "Lưu <n> tên" (file), "Sai, sửa thành", "Chuẩn hoá". Không hỏi: Đổi tên một mã, Lưu từ điển, Lưu nhóm / từ khoá, Thêm vào
     từ điển, Gửi yêu cầu.
+- **Bổ sung 2026-11-13, Supima (chốt trong vòng hỏi: 3 đúng, 4 giữ):** Screen 13 - dưới bảng thành phần, khối "Pha bông" chỉ hiện khi
+  có thành phần chọn "Cotton (phương án)": hàng ô số USA % / Brazil % / Australia % (phương án cho lần tính) + ô "Tỷ lệ Supima %" + ô
+  tick "Truyền điểm Supima coin trên TG" (chỉ hiện khi Tỷ lệ Supima > 0); bảng kết quả thành phần thêm cột "Cách pha"; bảng giá thêm
+  dòng "Phí Supima coin" khi có tick. Screen 11 thẻ Khai báo tháng: thêm hàng "Nhóm giá Supima" (danh sách chọn), "Giá Supima coin
+  (USD/kg)", "Thuế nhà thầu coin (%)". Không hỏi xác nhận thêm.
 - **Ô số liệu:** Screen 1, 3, 6, 7, 10. **Biểu đồ:** Screen 7, Screen 10.
 - **Hộp thoại xác nhận** trước khi: Huỷ yêu cầu, Từ chối, Xoá nhóm tiêu hao, Xoá dòng CK/PP, "Lưu đóng gói" (nội dung theo BR-62), mọi nút "… và tính lại" (Screen
   5), "Lưu hệ số", "Lưu thay đổi" nhóm tiêu hao (có tính lại), "Lưu N dòng hợp lệ". Không hỏi lại khi: Gửi yêu cầu, Lưu sửa
@@ -1961,6 +1987,8 @@ không có vai trò phù hợp (BR-47, BR-48); phía xử lý vẫn kiểm tra l
 - **Blocks:** khối "Tính giá" (UC-62) → khối kết quả → khối "Các lần đã tính" (UC-63).
 - **Buttons:** "Tính thử", "Lưu lần tính", "Xuất Excel", "Dùng lại để tính mới", "Xoá lần tính" (hỏi xác nhận).
 - **After actions:** lưu xong bảng "Các lần đã tính" chọn sẵn lần vừa lưu.
+- **Bổ sung 2026-11-13:** khối "Pha bông" (UC-62) chỉ hiện với sợi có thành phần bông; ô tick Supima coin chỉ hiện khi Tỷ lệ
+  Supima > 0.
 
 ### Screen 14: Kiểm tra tên sợi (bổ sung 2026-11-11)
 - **Purpose:** rà và sửa tên sợi sai, quản lý từ điển tên chuẩn, nhóm sợi / từ khoá của ô ghép tên, chuẩn hoá viết hoa. Sales, Phòng SO
@@ -2312,8 +2340,30 @@ không có vai trò phù hợp (BR-47, BR-48); phía xử lý vẫn kiểm tra l
   Sales / SO: đổi tên bị từ chối.
 - [ ] AC-146 (giữ nguyên): Gửi yêu cầu tên hợp lệ không có chữ lạ chạy như trước (BR-06, BR-76..BR-78 giữ nguyên); giá, NSM, mã kế toán của mọi
   mã không đổi sau đổi tên / chuẩn hoá; mọi test cũ giữ xanh.
+- [ ] AC-147 (BR-112, UC-62): Chọn sợi "CM 40/1 (SUPIMA 50%) COMPACT" → Tỷ lệ Supima điền sẵn 50%; "CM 30/1 SUPIMA" → 100%;
+  "CM 30/1" → 0% và không hiện ô tick coin; sợi "PE 30/1 MVS" (không có thành phần bông) → không hiện khối Pha bông.
+- [ ] AC-148 (BR-111): Tháng 11/2026, tỷ giá 25.800: Cotton (phương án) giá tính 1,8032; nhóm Supima "Cotton Pima" BQ 3,6267, hồi phế
+  0,30 → 3,3267; nhóm tiêu hao S4 "CM COMPACT" tổng 24,20%, "CM (SUPIMA 100%)" tổng 21,70%; thành phần bông 100% của CM (SUPIMA 50%)
+  COMPACT, không tick coin → giá bông / kg sợi = 0,5 × 1,8032 ÷ 0,758 + 0,5 × 3,3267 ÷ 0,783 = 1,1894 + 2,1243 = 3,3137; tick coin
+  (0,552, thuế 5%) → phần Supima = 0,5 × (3,3267 + 0,5796) ÷ 0,783 = 2,4944, tổng 3,6838, bảng giá có dòng "Phí Supima coin".
+- [ ] AC-149 (BR-110): Đổi phương án lần tính thành USA 100% → giá tính bông thường = Giá BQ USA − 0,18; khai báo tháng vẫn 31% /
+  69%; nhập 60% + 30% → câu tổng 100%; báo giá lưu "USA 100%" và "Dùng lại để tính mới" điền lại đúng phương án.
+- [ ] AC-150 (BR-111, BR-113): Tháng chưa khai báo nhóm giá Supima mà Tỷ lệ Supima > 0 → câu "Chưa khai báo nhóm giá Supima tháng
+  11/2026."; thiếu nhóm tiêu hao "CM (SUPIMA 100%)" → câu nhóm tiêu hao; Tỷ lệ Supima 120% → câu 0-100%; khai báo tháng giá coin âm →
+  câu BR-113; tháng mới chép nhóm Supima, giá coin, thuế từ tháng trước.
+- [ ] AC-151 (UC-63, 5.12): Báo giá lưu có Tỷ lệ Supima 50%, tick coin → chi tiết và file Excel có Tỷ lệ Supima 50%, Truyền điểm coin
+  "Có", Phí coin 0,5796, Phương án bông "USA 31% + Brazil 69%".
+- [ ] AC-152 (giữ nguyên): Sợi không có Supima (s = 0) và phương án mặc định cho cùng kết quả như trước (AC-126: Giá NL 1,7564, FOB
+  2,9401, CIF 2,9701); mọi test cũ giữ xanh.
 
 ## 10. Open questions (Câu hỏi mở)
+- Mở rộng 2026-11-13 (Supima): phương án bông riêng cho lần tính, pha bông Supima theo tỷ lệ với tiêu hao riêng (nhóm "CM (SUPIMA 100%)")
+  và bông thường (nhóm "CM" / "CM COMPACT"), phí Supima coin khi truyền điểm trên TG, khai báo nhóm giá Supima / giá coin / thuế
+  hằng tháng (4.25, 4.28, 4.28.1, 5.12, UC-58 / UC-62 / UC-63 sửa, BR-94 sửa, BR-110..BR-113, AC-147..AC-152). Kế hoạch:
+  `docs/plans/yarn_costing-extension-20261113-supima.md`.
+- Giả định (2026-11-13): pha Supima chỉ cho thành phần chọn nhóm "Cotton (phương án)"; tiêu hao "bông thường" / "Supima" là tổng
+  tiêu hao các công đoạn của nhóm tham chiếu (giống tiêu hao lũy kế từ chải thô); sợi 100% Supima dùng tiêu hao của chính sợi;
+  hồi phế Supima khai báo theo nhóm giá Supima ở khai báo tháng (ví dụ 0,30).
 - Mở rộng 2026-11-11: kiểm tra chính tả và sửa tên sợi - từ điển tên chuẩn, bảng tên nghi sai, chữ mới chờ duyệt (tự ghi lại, tự thêm khi tính
   giá), đổi tên một sợi / hàng loạt bằng Excel (giữ tên cũ để tìm), ô ghép tên khi Sales gửi yêu cầu (nhóm lạ tự thêm), chặn sai khi gửi,
   chuẩn hoá viết hoa một lượt + loại mã trùng tên (4.12 thêm trường, 4.29-4.31, 5.13, UC-65..UC-71, UC-15 / UC-16 sửa, BR-100..BR-109, Screen
@@ -2593,3 +2643,7 @@ không có vai trò phù hợp (BR-47, BR-48); phía xử lý vẫn kiểm tra l
 | Screen 2 (sửa), Screen 14 | `components/name_input.py` (ô ghép tên / gõ tay, chữ lạ), `pages/yarn_request_page.py`, `pages/name_check_page.py` |
 | AC-133..AC-146 | `test_yarn_name.py` trong thư mục kiểm thử của chức năng |
 | AC-118..AC-132 | `test_material_price.py` trong thư mục kiểm thử của chức năng (số liệu thật của 3 file Sales: cotton phương án 1,8032, poly Indorama 1,1122 / 1,2810, FOB 2,9401, CIF 2,9701) |
+| Supima (2026-11-13) - dữ liệu | `models/material_price.py` (`MonthlyMaterialSetting.supima_group_id / coin_usd / coin_tax`, `Quote.cotton_plan / supima_percent / supima_coin / coin_fee_usd`, `QuoteComponent.supima_ratio / normal_net / normal_loss / supima_net / supima_loss`, `SupimaMix`; mặc định có sẵn - không cần chuyển dữ liệu) |
+| BR-110..BR-113, BR-94 (sửa) | `business/quote_business.py` (`supima_from_name`, `ensure_plan`, `ensure_supima_ratio`, `group_loss`, `normal_loss_key`, `material_components` pha bông thường + Supima), `business/material_price_business.py` (`plan_average`, `ensure_setting_valid` giá coin / thuế, `draft` chép từ tháng trước) |
+| UC-58, UC-62, UC-63 (bổ sung) | `services/calculate_quote_service.py` (`_supima`), `get_quote_form_service.py`, `get_monthly_setting_service.py`, `save_monthly_setting_service.py`; DTO `dto/material_dto.py`, `builders/material_dto_builders.py`; Excel 4 cột `builders/material_file_builders.py`; giao diện `pages/quote_page.py` (`_cotton_block`, cột Cách pha, dòng Phí Supima coin), `pages/material_price_page.py` (nhóm giá Supima, giá coin, thuế nhà thầu) |
+| AC-147..AC-152 | `test_material_price.py` trong thư mục kiểm thử của chức năng (AC-152 = toàn bộ test cũ) |

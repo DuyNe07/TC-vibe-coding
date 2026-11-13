@@ -144,6 +144,9 @@ class MonthlySettingResponse(BaseResponseDTO):
     recoveries: list[RecoveryDTO] = []
     group_options: list[PriceGroupDTO] = []
     updated_by: str = ""
+    supima_group_id: str = ""  # BR-113 (bổ sung 2026-11-13)
+    coin_usd: Decimal = Decimal("0.552")
+    coin_tax: Decimal = Decimal("0.05")
 
 
 class SaveMonthlySettingRequest(BaseRequestDTO):
@@ -153,6 +156,9 @@ class SaveMonthlySettingRequest(BaseRequestDTO):
     cotton_plan_note: str = ""
     cotton_plan: list[CottonShareDTO] = []
     recoveries: list[RecoveryDTO] = []
+    supima_group_id: str = ""  # BR-113 (bổ sung 2026-11-13)
+    coin_usd: Decimal = Decimal("0.552")
+    coin_tax: Decimal = Decimal("0.05")
 
 
 # ---- UC-59 ----
@@ -338,6 +344,8 @@ class QuoteFormResponse(BaseResponseDTO):
     default_fi: Decimal = Decimal("0.03")
     group_options: list[PriceGroupDTO] = []
     has_trial_line: bool = False
+    supima_percent: Decimal = ZERO  # BR-112 (bổ sung 2026-11-13): đọc từ tên
+    cotton_plan: list[CottonShareDTO] = []  # BR-110: phương án khai báo tháng (mặc định của lần tính)
 
 
 class QuoteComponentDTO(BaseDTO):
@@ -350,6 +358,11 @@ class QuoteComponentDTO(BaseDTO):
     recovery_usd: Decimal = ZERO
     net_usd: Decimal = ZERO
     cost_usd: Decimal = ZERO
+    supima_ratio: Decimal = ZERO  # BR-111 (bổ sung 2026-11-13)
+    normal_net: Decimal = ZERO
+    normal_loss: Decimal = ZERO
+    supima_net: Decimal = ZERO
+    supima_loss: Decimal = ZERO
 
 
 class QuoteDTO(BaseDTO):
@@ -382,6 +395,10 @@ class QuoteDTO(BaseDTO):
     note: str = ""
     created_by: str = ""
     created_at: datetime | None = None
+    cotton_plan: list[CottonShareDTO] = []  # BR-110 / BR-111 (bổ sung 2026-11-13)
+    supima_percent: Decimal = ZERO
+    supima_coin: bool = False
+    coin_fee_usd: Decimal = ZERO
 
 
 class CalculateQuoteRequest(BaseRequestDTO):
@@ -400,6 +417,9 @@ class CalculateQuoteRequest(BaseRequestDTO):
     groups: dict[str, str] = {}  # material label → price group id
     note: str = ""
     commit: bool = False
+    cotton_plan: list[CottonShareDTO] | None = None  # BR-110: None = phương án khai báo tháng
+    supima_percent: Decimal = ZERO  # BR-111 (fraction)
+    supima_coin: bool = False
 
 
 class QuoteResponse(BaseResponseDTO):

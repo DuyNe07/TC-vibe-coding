@@ -17,17 +17,21 @@ from backend.features.yarn_costing.models.enums import (
     StockSection,
     YarnStatus,
 )
+from backend.features.yarn_costing.models.loss_group import LossGroup
 from backend.features.yarn_costing.models.material_price import (
     COTTON_PLAN_ID,
+    CottonShare,
     GroupAverage,
     Quote,
     QuoteComponent,
     StockLine,
+    SupimaMix,
 )
 from backend.features.yarn_costing.models.yarn import PriceLine, Yarn, YarnComponent
 
 ZERO = Decimal(0)
 ONE = Decimal(1)
+HUNDRED = Decimal(100)
 CORE_LENGTH = 18
 PRICED = (YarnStatus.DA_TINH_GIA, YarnStatus.CO_MA_KE_TOAN)
 QUOTE_NO = re.compile(r"^BG-(\d{4})-(\d+)$")
@@ -44,6 +48,16 @@ MSG_CUSTOMER_LONG = "Khách hàng tối đa 100 ký tự."
 MSG_NOTE_LONG = "Ghi chú tối đa 500 ký tự."
 MSG_MARKET = "Vui lòng chọn Nội địa hoặc Xuất khẩu."
 MSG_DELETE = "Chỉ người tính hoặc Phòng SO được xoá báo giá này."
+MSG_PLAN_TOTAL = "Tổng tỷ lệ phương án bông phải bằng 100% (hiện là {total}%)."
+MSG_SUPIMA_RATIO = "Tỷ lệ Supima phải từ 0 đến 100%."
+MSG_NO_SUPIMA_GROUP = "Chưa khai báo nhóm giá Supima tháng {month}."
+MSG_NO_LOSS_GROUP = "Chưa có nhóm tiêu hao '{group}' ở xưởng {factory}."
+SUPIMA_PERCENT_RULE = re.compile(r"\b(?:SU)?PIMA\s*(\d+(?:[.,]\d+)?)\s*%")
+SUPIMA_WORD_RULE = re.compile(r"\b(?:SU)?PIMA\b")
+SUPIMA_LOSS_GROUP = "CM (SUPIMA 100%)"
+NORMAL_LOSS_GROUP = "CM"
+NORMAL_COMPACT_LOSS_GROUP = "CM COMPACT"
+TOLERANCE = Decimal("0.00001")
 
 
 def label_key(text: str) -> str:
@@ -124,17 +138,55 @@ class QuoteBusiness(BaseBusiness[Quote]):
         wanted = LineType.THUONG if kind == PriceKind.THUONG else LineType.THI_NGHIEM
         return next((line for line in yarn.lines if line.line_type == wanted), None)
 
+    # ---- BR-110 / BR-111 / BR-112 (bổ sung 2026-11-13) ----
+    def supima_from_name(self, name: str) -> Decimal:
+        """BR-112: "SUPIMA n%" / "PIMA n%" → n%; SUPIMA / PIMA without % → 100%; else 0 (fraction)."""
+        upper = name.upper()
+        match = SUPIMA_PERCENT_RULE.search(upper)
+        if match:
+            return min(Decimal(match.group(1).replace(",", ".")) / HUNDRED, ONE)
+        return ONE if SUPIMA_WORD_RULE.search(upper) else ZERO
+
+    def ensure_plan(self, plan: Sequence[CottonShare]) -> None:
+        total = sum((s.percent for s in plan), ZERO)
+        if any(s.percent < 0 for s in plan) or abs(total - ONE) > TOLERANCE or not any(s.percent > 0 for s in plan):
+            shown = f"{(total * HUNDRED).normalize():f}".replace(".", ",")
+            raise YarnValidationError(MSG_PLAN_TOTAL.format(total=shown))
+
+    def ensure_supima_ratio(self, ratio: Decimal) -> None:
+        if ratio < 0 or ratio > ONE:
+            raise YarnValidationError(MSG_SUPIMA_RATIO)
+
+    def group_loss(self, groups: Sequence[LossGroup], key: str, factory: str) -> Decimal:
+        """BR-111: tổng tiêu hao các công đoạn của một nhóm tiêu hao tham chiếu cùng xưởng."""
+        found = next((g for g in groups if g.factory_code.value == factory and g.group_key == key), None)
+        if found is None:
+            raise YarnValidationError(MSG_NO_LOSS_GROUP.format(group=key, factory=factory))
+        return sum(found.losses.values(), ZERO)
+
+    def normal_loss_key(self, yarn: Yarn) -> str:
+        return NORMAL_COMPACT_LOSS_GROUP if yarn.is_compact else NORMAL_LOSS_GROUP
+
     # ---- BR-94 / BR-95 ----
     def material_components(
-        self, yarn: Yarn, chosen: dict[str, str], averages: Sequence[GroupAverage], market: MaterialMarket
+        self,
+        yarn: Yarn,
+        chosen: dict[str, str],
+        averages: Sequence[GroupAverage],
+        market: MaterialMarket,
+        cotton: GroupAverage | None = None,
+        supima: SupimaMix | None = None,
     ) -> tuple[list[QuoteComponent], list[str]]:
-        """Components with their group price (BR-92) → (components, groups without price notes)."""
+        """Components with their group price (BR-92) → (components, groups without price notes).
+        ``cotton`` = Cotton (phương án) of the quote's own plan (BR-110); ``supima`` = the Supima mix (BR-111)."""
         components: list[QuoteComponent] = []
         missing: list[str] = []
         for component in yarn.components:
             group_id = chosen.get(component.material_label, "")
             loss = self.component_loss(yarn, component)
             found = next((a for a in averages if a.group_id == group_id and a.market == market), None)
+            if group_id == COTTON_PLAN_ID and cotton is not None:
+                found = cotton
             if found is None or found.net is None or found.average is None:
                 missing.append(found.note if found is not None and found.note else group_id)
                 components.append(
@@ -148,6 +200,19 @@ class QuoteBusiness(BaseBusiness[Quote]):
                 )
                 continue
             cost = component.ratio * found.net / (ONE - loss) if loss < ONE else ZERO
+            mix: dict[str, Decimal] = {}
+            if group_id == COTTON_PLAN_ID and supima is not None and supima.ratio > 0:
+                s = supima.ratio
+                supima_price = supima.net + supima.coin_fee
+                if s >= ONE:  # 100% Supima: the yarn's own loss group is already the Supima one
+                    cost = component.ratio * supima_price / (ONE - loss)
+                    mix = {"supima_loss": loss}
+                else:
+                    cost = component.ratio * (
+                        (ONE - s) * found.net / (ONE - supima.normal_loss) + s * supima_price / (ONE - supima.loss)
+                    )
+                    mix = {"supima_loss": supima.loss, "normal_loss": supima.normal_loss, "normal_net": found.net}
+                mix |= {"supima_ratio": s, "supima_net": supima_price}
             components.append(
                 QuoteComponent(
                     material_label=component.material_label,
@@ -159,6 +224,7 @@ class QuoteBusiness(BaseBusiness[Quote]):
                     recovery_usd=found.recovery,
                     net_usd=found.net,
                     cost_usd=cost,
+                    **mix,
                 )
             )
         return components, missing

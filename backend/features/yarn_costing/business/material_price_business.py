@@ -62,6 +62,8 @@ MSG_NO_DATA = "Nhóm '{group}' ({market}) chưa có giá tháng {month}: không 
 MSG_NO_PLAN = "Chưa khai báo phương án pha bông tháng {month}."
 MSG_NO_STOCK = "Chưa có file kho tháng {month} (tháng trước tháng tính). Vui lòng tải ở thẻ File kho."
 MSG_LEVEL = "Mức cảnh báo phải là số lớn hơn 0."
+MSG_COIN = "Giá Supima coin không được âm."
+MSG_COIN_TAX = "Thuế nhà thầu không được âm."
 NOTE_NO_AVG = "chưa có giá BQ tháng {month}"
 NOTE_UNDECLARED = "chưa khai báo nhóm"
 NOTE_NO_QUOTE = "chưa tính giá báo khách"
@@ -128,6 +130,9 @@ class MaterialPriceBusiness(BaseBusiness[MaterialPriceGroup]):
             cotton_plan=list(previous.cotton_plan),
             recoveries=list(previous.recoveries),
             copied_from=previous.period,
+            supima_group_id=previous.supima_group_id,
+            coin_usd=previous.coin_usd,
+            coin_tax=previous.coin_tax,
         )
 
     def latest_before(self, period: str, settings: Sequence[MonthlyMaterialSetting]) -> MonthlyMaterialSetting | None:
@@ -141,7 +146,13 @@ class MaterialPriceBusiness(BaseBusiness[MaterialPriceGroup]):
         plan: Sequence[CottonShare],
         recoveries: Sequence[GroupRecovery],
         group_names: dict[str, str],
+        coin_usd: Decimal = Decimal("0.552"),
+        coin_tax: Decimal = Decimal("0.05"),
     ) -> None:
+        if coin_usd < 0:  # BR-113
+            raise YarnValidationError(MSG_COIN)
+        if coin_tax < 0:
+            raise YarnValidationError(MSG_COIN_TAX)
         if norm_factor <= 0:
             raise YarnValidationError(MSG_FACTOR)
         if default_fi < 0:
@@ -304,6 +315,19 @@ class MaterialPriceBusiness(BaseBusiness[MaterialPriceGroup]):
         plans = [self._cotton_plan(market, result, groups, monthly, month) for market in MARKETS]
         result.sort(key=lambda a: (a.group_name.casefold(), a.market != MaterialMarket.NOI_DIA))
         return [*plans, *result]
+
+    def plan_average(
+        self,
+        market: MaterialMarket,
+        averages: Sequence[GroupAverage],
+        groups: dict[str, MaterialPriceGroup],
+        monthly: MonthlyMaterialSetting,
+        plan: Sequence[CottonShare],
+        period: str,
+    ) -> GroupAverage:
+        """BR-110: Cotton (phương án) of one quote with its own plan (the monthly recovery of the plan still applies)."""
+        own = monthly.model_copy(update={"cotton_plan": [s for s in plan if s.percent > 0]})
+        return self._cotton_plan(market, averages, groups, own, month_text(period))
 
     def lot_unit_usd(self, lot: ArrivalLot, rate: Decimal) -> Decimal:
         """BR-92: Giá nhập kho (USD/kg), empty → Unit price (VND ÷ tỷ giá M)."""

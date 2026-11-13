@@ -102,6 +102,10 @@ class MonthlyMaterialSetting(BaseEntity):
     recoveries: list[GroupRecovery] = Field(default_factory=list)
     copied_from: str = ""
     updated_by: str = ""
+    # BR-113 (bổ sung 2026-11-13): bông Supima pha trong phương án bông
+    supima_group_id: str = ""
+    coin_usd: Decimal = Decimal("0.552")
+    coin_tax: Decimal = Decimal("0.05")
 
     def recovery_of(self, group_id: str) -> Decimal:
         return next((r.usd_per_kg for r in self.recoveries if r.group_id == group_id), ZERO)
@@ -168,6 +172,12 @@ class QuoteComponent(BaseValueObject):
     recovery_usd: Decimal = ZERO
     net_usd: Decimal = ZERO
     cost_usd: Decimal = ZERO
+    # BR-111 (bổ sung 2026-11-13): phần pha Supima của thành phần bông
+    supima_ratio: Decimal = ZERO
+    normal_net: Decimal = ZERO
+    normal_loss: Decimal = ZERO
+    supima_net: Decimal = ZERO
+    supima_loss: Decimal = ZERO
 
 
 class Quote(BaseEntity):
@@ -202,6 +212,11 @@ class Quote(BaseEntity):
     note: str = ""
     created_by: str = ""
     created_username: str = ""
+    # BR-110 / BR-111 (bổ sung 2026-11-13)
+    cotton_plan: list[CottonShare] = Field(default_factory=list)
+    supima_percent: Decimal = ZERO
+    supima_coin: bool = False
+    coin_fee_usd: Decimal = ZERO
 
 
 # ---- values computed on the fly (not stored) ----
@@ -278,3 +293,13 @@ class MonthInputs(BaseValueObject):
     mappings: dict[tuple[str, str], ArrivalMapping] = Field(default_factory=dict)
     monthly: list[MonthlyMaterialSetting] = Field(default_factory=list)
     rates: list[ExchangeRate] = Field(default_factory=list)
+
+
+class SupimaMix(BaseValueObject):
+    """BR-111: what the cotton component of one quote mixes in (s = 0 → nothing)."""
+
+    ratio: Decimal = ZERO  # s, fraction of the cotton part
+    net: Decimal = ZERO  # Giá tính Supima (BQ − hồi phế)
+    coin_fee: Decimal = ZERO
+    loss: Decimal = ZERO  # tổng tiêu hao nhóm "CM (SUPIMA 100%)"
+    normal_loss: Decimal = ZERO  # tổng tiêu hao nhóm "CM" / "CM COMPACT"
