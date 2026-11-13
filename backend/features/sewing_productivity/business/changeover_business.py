@@ -1,7 +1,9 @@
-"""Style changeovers (BR-12 via the clean rows, BR-32 to BR-38, BR-41)."""
+"""Style changeovers (BR-12 via the clean rows, BR-32 to BR-38, BR-41; BR-87 since 2026-11-13)."""
 
+from bisect import bisect_left
 from calendar import monthrange
 from collections import defaultdict
+from collections.abc import Iterable
 from datetime import date
 from decimal import Decimal
 
@@ -66,6 +68,42 @@ class ChangeoverBusiness(BaseBusiness[CleanRow]):
             if day >= from_date:
                 count += len(pairs_by_day[day] - previous)
             previous = pairs_by_day[day]
+        return count
+
+    @staticmethod
+    def code_of(row: CleanRow) -> tuple[str, Decimal, Decimal]:
+        """BR-87 the "mã hàng" of a row: customer group + SMV + CM price (rounded like the BR-32 pairs)."""
+        smv, cm_price = pair_of(row)
+        return row.customer_group, smv, cm_price
+
+    def code_days(self, history: Iterable[CleanRow]) -> dict[tuple[Factory, str], list[tuple[date, frozenset]]]:
+        """BR-87 each (factory, line) of the whole stored history: its working days in order, each with the codes it
+        ran. Only rows with output and an SMV count (BR-37), so a day of rows without SMV is not a gap."""
+        by_line: defaultdict[tuple[Factory, str], defaultdict[date, set]] = defaultdict(lambda: defaultdict(set))
+        for row in history:
+            if row.smv is not None and row.quantity > 0:
+                by_line[(row.factory, row.line)][row.production_date].add(self.code_of(row))
+        return {key: [(day, frozenset(days[day])) for day in sorted(days)] for key, days in by_line.items()}
+
+    @staticmethod
+    def style_changeovers(
+        days: list[tuple[date, frozenset]],
+        from_date: date,
+        to_date: date,
+        shown: dict[date, set] | None = None,
+    ) -> int:
+        """BR-87 on one line: for each working day in the period, the codes its previous working day did not run (the
+        first time counts; back after at least one working day away counts again). `shown` (BR-29 filters): only the
+        codes of the chosen customer / product groups on that day are counted."""
+        start = bisect_left(days, from_date, key=lambda item: item[0])  # `days` is sorted: skip the days before
+        count = 0
+        previous: frozenset = days[start - 1][1] if start else frozenset()
+        for day, codes in days[start:]:
+            if day > to_date:
+                break
+            new = codes - previous
+            count += len(new if shown is None else new & shown.get(day, set()))
+            previous = codes
         return count
 
     def working_days(self, rows: list[CleanRow]) -> int:

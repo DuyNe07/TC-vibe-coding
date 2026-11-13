@@ -112,16 +112,16 @@ def test_weekly_excel_in_english():  # AC-57
     sheets = _sheets(file.content)
     assert list(sheets) == ["Overview", "Fac Vinh Long", "Fac 2", "Fac 3", "Fac 5"]
     overview = {row["Metric"]: row for row in sheets["Overview"]}
-    assert overview["%Efficiency (with ratio - sum)"]["Fac 2"] == 80
-    assert overview["%Efficiency (with ratio - sum)"]["HCM"] == pytest.approx(83.3)
-    assert overview["%Efficiency (with ratio - sum)"]["Fac Vinh Long"] == "-"
-    assert overview["%Efficiency (with ratio - sum) assessment"]["Fac 2"] == "Below threshold"
-    assert overview["%Efficiency (with ratio - sum) assessment"]["HCM"] == "Below threshold"
+    assert overview["%Efficiency (with ratio)"]["Fac 2"] == 80
+    assert overview["%Efficiency (with ratio)"]["HCM"] == pytest.approx(83.3)
+    assert overview["%Efficiency (with ratio)"]["Fac Vinh Long"] == "-"
+    assert overview["%Efficiency (with ratio) assessment"]["Fac 2"] == "Below threshold"
+    assert overview["%Efficiency (with ratio) assessment"]["HCM"] == "Below threshold"
     assert {
         "Line",
         "Date",
         "%Efficiency (with ratio - system)",
-        "%Efficiency (with ratio - sum)",
+        "%Efficiency (with ratio)",
         "CM earning",
     } <= set(sheets["Fac 2"][0])
 
@@ -138,7 +138,7 @@ def test_daily_excel_in_english():  # AC-57
 def test_names_of_stored_values_are_only_translated_for_display():  # AC-58
     assert Factory.FAC_1.value == "Fac 1"
     assert english_name("Fac 1") == "Fac Vinh Long"
-    assert english_name("Hiệu suất B") == "%Efficiency (with ratio - sum)"
+    assert english_name("Hiệu suất B") == "%Efficiency (with ratio)"
     assert english_name("Đổi mã hàng tuần") == "Weekly changeover"
     assert english_name("LINE 7") == "LINE 7"
     assert (

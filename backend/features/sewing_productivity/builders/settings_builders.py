@@ -137,7 +137,9 @@ class FilterOptionsBuilder(BaseBuilder[FilterOptionsResponse]):
         last_upload_at: datetime | None,
         default_week: DateRange,
         default_month_from: date | None,
+        default_year_from: date | None = None,
     ) -> None:
+        self.default_year_from = default_year_from
         self.lines_by_factory = lines_by_factory
         self.customer_groups = customer_groups
         self.product_groups = product_groups
@@ -157,5 +159,6 @@ class FilterOptionsBuilder(BaseBuilder[FilterOptionsResponse]):
             default_week_from=self.default_week.from_date,
             default_week_to=self.default_week.to_date,
             default_month_from=self.default_month_from,
+            default_year_from=self.default_year_from,
             has_data=self.latest_date is not None,
         )

@@ -108,6 +108,16 @@ class ProductivityBusiness(BaseBusiness[CleanRow]):
         """BR-23 MO 8h of a factory = MO x 8 / hours (also for the period, with its totals and average hours)."""
         return cm_earning * HOURS_PER_SHIFT / (workers * hours) if workers and hours else None
 
+    def average_smv(self, rows: list[CleanRow]) -> Decimal | None:
+        """BR-66 average SMV weighted by output = sum(SMV x output) / output, without the rows missing SMV."""
+        kept = [row for row in rows if row.smv is not None]
+        output = total(row.quantity for row in kept)
+        return total(row.smv * row.quantity for row in kept) / output if output else None
+
+    def direct_labor(self, direct: Decimal, headcount: Decimal) -> Decimal | None:
+        """BR-65 %Direct labor = direct sewers / total headcount (%), both summed over the same days."""
+        return direct * HUNDRED / headcount if headcount else None
+
     def average_cm_price(self, cm_earning: Decimal, output: Decimal) -> Decimal | None:
         """BR-24 average CM price = CM earning / output."""
         return cm_earning / output if output else None

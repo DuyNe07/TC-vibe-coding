@@ -39,6 +39,17 @@ class LineReportBusiness(BaseBusiness[CleanRow]):
             result.append(self._line_period(facts, factory, line, stats, days))
         return result
 
+    def line_periods(self, facts: ReportFacts, factory: Factory) -> list[tuple[LineStat, list[CleanRow]]]:
+        """UC-31 each line with output, sorted by number: its period row (as Screen 2 / Screen 5) and its rows."""
+        by_line = self._days_by_line(facts, factory, None, with_targets=False)
+        result = []
+        for line in sorted(by_line, key=line_sort_key):
+            days = by_line[line]
+            stats = [self._line_day(facts, factory, line, day, days[day]) for day in sorted(days)]
+            rows = [row for day in sorted(days) for row in days[day]]
+            result.append((self._line_period(facts, factory, line, stats, days), rows))
+        return result
+
     def day_rows(self, facts: ReportFacts, factory: Factory) -> list[LineStat]:
         """UC-07 one row per line on the only day of the report, sorted by number (BR-21, BR-22, BR-43)."""
         by_line = self._days_by_line(facts, factory, None)

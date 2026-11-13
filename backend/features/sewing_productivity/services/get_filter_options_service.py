@@ -23,7 +23,8 @@ class GetFilterOptionsService(BaseService[EmptyRequest, FilterOptionsResponse]):
     def execute(self, request: EmptyRequest) -> FilterOptionsResponse:
         source = self.loader()
         lookup = self.cleaning.name_lookup(source.production, source.targets)
-        rows = self.cleaning.clean(source.production, lookup, source.catalogs)
+        reported = [record for record in source.production if record.factory in ALL_FACTORIES]  # BR-98
+        rows = self.cleaning.clean(reported, lookup, source.catalogs)
         lines: defaultdict[str, set[str]] = defaultdict(set)
         for row in rows:
             lines[row.factory.value].add(row.line)
@@ -44,4 +45,5 @@ class GetFilterOptionsService(BaseService[EmptyRequest, FilterOptionsResponse]):
             source.last_upload_at,
             week,
             month_start,
+            self.filters.default_year_start(latest) if latest else None,
         ).build()

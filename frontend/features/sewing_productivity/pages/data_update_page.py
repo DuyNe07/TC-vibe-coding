@@ -6,7 +6,8 @@ from backend.core.gateway import gateway
 from backend.features.sewing_productivity import SewingProductivityController
 from frontend.core.base_page import BasePage
 from frontend.features.sewing_productivity.components.page_messages import show_flash, show_no_permission
-from frontend.features.sewing_productivity.components.upload_blocks import upload_blocks, upload_history
+from frontend.features.sewing_productivity.components.upload_blocks import upload_blocks
+from frontend.features.sewing_productivity.components.upload_history import upload_history
 from frontend.features.sewing_productivity.components.weekly_changeover_blocks import weekly_form, weekly_list
 
 
@@ -20,7 +21,7 @@ class DataUpdatePage(BasePage):
     def render(self) -> None:
         feature = gateway.open(SewingProductivityController)
         try:
-            logs = feature.list_upload_logs(EmptyRequest())
+            feature.list_upload_logs(EmptyRequest())  # BR-09 probe: the page is for data updaters only
         except AppError as exc:  # BR-09 is the only failure of this use case
             show_no_permission(exc)
             return
@@ -30,4 +31,4 @@ class DataUpdatePage(BasePage):
         upload_blocks(self, feature)
         weekly_form(self, feature, options)
         weekly_list(self, feature)
-        upload_history(self, logs)
+        upload_history(self, feature.list_upload_logs(EmptyRequest()))  # read again: a file refused above is listed

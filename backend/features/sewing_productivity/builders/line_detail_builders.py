@@ -11,6 +11,11 @@ from backend.features.sewing_productivity.builders.display import (
     is_below,
     with_header,
 )
+from backend.features.sewing_productivity.builders.line_overview_builders import (
+    order_dtos,
+    overview_dtos,
+    strength_dtos,
+)
 from backend.features.sewing_productivity.builders.overview_builders import ASSESSMENT_ROWS, OVERVIEW_ROWS
 from backend.features.sewing_productivity.constants import PERIOD_LABEL
 from backend.features.sewing_productivity.dto.line_detail_dto import (
@@ -19,7 +24,14 @@ from backend.features.sewing_productivity.dto.line_detail_dto import (
     LineDetailRowDTO,
 )
 from backend.features.sewing_productivity.models.enums import NumberKind
-from backend.features.sewing_productivity.models.report_values import FactoryDayStat, FactorySummary, LineStat
+from backend.features.sewing_productivity.models.report_values import (
+    FactoryDayStat,
+    FactorySummary,
+    LineOrder,
+    LineOverview,
+    LineStat,
+)
+from backend.features.sewing_productivity.models.source_records import LineStrength
 from backend.shared.file_io import ExcelWriter
 
 WEEKLY_LINE_HEADERS = (
@@ -29,11 +41,23 @@ WEEKLY_LINE_HEADERS = (
 
 
 class LineDetailResponseBuilder(BaseBuilder[LineDetailResponse]):
-    def __init__(self, rows: list[LineStat], days: list[FactoryDayStat], note: str, has_data: bool) -> None:
+    def __init__(
+        self,
+        rows: list[LineStat],
+        days: list[FactoryDayStat],
+        note: str,
+        has_data: bool,
+        overview: list[LineOverview] | None = None,
+        orders: list[LineOrder] | None = None,
+        strengths: list[LineStrength] | None = None,
+    ) -> None:
         self.rows = rows
         self.days = days
         self.note = note
         self.has_data = has_data
+        self.overview = overview or []
+        self.orders = orders or []
+        self.strengths = strengths or []
 
     def build(self) -> LineDetailResponse:
         return LineDetailResponse(
@@ -44,6 +68,9 @@ class LineDetailResponseBuilder(BaseBuilder[LineDetailResponse]):
             ],
             note=self.note,
             has_data=self.has_data,
+            line_overview=overview_dtos(self.overview),
+            line_orders=order_dtos(self.orders),
+            strengths=strength_dtos(self.strengths),
         )
 
     @staticmethod

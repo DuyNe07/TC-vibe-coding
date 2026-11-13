@@ -17,4 +17,5 @@ class FilterOptionsResponse(BaseResponseDTO):
     default_week_from: date | None = None
     default_week_to: date | None = None
     default_month_from: date | None = None
+    default_year_from: date | None = None  # BR-31 (sửa 2026-11-06): Screen 4 starts on 1 January
     has_data: bool

@@ -40,7 +40,21 @@ class TargetRecord(StoredRecord):
     is_mismatched: bool = False
 
 
+class LineStrength(StoredRecord):
+    """Section 4.11 (thêm 2026-11-12): one line of the Line Strength file. Id = factory + line (BR-82)."""
+
+    factory: Factory
+    line: str = Field(min_length=1)
+    strong_groups: list[str] = []
+    buyers: str = ""
+    changeover_speed: str = ""
+    remark: str = ""
+    file_name: str = Field(min_length=1)
+
+
 class WorkerRecord(StoredRecord):
     work_date: date
     factory: Factory
     direct_sewers: Decimal = Field(gt=0)
+    total_workers: Decimal | None = Field(default=None, gt=0)  # BR-65: rows saved before 2026-11-06 have none
+    derived: bool = False  # BR-97 (thêm 2026-11-13): summed from the lines of a file with only Production data

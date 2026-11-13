@@ -1,8 +1,9 @@
 """Checking the data file and turning its rows into stored records (BR-01 to BR-07, BR-16)."""
 
-from collections import Counter
+from collections import Counter, defaultdict
 from collections.abc import Callable
 from datetime import date
+from decimal import Decimal
 from typing import TypeVar
 
 from backend.core.base import BaseBusiness
@@ -24,11 +25,15 @@ from backend.features.sewing_productivity.constants import (
     LINE_LABEL_FORMAT,
     MISMATCHED_PRODUCTION_VALUE,
     MISMATCHED_TARGET_VALUE,
+    PRODUCTION_ONLY_BEFORE,
     REQUIRED_SHEETS,
     SHEET_PRODUCTION,
     SHEET_TARGET,
+    SHEET_WORKER,
     WORKER_COLUMNS,
+    WORKER_TOTAL_COLUMNS,
 )
+from backend.features.sewing_productivity.models.enums import Factory
 from backend.features.sewing_productivity.models.source_records import ProductionRecord, TargetRecord, WorkerRecord
 from backend.features.sewing_productivity.models.stored_record import StoredRecord, stable_id
 from backend.features.sewing_productivity.models.upload_values import (
@@ -55,13 +60,18 @@ class UploadBusiness(BaseBusiness[RawProductionRow]):
         """BR-01 format and size. The row limit is enforced when the sheets are read."""
         UploadFileRule().check(facts)
 
-    def ensure_sheets(self, found: set[str]) -> None:
-        """BR-02 the 3 sheets are present (`found` holds the required names that were recognised)."""
+    def ensure_sheets(self, found: set[str]) -> bool:
+        """BR-02 the 3 sheets are present (`found` holds the required names that were recognised). Returns True for a
+        file with only Production data (BR-97, sửa 2026-11-13): `parse` then checks that it is a past year."""
         missing = tuple(sheet for sheet in REQUIRED_SHEETS if sheet not in found)
+        if found == {SHEET_PRODUCTION}:
+            return True
         RequiredSheetsRule().check(SheetNames(missing=missing))
+        return False
 
-    def parse(self, workbook: RawWorkbook) -> ParsedUpload:
-        """BR-03, BR-04, BR-05, BR-06, BR-16: raises when the file is refused, lists the rows it skips."""
+    def parse(self, workbook: RawWorkbook, production_only: bool = False) -> ParsedUpload:
+        """BR-03, BR-04, BR-05, BR-06, BR-16: raises when the file is refused, lists the rows it skips. BR-97: with
+        `production_only`, every day must be before 2026 and the sewers of each factory and day come from its lines."""
         violations = [v for sheet in workbook.columns if (v := RequiredColumnsRule().evaluate(sheet)) is not None]
         if violations:
             raise BusinessRuleViolation(violations)
@@ -69,9 +79,15 @@ class UploadBusiness(BaseBusiness[RawProductionRow]):
         production, production_skipped = self._production_records(non_blank)
         cells = sum(1 for record in production if record.standard_output is not None)
         FormulaResultsRule().check(ProductionResultFacts(valid_rows=len(production), standard_output_cells=cells))
+        if production_only:
+            self._ensure_past_year(production)
         targets, target_skipped = self._target_records(workbook.targets)
-        workers = self._worker_records(workbook)
-        worker_days = [row.work_date for row in workbook.workers]
+        workers = self.derived_workers(production) if production_only else self._worker_records(workbook)
+        worker_days = (
+            [record.production_date for record in production]
+            if production_only
+            else [row.work_date for row in workbook.workers]
+        )
         return ParsedUpload(
             production=production,
             targets=targets,
@@ -82,7 +98,36 @@ class UploadBusiness(BaseBusiness[RawProductionRow]):
             production_range=self._range([record.production_date for record in production]),
             target_range=self._range([record.target_date for record in targets]),
             worker_range=self._range(worker_days),
+            derived_workers=production_only,
         )
+
+    @staticmethod
+    def _ensure_past_year(production: list[ProductionRecord]) -> None:
+        """BR-97 a file with only Production data is accepted for days before 2026 only; otherwise BR-02 as before."""
+        if any(record.production_date >= PRODUCTION_ONLY_BEFORE for record in production):
+            RequiredSheetsRule().check(SheetNames(missing=(SHEET_TARGET, SHEET_WORKER)))
+
+    @staticmethod
+    def derived_workers(production: list[ProductionRecord]) -> list[WorkerRecord]:
+        """BR-97 sewers of a factory on a day = sum over its lines of the line's people that day (BR-21: the average
+        of the line's rows)."""
+        people: dict[tuple[date, Factory, str], list[Decimal]] = defaultdict(list)
+        for record in production:
+            people[(record.production_date, record.factory, normalize_key(record.source_line))].append(record.sewers)
+        totals: defaultdict[tuple[date, Factory], Decimal] = defaultdict(Decimal)
+        for (day, factory, _line), values in people.items():
+            totals[(day, factory)] += sum(values, Decimal(0)) / len(values)
+        return [
+            WorkerRecord(
+                id=stable_id(day, factory.value),
+                work_date=day,
+                factory=factory,
+                direct_sewers=count,
+                derived=True,
+            )
+            for (day, factory), count in sorted(totals.items())
+            if count > 0
+        ]
 
     def _production_records(self, rows: list[RawProductionRow]) -> tuple[list[ProductionRecord], list[SkippedRow]]:
         records: list[ProductionRecord] = []
@@ -167,6 +212,7 @@ class UploadBusiness(BaseBusiness[RawProductionRow]):
     @staticmethod
     def _worker_records(workbook: RawWorkbook) -> list[WorkerRecord]:
         """Section 4.3: one number per factory and day; an empty cell means no number yet."""
+        total_column = {factory: column for column, factory in WORKER_TOTAL_COLUMNS.items()}
         records: dict[str, WorkerRecord] = {}
         for row in workbook.workers:
             for column, factory in WORKER_COLUMNS.items():
@@ -174,8 +220,13 @@ class UploadBusiness(BaseBusiness[RawProductionRow]):
                 record_id = stable_id(row.work_date, factory.value)
                 if count is None or count <= 0 or record_id in records:
                     continue
+                total = row.totals.get(total_column[factory])
                 records[record_id] = WorkerRecord(
-                    id=record_id, work_date=row.work_date, factory=factory, direct_sewers=count
+                    id=record_id,
+                    work_date=row.work_date,
+                    factory=factory,
+                    direct_sewers=count,
+                    total_workers=total if total is not None and total > 0 else None,
                 )
         return list(records.values())
 

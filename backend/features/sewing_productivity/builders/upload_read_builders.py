@@ -24,6 +24,7 @@ from backend.features.sewing_productivity.constants import (
     WORKER_COLUMNS,
     WORKER_DATE_COLUMN_INDEX,
     WORKER_DATE_COLUMN_LABEL,
+    WORKER_TOTAL_COLUMNS,
 )
 from backend.features.sewing_productivity.exceptions import UploadFileError
 from backend.features.sewing_productivity.models.upload_values import (
@@ -123,6 +124,8 @@ class RawWorkbookBuilder(BaseBuilder[RawWorkbook]):
         )
 
     def _read(self, sheet: str, header_index: int) -> Rows:
+        if sheet not in self.sheets:  # BR-97 a past-year file has only Production data
+            return []
         reader = ExcelReader(sheet_name=self.sheets[sheet], header_row=header_index, max_rows=MAX_SHEET_ROWS)
         try:
             return reader.read(self.file)
@@ -209,10 +212,12 @@ class RawWorkbookBuilder(BaseBuilder[RawWorkbook]):
         headers = list(rows[0])
         date_header = headers[WORKER_DATE_COLUMN_INDEX]
         mapping = map_columns(headers, {name: (name,) for name in WORKER_COLUMNS})
+        total_mapping = map_columns(headers, {name: (name,) for name in WORKER_TOTAL_COLUMNS})
         result: list[RawWorkerRow] = []
         for raw in rows:
             day = cell_date(raw.get(date_header))
             if day is not None:
                 counts = {name: parse_decimal(raw.get(header)) for name, header in mapping.items()}
-                result.append(RawWorkerRow(work_date=day, counts=counts))
+                totals = {name: parse_decimal(raw.get(header)) for name, header in total_mapping.items()}
+                result.append(RawWorkerRow(work_date=day, counts=counts, totals=totals))
         return result

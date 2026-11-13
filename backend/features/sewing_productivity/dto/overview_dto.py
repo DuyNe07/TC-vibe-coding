@@ -3,13 +3,18 @@
 from datetime import date
 
 from backend.core.base import BaseDTO, BaseRequestDTO, BaseResponseDTO
-from backend.features.sewing_productivity.models.enums import Factory, RankingMetric
+from backend.features.sewing_productivity.models.enums import REPORT_FACTORIES, Factory, RankingMetric
 
 __all__ = [
+    "MonthGroupDTO",
+    "GroupShareDTO",
+    "GroupCmPriceDTO",
+    "CustomerOutputDTO",
     "ChartPointDTO",
     "ChartsRequest",
     "ChartsResponse",
     "Factory",
+    "REPORT_FACTORIES",
     "FactoryOutputDTO",
     "OverviewMetricDTO",
     "OverviewRequest",
@@ -43,6 +48,7 @@ class OverviewMetricDTO(BaseDTO):
 
 class OverviewResponse(BaseResponseDTO):
     metrics: list[OverviewMetricDTO]
+    cards: list[OverviewMetricDTO] = []  # BR-58: figures shown only on the cards (BR-65, BR-66), not in the table
     note: str = ""
     has_data: bool
 
@@ -54,6 +60,7 @@ class ChartsRequest(BaseRequestDTO):
     customer_groups: list[str] = []
     product_groups: list[str] = []
     ranking_metric: RankingMetric = RankingMetric.EFFICIENCY_B
+    products: bool = False  # BR-93 to BR-96 (thêm 2026-11-13 lần 4): also the "Products & customers" figures
 
 
 class ChartPointDTO(BaseDTO):
@@ -74,6 +81,40 @@ class RankedLineDTO(BaseDTO):
     value: float
 
 
+class GroupShareDTO(BaseDTO):
+    """BR-93 `column` = factory name or "Total"; `share` in %."""
+
+    column: str
+    group: str
+    output: float
+    share: float | None = None
+
+
+class CustomerOutputDTO(BaseDTO):
+    """BR-94 one customer group in one factory."""
+
+    customer: str
+    factory: str
+    output: float
+
+
+class GroupCmPriceDTO(BaseDTO):
+    """BR-95"""
+
+    group: str
+    output: float
+    cm_price: float
+
+
+class MonthGroupDTO(BaseDTO):
+    """BR-96"""
+
+    month: str
+    start: date
+    group: str
+    output: float
+
+
 class ChartsResponse(BaseResponseDTO):
     """Days with "-" are left out of the series. `not_applicable_message` is set under a customer or product filter."""
 
@@ -91,4 +132,10 @@ class ChartsResponse(BaseResponseDTO):
     hcm_efficiency_b: list[ChartPointDTO] = []
     hcm_efficiency_no_ratio: list[ChartPointDTO] = []
     hcm_mo8h: list[ChartPointDTO] = []
+    # BR-93 to BR-96 (thêm 2026-11-13 lần 4): only when the request asks for `products`
+    product_shares: list[GroupShareDTO] = []  # the chart: 5 groups + Other per column
+    product_table: list[GroupShareDTO] = []  # every group per column
+    top_customers: list[CustomerOutputDTO] = []
+    cm_by_group: list[GroupCmPriceDTO] = []
+    monthly_mix: list[MonthGroupDTO] = []
     hcm_output: FactoryOutputDTO | None = None

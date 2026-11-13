@@ -47,14 +47,42 @@ class SaveUploadResponse(BaseResponseDTO):
     message: str
 
 
+class UploadSheetCountDTO(BaseDTO):
+    sheet: str
+    read_rows: int
+    valid_rows: int
+    skipped_rows: int
+
+
+class UploadChangeCountDTO(BaseDTO):
+    sheet: str
+    factory: str
+    added: int
+    updated: int
+    hidden: int
+
+
 class UploadLogDTO(BaseDTO):
+    """UC-03 one upload. Totals and details (BR-72 to BR-74) are None / empty when `has_details` is False (an upload
+    saved before 2026-11-09)."""
+
     uploaded_at: datetime
     uploaded_by: str
     file_name: str
-    from_date: date
-    to_date: date
+    from_date: date | None = None
+    to_date: date | None = None
     saved_rows: int
     skipped_rows: int
+    status: str = "Saved"
+    reject_reason: str = ""
+    has_details: bool = False
+    added: int | None = None
+    updated: int | None = None
+    hidden: int | None = None
+    sheet_counts: list[UploadSheetCountDTO] = []
+    changes: list[UploadChangeCountDTO] = []
+    skipped: list[SkippedRowDTO] = []
+    warnings: list[UploadWarningDTO] = []
 
 
 class UploadLogListResponse(BaseResponseDTO):

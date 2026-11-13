@@ -55,7 +55,10 @@ def file_sheets(sheets: dict[str, list[dict[str, object]]], english: bool) -> di
         return sheets
     return {
         english_name(sheet): [
-            {english_name(column): english_name(cell) if isinstance(cell, str) else cell for column, cell in row.items()}
+            {
+                english_name(column): english_name(cell) if isinstance(cell, str) else cell
+                for column, cell in row.items()
+            }
             for row in rows
         ]
         for sheet, rows in sheets.items()

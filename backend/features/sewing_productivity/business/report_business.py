@@ -9,6 +9,7 @@ from backend.core.base import BaseBusiness
 from backend.features.sewing_productivity.business.changeover_business import ChangeoverBusiness
 from backend.features.sewing_productivity.business.cleaning_business import CleaningBusiness
 from backend.features.sewing_productivity.business.filter_business import FilterBusiness
+from backend.features.sewing_productivity.business.line_strength_business import LineStrengthBusiness
 from backend.features.sewing_productivity.business.productivity_business import ProductivityBusiness, total
 from backend.features.sewing_productivity.constants import (
     ALL_FACTORIES,
@@ -19,16 +20,21 @@ from backend.features.sewing_productivity.constants import (
     RANKING_SIZE,
     TOTAL_COLUMN,
 )
-from backend.features.sewing_productivity.models.clean_values import CleanRow, ReportSource
+from backend.features.sewing_productivity.models.clean_values import CleanRow, NameLookup, ReportSource
 from backend.features.sewing_productivity.models.enums import Factory, RankingMetric
 from backend.features.sewing_productivity.models.report_values import (
     DailyFactorySummary,
     FactoryDayStat,
     FactorySummary,
+    PeriodRange,
+    PeriodSummaries,
     RankedLine,
     ReportFacts,
 )
 from backend.features.sewing_productivity.models.settings_records import FactoryGoal
+from backend.features.sewing_productivity.models.source_records import LineStrength
+
+CodeDays = dict[tuple[Factory, str], list[tuple[date, frozenset]]]  # BR-87, see ChangeoverBusiness.code_days
 
 
 class ReportBusiness(BaseBusiness[CleanRow]):
@@ -37,6 +43,7 @@ class ReportBusiness(BaseBusiness[CleanRow]):
         self.cleaning = CleaningBusiness()
         self.filters = FilterBusiness()
         self.changeover = ChangeoverBusiness()
+        self.strength = LineStrengthBusiness()
 
     def facts(
         self,
@@ -46,10 +53,16 @@ class ReportBusiness(BaseBusiness[CleanRow]):
         factories: Iterable[Factory] = (),
         customer_groups: list[str] | None = None,
         product_groups: list[str] | None = None,
+        lookup: NameLookup | None = None,
+        strengths: list[LineStrength] | None = None,
+        code_days: CodeDays | None = None,
     ) -> ReportFacts:
-        """Narrow everything to the period first, then build the lookups once (BR-29: `shown` applies the filters)."""
+        """Narrow everything to the period first, then build the lookups once (BR-29: `shown` applies the filters).
+
+        `lookup` (BR-13) can be given when one report builds the facts of many periods from the same data.
+        `strengths` (BR-86) default to the ones of the source; `code_days` (BR-87) only when changeovers are counted."""
         chosen = tuple(factories) or ALL_FACTORIES
-        lookup = self.cleaning.name_lookup(source.production, source.targets)
+        lookup = lookup or self.cleaning.name_lookup(source.production, source.targets)
         records = [
             record
             for record in source.production
@@ -83,9 +96,25 @@ class ReportBusiness(BaseBusiness[CleanRow]):
                 for worker in source.workers
                 if from_date <= worker.work_date <= to_date
             },
+            headcount={
+                (worker.factory, worker.work_date): worker.total_workers
+                for worker in source.workers
+                if from_date <= worker.work_date <= to_date and worker.total_workers is not None
+            },
             goals=self._by_factory(source.goals, lambda goal: goal.factory),
             weekly=source.weekly_changeovers,
+            strengths=self.strength.strong_map(source.strengths if strengths is None else strengths),
+            code_days=code_days or {},
         )
+
+    def code_days(
+        self, source: ReportSource, factories: Iterable[Factory] = (), lookup: NameLookup | None = None
+    ) -> CodeDays:
+        """BR-87 the working days and codes of every line of the chosen factories, over the whole stored history."""
+        chosen = tuple(factories) or ALL_FACTORIES
+        lookup = lookup or self.cleaning.name_lookup(source.production, source.targets)
+        records = [record for record in source.production if record.factory in chosen]
+        return self.changeover.code_days(self.cleaning.clean(records, lookup, source.catalogs))
 
     @staticmethod
     def _by_factory(items: Iterable, factory_of: Callable[[object], Factory]) -> dict[Factory, list]:
@@ -135,6 +164,47 @@ class ReportBusiness(BaseBusiness[CleanRow]):
         workers = total(facts.workers[pair] for pair in pairs)
         hours = self.calc.factory_period_hours(facts.factory_hours[pair] for pair in pairs)
         return self.calc.factory_mo(cm, workers), self.calc.factory_mo8h(cm, workers, hours)
+
+    def _members_direct_labor(self, facts: ReportFacts, members: tuple[Factory, ...]) -> Decimal | None:
+        """BR-65 over one factory or a group: the factory-days that have both numbers, summed before dividing."""
+        pairs = [pair for pair in facts.headcount if pair[0] in members and pair in facts.workers]
+        if not pairs:
+            return None
+        return self.calc.direct_labor(
+            total(facts.workers[pair] for pair in pairs), total(facts.headcount[pair] for pair in pairs)
+        )
+
+    def _members_direct_workers(self, facts: ReportFacts, members: tuple[Factory, ...]) -> Decimal | None:
+        """BR-69 Direct worker: each factory's average sewers per day over its days with a number; a group adds them."""
+        averages = []
+        for factory in members:
+            counts = [count for (owner, _day), count in facts.workers.items() if owner == factory]
+            if counts:
+                averages.append(total(counts) / len(counts))
+        return total(averages) if averages else None
+
+    def period_summaries(
+        self,
+        source: ReportSource,
+        periods: list[PeriodRange],
+        factories: Iterable[Factory] = (),
+        code_days: CodeDays | None = None,
+    ) -> list[PeriodSummaries]:
+        """UC-29 every period with production (BR-68), with the Screen 1 figures of each chosen factory, HCM, Total;
+        with `code_days` also the changeovers of BR-89."""
+        lookup = self.cleaning.name_lookup(source.production, source.targets)
+        result = []
+        for period in periods:
+            facts = self.facts(source, period.from_date, period.to_date, factories, lookup=lookup, code_days=code_days)
+            if not self.has_data(facts):
+                continue
+            summaries = [self.factory_summary(facts, factory) for factory in facts.factories]
+            hcm = self.hcm_summary(facts)
+            if hcm:
+                summaries.append(hcm)
+            summaries.append(self.total_summary(facts))
+            result.append(PeriodSummaries(period=period, summaries=summaries))
+        return result
 
     def hcm_members(self, facts: ReportFacts) -> tuple[Factory, ...]:
         """BR-51 the chosen HCM factories; empty when fewer than 2 are chosen."""
@@ -193,7 +263,7 @@ class ReportBusiness(BaseBusiness[CleanRow]):
         cm = total(row.cm_earning for row in shown) if shown else None
         hours = [value for key, value in facts.factory_hours.items() if key[0] in members]
         weekly, lines = self._weekly_changeover(facts, members)
-        targets = [target for member in members for target in facts.targets.get(member, ())]
+        changeovers, per_line_day = self._style_changeovers(facts, members)
         return FactorySummary(
             factory=factory,
             group_name=group_name,
@@ -213,13 +283,35 @@ class ReportBusiness(BaseBusiness[CleanRow]):
             mo8h_vs_target=self.calc.percent_of_target(mo8h, mo8h_target),
             average_cm_price=self.calc.average_cm_price(cm, output) if cm is not None else None,
             average_hours=self.calc.factory_period_hours(hours),
-            strength_match=None if facts.filtered else self.calc.strength_match(targets),
+            strength_match=self.strength.matching_ratio(shown, facts.strengths),  # BR-86 (sửa BR-25, 2026-11-13)
             weekly_changeover=None if weekly is None else Decimal(weekly),
             weekly_changeover_per_line=self.changeover.weekly_per_line(weekly, lines),
+            average_smv=self.calc.average_smv(shown),
+            direct_labor=None if facts.filtered else self._members_direct_labor(facts, members),
+            direct_workers=None if facts.filtered else self._members_direct_workers(facts, members),
+            changeovers=changeovers,
+            changeover_per_line_day=per_line_day,
             efficiency_a_assessment=self.calc.assess_efficiency(efficiency_a, goal),
             efficiency_b_assessment=self.calc.assess_efficiency(efficiency_b, goal),
             mo8h_assessment=self.calc.assess_mo8h(mo8h, goal),
         )
+
+    def _style_changeovers(self, facts: ReportFacts, members: tuple[Factory, ...]) -> tuple[int | None, Decimal | None]:
+        """BR-89 the changeovers of the members (BR-87, every line) and changeovers / line / day; a group divides by
+        the sum of working days x lines of each member. (None, None) when the report does not count changeovers."""
+        if not facts.code_days:
+            return None, None
+        count = sum(
+            self.changeover.style_changeovers(days, facts.from_date, facts.to_date)
+            for (factory, _line), days in facts.code_days.items()
+            if factory in members
+        )
+        line_days = sum(
+            self.changeover.working_days(facts.rows.get(member, []))
+            * self.changeover.line_count(facts.rows.get(member, []))
+            for member in members
+        )
+        return count, (Decimal(count) / Decimal(line_days) if line_days else None)
 
     def factory_days(self, facts: ReportFacts, factory: Factory) -> list[FactoryDayStat]:
         """UC-05, UC-08 one factory day by day (BR-18, BR-19, BR-20, BR-23, BR-26, BR-28), BR-29 applied."""

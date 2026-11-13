@@ -10,8 +10,6 @@ from backend.features.sewing_productivity.dto.upload_dto import (
     CheckUploadRequest,
     SaveUploadRequest,
     UploadCheckResponse,
-    UploadLogDTO,
-    UploadLogListResponse,
     UploadWarningDTO,
 )
 from frontend.core.base_page import BasePage
@@ -24,15 +22,16 @@ from frontend.core.components import (
     show_success,
     stat_row,
 )
-from frontend.core.formatting import format_number
 from frontend.core.session_state import SessionState
+from frontend.features.sewing_productivity.components.number_format import format_number
 from frontend.features.sewing_productivity.components.report_cells import day_text
 
 RESULT_KEYS = ("check_result", "check_error", "checked_fingerprint")
 SAVED_RESULT = "saved_result"
 UPLOAD_HELP = (
-    "An .xlsx file saved from Excel, 50 MB at most. Press Check & save: the file is checked and saved in one go, "
-    "then the skipped rows and warnings are listed below."
+    "An .xlsx file saved from Excel, 50 MB at most: the Data sewing file, or the Sewing Line Strength file (the app "
+    "recognises it and replaces the line strengths, see Catalogs). Press Check & save: the file is checked and saved "
+    "in one go, then the skipped rows and warnings are listed below."
 )
 
 
@@ -186,36 +185,3 @@ def upload_blocks(page: BasePage, feature: SewingProductivityController) -> None
             show_error(error)
         if result is not None:
             _show_check_result(page, result, file)
-
-
-def _local_time_rows(logs: list[UploadLogDTO]) -> list[dict[str, object]]:
-    return [
-        {
-            "Uploaded at": log.uploaded_at.astimezone().replace(tzinfo=None)
-            if log.uploaded_at.tzinfo
-            else log.uploaded_at,
-            "Uploaded by": log.uploaded_by,
-            "File name": log.file_name,
-            "From": log.from_date,
-            "To": log.to_date,
-            "Rows saved": log.saved_rows,
-            "Rows skipped": log.skipped_rows,
-        }
-        for log in logs
-    ]
-
-
-def upload_history(page: BasePage, logs: UploadLogListResponse) -> None:
-    with panel("Upload history", icon="🕘"):
-        data_table(
-            _local_time_rows(logs.items),
-            column_config={
-                "Uploaded at": st.column_config.DatetimeColumn(format="DD/MM/YYYY HH:mm"),
-                "From": st.column_config.DateColumn(format="DD/MM/YYYY"),
-                "To": st.column_config.DateColumn(format="DD/MM/YYYY"),
-                "Rows saved": st.column_config.NumberColumn(format="localized"),
-                "Rows skipped": st.column_config.NumberColumn(format="localized"),
-            },
-            key=page.key("logs"),
-            empty_message="No uploads yet.",
-        )

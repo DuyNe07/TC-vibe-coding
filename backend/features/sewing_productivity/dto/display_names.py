@@ -7,11 +7,11 @@ HCM_COLUMN = FactoryGroup.HCM.value
 TOTAL_COLUMN = FactoryGroup.TOTAL.value
 # BR-56: the two with-ratio kinds and the kind without ratio
 EFFICIENCY_SYSTEM = "%Efficiency (with ratio - system)"
-EFFICIENCY_SUM = "%Efficiency (with ratio - sum)"
-EFFICIENCY_NO_RATIO = "%Efficiency B (no ratio)"
+EFFICIENCY_SUM = "%Efficiency (with ratio)"
+EFFICIENCY_NO_RATIO = "%Efficiency (no ratio)"
 TARGET_SYSTEM = "Target (with ratio - system)"
-TARGET_SUM = "Target (with ratio - sum)"
-TARGET_NO_RATIO = "Target B (no ratio)"
+TARGET_SUM = "Target (with ratio)"
+TARGET_NO_RATIO = "Target (no ratio)"
 
 ENGLISH_NAMES = {
     **FACTORY_NAMES,

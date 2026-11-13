@@ -1,4 +1,5 @@
-"""Report table cells (BR-28, BR-50, BR-53): right-aligned text that shows "-", 🔴 and bold, and still sorts as a number."""
+"""Report table cells (BR-28, BR-50, BR-53, BR-75, BR-76): right-aligned text that shows "-", ▼ and bold, and still
+sorts as a number."""
 
 from collections.abc import Iterable, Mapping, Sequence
 from datetime import date
@@ -14,9 +15,10 @@ from backend.features.sewing_productivity.dto.display_names import (
     english_name,
 )
 from backend.features.sewing_productivity.dto.overview_dto import OverviewMetricDTO
-from frontend.core.formatting import format_number
+from frontend.features.sewing_productivity.components.number_format import format_number
 
-BELOW_MARK = "🔴"
+BELOW_MARK = "▼"  # BR-76 (sửa 2026-11-09: trước đây 🔴)
+BELOW_NOTE = f"{BELOW_MARK} below threshold"
 NOT_AVAILABLE = "-"
 PERIOD_LABEL = "Whole period"
 TOTAL_LABEL = "Total"
@@ -29,6 +31,51 @@ BOLD_LETTERS = str.maketrans(
         **{chr(ord("0") + index): chr(0x1D7EC + index) for index in range(10)},
         **{chr(ord("A") + index): chr(0x1D5D4 + index) for index in range(26)},
         **{chr(ord("a") + index): chr(0x1D5EE + index) for index in range(26)},
+    }
+)
+# BR-61 the Screen 1 table: groups in the order of the weekly Excel report, backend names of their rows in order
+CATEGORY_COLUMN = "Category"
+METRIC_GROUPS = (
+    ("Output", ("Mục tiêu B", "Sản lượng")),
+    (
+        "Efficiency",
+        (
+            "Mục tiêu hiệu suất",
+            "Hiệu suất B",
+            "% so với mục tiêu của hiệu suất B",
+            "Mục tiêu A",
+            "Hiệu suất A",
+            "% so với mục tiêu của hiệu suất A",
+            "Mục tiêu (không tỉ lệ)",
+            "Hiệu suất (không tỉ lệ)",
+        ),
+    ),
+    ("CM", ("Tiền CM",)),
+    ("MO 8h", ("Mục tiêu MO 8h", "MO 8h", "% so với mục tiêu của MO 8h")),
+    (
+        "Other",
+        (
+            "Giá CM trung bình",
+            "Giờ làm trung bình",
+            "Tỷ lệ đúng sở trường",
+            "Đổi mã hàng tuần",
+            "Đổi mã hàng tuần trên chuyền",
+        ),
+    ),
+)
+CATEGORY_COLUMN_WIDTH = 105  # the "Efficiency" tag in full
+CATEGORY_COLORS = ("blue", "green", "violet", "orange", "gray")  # one per group, in the order above
+HIDDEN_METRICS = frozenset(
+    {
+        "Mục tiêu hiệu suất",
+        "Mục tiêu MO 8h",
+        "% so với mục tiêu của MO 8h",
+        "Mục tiêu A",
+        "Hiệu suất A",
+        "% so với mục tiêu của hiệu suất A",
+        "Mục tiêu (không tỉ lệ)",  # BR-61 (sửa 2026-11-06 lần 2)
+        "Hiệu suất (không tỉ lệ)",
+        "% so với mục tiêu của hiệu suất B",  # BR-61 (sửa 2026-11-06 lần 3)
     }
 )
 ROW_HEIGHT = 33  # measured in the browser with the app's theme
@@ -58,6 +105,11 @@ def number_cells(
     if flags is None:
         return padded
     return [f"{text} {BELOW_MARK}" if below else text for text, below in zip(padded, flags, strict=True)]
+
+
+def below_note() -> None:
+    """BR-76 the meaning of ▼, under every table that can show it."""
+    st.caption(BELOW_NOTE)
 
 
 def right_text_columns(names: Iterable[str]) -> dict[str, Any]:
@@ -113,6 +165,35 @@ def metric_rows(metrics: Sequence[OverviewMetricDTO], columns: Sequence[str]) ->
         }
         rows.append({METRIC_COLUMN: bold_text(label) if bold else label, **cells})
     return rows
+
+
+def grouped_metric_rows(
+    metrics: Sequence[OverviewMetricDTO], columns: Sequence[str], show_all: bool
+) -> list[dict[str, Any]]:
+    """BR-61 the rows of the Screen 1 table in the order of the weekly Excel report, each with its group.
+
+    The rows marked hidden appear only when `show_all` is on; a metric the backend does not send is skipped."""
+    by_name = {metric.metric: metric for metric in metrics}
+    rows = []
+    for category, names in METRIC_GROUPS:
+        for name in names:
+            if name not in by_name or (name in HIDDEN_METRICS and not show_all):
+                continue
+            row = metric_rows([by_name[name]], columns)[0]
+            rows.append({CATEGORY_COLUMN: [category], **row})
+    return rows
+
+
+def grouped_metric_columns(columns: Sequence[str]) -> dict[str, Any]:
+    return {
+        CATEGORY_COLUMN: st.column_config.MultiselectColumn(
+            pinned=True,
+            width=CATEGORY_COLUMN_WIDTH,
+            options=[category for category, _names in METRIC_GROUPS],
+            color=list(CATEGORY_COLORS),
+        ),
+        **metric_columns(columns),
+    }
 
 
 def metric_columns(columns: Sequence[str]) -> dict[str, Any]:

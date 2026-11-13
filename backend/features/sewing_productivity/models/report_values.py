@@ -29,8 +29,14 @@ class ReportFacts(BaseValueObject):
     line_sewers: dict[Any, Decimal] = {}
     factory_hours: dict[Any, Decimal] = {}
     workers: dict[Any, Decimal] = {}
+    headcount: dict[Any, Decimal] = {}  # BR-65 total headcount, only the days that have it
     goals: dict[Factory, list[FactoryGoal]] = {}
     weekly: list[WeeklyChangeover] = []
+    # BR-86 (thêm 2026-11-13) the strong item groups of each (factory, line), case folded
+    strengths: dict[Any, frozenset[str]] = {}
+    # BR-87 (thêm 2026-11-13) each (factory, line): its working days with the codes it ran, over the whole history;
+    # empty when the report does not count changeovers
+    code_days: dict[Any, list[tuple[date, frozenset[Any]]]] = {}
 
 
 class LineStat(BaseValueObject):
@@ -108,6 +114,11 @@ class FactorySummary(BaseValueObject):
     strength_match: Decimal | None = None
     weekly_changeover: Decimal | None = None
     weekly_changeover_per_line: Decimal | None = None
+    average_smv: Decimal | None = None  # BR-66, cards and Screen 4
+    direct_labor: Decimal | None = None  # BR-65, cards only
+    direct_workers: Decimal | None = None  # BR-69 Direct worker, Screen 4 only
+    changeovers: int | None = None  # BR-87, Screen 4 only (thêm 2026-11-13)
+    changeover_per_line_day: Decimal | None = None  # BR-89, Screen 4 only (thêm 2026-11-13)
     efficiency_a_assessment: Assessment = Assessment.NOT_AVAILABLE
     efficiency_b_assessment: Assessment = Assessment.NOT_AVAILABLE
     mo8h_assessment: Assessment = Assessment.NOT_AVAILABLE
@@ -141,6 +152,15 @@ class DailyFactorySummary(BaseValueObject):
     @property
     def column(self) -> str:
         return self.factory.value if self.factory else self.group_name
+
+
+class FactoryDetail(BaseValueObject):
+    """BR-64 what one `<factory>-detailed` sheet needs: line rows (DAY and PERIOD), the factory days, its summary."""
+
+    factory: Factory
+    lines: list[LineStat]
+    days: list[FactoryDayStat]
+    summary: FactorySummary
 
 
 class RankedLine(BaseValueObject):
@@ -208,3 +228,121 @@ class ChangeoverReport(BaseValueObject):
     by_month: list[ChangeoverCount] = []
     by_line: list[ChangeoverLineCount] = []
     details: list[ChangeoverDetail] = []
+
+
+class PeriodRange(BaseValueObject):
+    """BR-68 one period of Screen 4: its name and the chosen days it covers."""
+
+    label: str
+    from_date: date
+    to_date: date
+
+
+class PeriodSummaries(BaseValueObject):
+    """UC-29 one period with one summary per chosen factory, then HCM (when shown) and Total."""
+
+    period: PeriodRange
+    summaries: list[FactorySummary]
+
+
+class LineOverview(BaseValueObject):
+    """UC-06 (sửa 2026-11-12) one row of the Line Detail table (BR-83), or its Total row."""
+
+    line: str
+    is_total: bool = False
+    output: Decimal | None = None
+    efficiency: Decimal | None = None  # %Efficiency (with ratio) = BR-19 (thêm 2026-11-13)
+    mo8h: Decimal | None = None
+    hours: Decimal | None = None
+    matching_ratio: Decimal | None = None  # BR-86 (sửa 2026-11-13)
+    changeover: int = 0  # BR-87 (sửa 2026-11-13)
+    efficiency_assessment: Assessment = Assessment.NOT_AVAILABLE
+    mo8h_assessment: Assessment = Assessment.NOT_AVAILABLE
+
+
+class LineOrder(BaseValueObject):
+    """UC-06 (sửa 2026-11-12) one base order a line made in the chosen dates (BR-84). `matches` None = "-"."""
+
+    line: str
+    base_po: str
+    customers: str
+    styles: str
+    product_groups: list[str]
+    cm_price: Decimal | None = None
+    output: Decimal
+    smv: Decimal | None = None  # BR-88 (thêm 2026-11-13)
+    efficiency: Decimal | None = None  # BR-88 (thêm 2026-11-13)
+    first_day: date | None = None
+    matches: bool | None = None
+
+
+class LineTrendPoint(BaseValueObject):
+    """BR-90 (thêm 2026-11-13 lần 2) one period of the "Line trend" of one line, figures as the Line Detail table."""
+
+    period: PeriodRange
+    output: Decimal | None = None
+    efficiency: Decimal | None = None
+    mo8h: Decimal | None = None
+    efficiency_assessment: Assessment = Assessment.NOT_AVAILABLE
+    mo8h_assessment: Assessment = Assessment.NOT_AVAILABLE
+
+
+class LinePerformance(BaseValueObject):
+    """UC-31 one row of Screen 6 (BR-78), or its Total row (BR-79), with the BR-80 assessments."""
+
+    line: str
+    is_total: bool = False
+    operators: Decimal | None = None
+    target_output: Decimal | None = None
+    output: Decimal | None = None
+    output_ratio: Decimal | None = None
+    target_value: Decimal | None = None
+    value: Decimal | None = None
+    value_ratio: Decimal | None = None
+    mo8h: Decimal | None = None
+    output_ratio_assessment: Assessment = Assessment.NOT_AVAILABLE
+    mo8h_assessment: Assessment = Assessment.NOT_AVAILABLE
+
+
+class GroupShare(BaseValueObject):
+    """BR-93 one product group of one column (a factory or Total): its output and share of the column (%)."""
+
+    column: str
+    group: str
+    output: Decimal
+    share: Decimal | None = None
+
+
+class CustomerOutput(BaseValueObject):
+    """BR-94 the output of one customer group in one factory."""
+
+    customer: str
+    factory: Factory
+    output: Decimal
+
+
+class GroupCmPrice(BaseValueObject):
+    """BR-95 the average CM price of one product group."""
+
+    group: str
+    output: Decimal
+    cm_price: Decimal
+
+
+class MonthGroupOutput(BaseValueObject):
+    """BR-96 the output of one product group in one month."""
+
+    month: str
+    start: date
+    group: str
+    output: Decimal
+
+
+class ProductMix(BaseValueObject):
+    """BR-93 to BR-96 everything the "Products & customers" area of Overview shows."""
+
+    shares: list[GroupShare] = []
+    table: list[GroupShare] = []
+    customers: list[CustomerOutput] = []
+    cm_prices: list[GroupCmPrice] = []
+    months: list[MonthGroupOutput] = []

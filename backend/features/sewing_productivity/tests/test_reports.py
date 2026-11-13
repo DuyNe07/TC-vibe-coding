@@ -110,7 +110,8 @@ def test_overview_numbers_are_hand_checked() -> None:
     assert values["MO 8h"] == pytest.approx(8.8889, abs=0.001)
     assert values["Giá CM trung bình"] == pytest.approx(800 / 600)  # AC-51
     assert values["Giờ làm trung bình"] == 8.5
-    assert values["Tỷ lệ đúng sở trường"] == pytest.approx(40)
+    # BR-25 (sửa 2026-11-13): the match now follows the saved line strengths (BR-86, AC-118); none saved here
+    assert values["Tỷ lệ đúng sở trường"] is None
     assert values["Đổi mã hàng tuần"] is None
     flags = metric_flags(response)
     assert flags["Hiệu suất A"] is True  # 80 < 90

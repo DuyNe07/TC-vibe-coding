@@ -2,12 +2,9 @@
 
 from frontend.core.feature_manifest import FeatureManifest
 from frontend.features.sewing_productivity.pages.catalogs_page import CatalogsPage
-from frontend.features.sewing_productivity.pages.changeover_page import ChangeoverPage
-from frontend.features.sewing_productivity.pages.daily_report_page import DailyReportPage
 from frontend.features.sewing_productivity.pages.data_update_page import DataUpdatePage
 from frontend.features.sewing_productivity.pages.goals_page import GoalsPage
 from frontend.features.sewing_productivity.pages.line_detail_page import LineDetailPage
-from frontend.features.sewing_productivity.pages.line_mo_page import LineMoPage
 from frontend.features.sewing_productivity.pages.monthly_report_page import MonthlyReportPage
 from frontend.features.sewing_productivity.pages.overview_page import OverviewPage
 
@@ -22,10 +19,9 @@ FEATURE = FeatureManifest(
     pages=(
         OverviewPage,
         LineDetailPage,
-        DailyReportPage,
-        MonthlyReportPage,
-        LineMoPage,
-        ChangeoverPage,
+        MonthlyReportPage,  # Sewing metrics
+        # Daily Report and MO by Line left the menu on 2026-11-12, Line performance on 2026-11-13 (merged into Line
+        # Detail, which downloads its Excel file) - user's requests; their data stays
         DataUpdatePage,
         GoalsPage,
         CatalogsPage,

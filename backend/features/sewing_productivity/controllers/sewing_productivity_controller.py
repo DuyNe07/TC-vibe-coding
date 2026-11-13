@@ -127,7 +127,7 @@ class SewingProductivityController(BaseController):
 
     @cached_query
     def get_monthly_report(self, request: MonthlyReportRequest) -> MonthlyReportResponse:
-        """UC-08 Xem báo cáo tháng."""
+        """UC-08 Xem báo cáo tháng; UC-29 Xem báo cáo theo kỳ (khi có loại kỳ)."""
         return GetMonthlyReportService().handle(request)
 
     @cached_query

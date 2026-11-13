@@ -7,7 +7,11 @@ from backend.features.sewing_productivity.builders.display import KIND_DECIMALS,
 from backend.features.sewing_productivity.dto.overview_dto import (
     ChartPointDTO,
     ChartsResponse,
+    CustomerOutputDTO,
     FactoryOutputDTO,
+    GroupCmPriceDTO,
+    GroupShareDTO,
+    MonthGroupDTO,
     OverviewMetricDTO,
     OverviewResponse,
     RankedLineDTO,
@@ -17,6 +21,8 @@ from backend.features.sewing_productivity.models.report_values import (
     DailyFactorySummary,
     FactoryDayStat,
     FactorySummary,
+    GroupShare,
+    ProductMix,
     RankedLine,
 )
 
@@ -41,6 +47,10 @@ OVERVIEW_ROWS = (
     ("Tỷ lệ đúng sở trường", "strength_match", NumberKind.PERCENT, None),
     ("Đổi mã hàng tuần", "weekly_changeover", NumberKind.INTEGER, None),
     ("Đổi mã hàng tuần trên chuyền", "weekly_changeover_per_line", NumberKind.MONEY, None),
+)
+CARD_ROWS = (  # BR-58: only on the cards of Screen 1, never in the table or the Excel files
+    ("SMV bình quân", "average_smv", NumberKind.MONEY, None),  # BR-66
+    ("%Direct labor", "direct_labor", NumberKind.PERCENT, None),  # BR-65
 )
 DAILY_ROWS = (
     ("MO", "mo", NumberKind.MONEY, None),
@@ -90,7 +100,10 @@ class OverviewResponseBuilder(BaseBuilder[OverviewResponse]):
 
     def build(self) -> OverviewResponse:
         return OverviewResponse(
-            metrics=metric_rows(OVERVIEW_ROWS, self.summaries), note=self.note, has_data=self.has_data
+            metrics=metric_rows(OVERVIEW_ROWS, self.summaries),
+            cards=metric_rows(CARD_ROWS, self.summaries),
+            note=self.note,
+            has_data=self.has_data,
         )
 
 
@@ -105,6 +118,7 @@ class ChartsResponseBuilder(BaseBuilder[ChartsResponse]):
         has_data: bool,
         hcm_days: list[FactoryDayStat] | None = None,
         hcm_summary: FactorySummary | None = None,
+        products: ProductMix | None = None,
     ) -> None:
         self.days = days
         self.summaries = summaries
@@ -114,6 +128,7 @@ class ChartsResponseBuilder(BaseBuilder[ChartsResponse]):
         self.has_data = has_data
         self.hcm_days = hcm_days or []
         self.hcm_summary = hcm_summary
+        self.products = products or ProductMix()
 
     def build(self) -> ChartsResponse:
         hcm_outputs = self._outputs([self.hcm_summary] if self.hcm_summary else [])
@@ -132,7 +147,29 @@ class ChartsResponseBuilder(BaseBuilder[ChartsResponse]):
             hcm_efficiency_no_ratio=self._series(self.hcm_days, "efficiency_no_ratio"),
             hcm_mo8h=self._series(self.hcm_days, "mo8h"),
             hcm_output=hcm_outputs[0] if hcm_outputs and not self.not_applicable_message else None,
+            product_shares=self._shares(self.products.shares),
+            product_table=self._shares(self.products.table),
+            top_customers=[
+                CustomerOutputDTO(customer=item.customer, factory=item.factory.value, output=float(item.output))
+                for item in self.products.customers
+            ],
+            cm_by_group=[
+                GroupCmPriceDTO(group=item.group, output=float(item.output), cm_price=float(item.cm_price))
+                for item in self.products.cm_prices
+            ],
+            monthly_mix=[
+                MonthGroupDTO(month=item.month, start=item.start, group=item.group, output=float(item.output))
+                for item in self.products.months
+            ],
         )
+
+    @staticmethod
+    def _shares(items: list[GroupShare]) -> list[GroupShareDTO]:
+        """BR-93 the product mix rows."""
+        return [
+            GroupShareDTO(column=item.column, group=item.group, output=float(item.output), share=as_float(item.share))
+            for item in items
+        ]
 
     @staticmethod
     def _series(days: list[FactoryDayStat], field: str) -> list[ChartPointDTO]:

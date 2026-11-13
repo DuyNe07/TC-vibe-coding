@@ -3,13 +3,15 @@
 from backend.core.base import BaseBuilder
 from backend.features.sewing_productivity.dto.upload_dto import (
     SkippedRowDTO,
+    UploadChangeCountDTO,
     UploadCheckResponse,
     UploadLogDTO,
     UploadLogListResponse,
+    UploadSheetCountDTO,
     UploadWarningDTO,
 )
 from backend.features.sewing_productivity.models.settings_records import UploadLog
-from backend.features.sewing_productivity.models.upload_values import ParsedUpload, UploadWarning
+from backend.features.sewing_productivity.models.upload_values import ParsedUpload, StrengthUpload, UploadWarning
 
 
 class UploadCheckResponseBuilder(BaseBuilder[UploadCheckResponse]):
@@ -39,23 +41,67 @@ class UploadCheckResponseBuilder(BaseBuilder[UploadCheckResponse]):
         )
 
 
+class StrengthCheckResponseBuilder(BaseBuilder[UploadCheckResponse]):
+    """UC-33 a Line Strength file checked: lines read, kept, skipped; no dates, no warnings."""
+
+    def __init__(self, upload: StrengthUpload, stored_lines: int) -> None:
+        self.upload = upload
+        self.stored_lines = stored_lines
+
+    def build(self) -> UploadCheckResponse:
+        upload = self.upload
+        return UploadCheckResponse(
+            read_rows=upload.read_rows,
+            valid_rows=len(upload.lines),
+            skipped_rows=len(upload.skipped),
+            stored_rows_in_range=self.stored_lines,
+            skipped=[
+                SkippedRowDTO(sheet=row.sheet, row_number=row.row_number, reason=row.reason) for row in upload.skipped
+            ],
+            warnings=[],
+            can_save=True,
+        )
+
+
 class UploadLogListBuilder(BaseBuilder[UploadLogListResponse]):
     def __init__(self, logs: list[UploadLog]) -> None:
         self.logs = logs
 
     def build(self) -> UploadLogListResponse:
         ordered = sorted(self.logs, key=lambda log: log.uploaded_at, reverse=True)
-        return UploadLogListResponse(
-            items=[
-                UploadLogDTO(
-                    uploaded_at=log.uploaded_at,
-                    uploaded_by=log.uploaded_by,
-                    file_name=log.file_name,
-                    from_date=log.from_date,
-                    to_date=log.to_date,
-                    saved_rows=log.saved_rows,
-                    skipped_rows=log.skipped_rows,
+        return UploadLogListResponse(items=[self._item(log) for log in ordered])
+
+    @staticmethod
+    def _total(log: UploadLog, field: str) -> int | None:
+        """The BR-73 total of one kind of change; None for an upload saved before the details existed."""
+        return sum(getattr(change, field) for change in log.changes) if log.has_details else None
+
+    def _item(self, log: UploadLog) -> UploadLogDTO:
+        return UploadLogDTO(
+            uploaded_at=log.uploaded_at,
+            uploaded_by=log.uploaded_by,
+            file_name=log.file_name,
+            from_date=log.from_date,
+            to_date=log.to_date,
+            saved_rows=log.saved_rows,
+            skipped_rows=log.skipped_rows,
+            status=log.status.value,
+            reject_reason=log.reject_reason,
+            has_details=log.has_details,
+            added=self._total(log, "added"),
+            updated=self._total(log, "updated"),
+            hidden=self._total(log, "hidden"),
+            sheet_counts=[UploadSheetCountDTO(**count.model_dump()) for count in log.sheet_counts],
+            changes=[
+                UploadChangeCountDTO(
+                    sheet=change.sheet,
+                    factory=change.factory.value,
+                    added=change.added,
+                    updated=change.updated,
+                    hidden=change.hidden,
                 )
-                for log in ordered
-            ]
+                for change in log.changes
+            ],
+            skipped=[SkippedRowDTO(**row.model_dump()) for row in log.skipped],
+            warnings=[UploadWarningDTO(**item.model_dump()) for item in log.warnings],
         )

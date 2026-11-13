@@ -84,9 +84,7 @@ def test_no_ratio_has_no_threshold_mark():  # AC-61
 
 def test_no_ratio_on_the_other_reports():  # AC-62
     _load()
-    charts = GetChartsService().handle(
-        ChartsRequest(from_date=DAY, to_date=DAY, ranking_metric=RankingMetric.NO_RATIO)
-    )
+    charts = GetChartsService().handle(ChartsRequest(from_date=DAY, to_date=DAY, ranking_metric=RankingMetric.NO_RATIO))
     assert {point.factory: point.value for point in charts.efficiency_no_ratio} == {"Fac 2": 50, "Fac 3": 50}
     assert charts.hcm_efficiency_no_ratio[0].value == pytest.approx(50)
     assert charts.top_lines[0].value == pytest.approx(50)
@@ -105,12 +103,12 @@ def test_no_ratio_in_excel():  # AC-62
     weekly = ExportWeeklyReportService().handle(ExportWeeklyRequest(from_date=DAY, to_date=DAY, english=True))
     book = load_workbook(BytesIO(weekly.content))
     labels = {row[0].value: row for row in book["Overview"].iter_rows(min_row=2)}
-    assert "%Efficiency B (no ratio)" in labels
-    assert "%Efficiency B (no ratio)" in [cell.value for cell in book["Fac 2"][1]]
+    assert "%Efficiency (no ratio)" in labels
+    assert "%Efficiency (no ratio)" in [cell.value for cell in book["Fac 2"][1]]
     line_mo = ExportLineMoService().handle(
         LineMoRequest(from_date=DAY, to_date=DAY, factory=Factory.FAC_2, english=True)
     )
-    assert "%Efficiency B (no ratio)" in load_workbook(BytesIO(line_mo.content)).sheetnames
+    assert "%Efficiency (no ratio)" in load_workbook(BytesIO(line_mo.content)).sheetnames
 
 
 def test_a_file_without_the_column_shows_a_dash():  # AC-63
@@ -123,5 +121,5 @@ def test_a_file_without_the_column_shows_a_dash():  # AC-63
 
 def test_names_of_the_kinds():  # AC-59
     assert english_name("Hiệu suất A") == "%Efficiency (with ratio - system)"
-    assert english_name("Hiệu suất B") == "%Efficiency (with ratio - sum)"
-    assert english_name(NO_RATIO_METRIC) == "%Efficiency B (no ratio)"
+    assert english_name("Hiệu suất B") == "%Efficiency (with ratio)"
+    assert english_name(NO_RATIO_METRIC) == "%Efficiency (no ratio)"

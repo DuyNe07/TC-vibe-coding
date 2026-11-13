@@ -11,18 +11,16 @@ from backend.features.sewing_productivity.dto.display_names import (
     english_terms,
 )
 from backend.features.sewing_productivity.dto.export_dto import ExportWeeklyRequest
-from backend.features.sewing_productivity.dto.overview_dto import ChartsRequest, OverviewRequest, RankingMetric
+from backend.features.sewing_productivity.dto.overview_dto import ChartsRequest, OverviewRequest
 from frontend.core.base_page import BasePage
 from frontend.core.components import data_table, download_button, empty_state, panel
-from frontend.features.sewing_productivity.components.overview_charts import (
-    daily_charts,
-    group_summary,
-    ranking_charts,
-)
+from frontend.features.sewing_productivity.components.overview_charts import daily_charts, group_summary
+from frontend.features.sewing_productivity.components.product_mix_blocks import products_section
 from frontend.features.sewing_productivity.components.report_cells import (
+    below_note,
     full_table_height,
-    metric_columns,
-    metric_rows,
+    grouped_metric_columns,
+    grouped_metric_rows,
     metric_table_columns,
 )
 from frontend.features.sewing_productivity.components.report_filters import (
@@ -33,9 +31,6 @@ from frontend.features.sewing_productivity.components.report_filters import (
     period_and_factories,
     show_data_times,
 )
-
-# BR-59 the rows of the system kind, hidden in the table until the toggle is on
-SYSTEM_METRICS = frozenset({"Mục tiêu A", "Hiệu suất A", "% so với mục tiêu của hiệu suất A"})
 
 
 class OverviewPage(BasePage):
@@ -75,46 +70,33 @@ class OverviewPage(BasePage):
         if data.note:
             st.info(english_terms(data.note), icon=":material/info:")
 
-        group_summary(data.metrics, factories)
+        group_summary([*data.metrics, *data.cards], factories, self.state, self.key)  # BR-58, BR-65, BR-66
         columns = metric_table_columns(data.metrics, factories)
         with panel("Metrics by factory", icon="📋"):
-            show_system = st.toggle(
-                f"Show {EFFICIENCY_SYSTEM}", key=self.key("show_system"), persist_state="session"
-            )  # BR-59
-            metrics = data.metrics if show_system else [m for m in data.metrics if m.metric not in SYSTEM_METRICS]
+            show_all = st.toggle(
+                f"Show targets & {EFFICIENCY_SYSTEM}", key=self.key("show_all_rows"), persist_state="session"
+            )  # BR-59, BR-61
+            rows = grouped_metric_rows(data.metrics, columns, show_all)
             data_table(
-                metric_rows(metrics, columns),
-                column_config=metric_columns(columns),
-                height=full_table_height(len(metrics)),
+                rows,
+                column_config=grouped_metric_columns(columns),
+                height=full_table_height(len(rows)),
                 key=self.key("metrics"),
             )
+            below_note()
             if HCM_COLUMN in columns:
                 members = " + ".join(english_name(name) for name in factories if name != "Fac 1")
                 st.caption(f"HCM = {members}: calculated from their totals, not an average of their percentages.")
-        export_request = ExportWeeklyRequest(**filters, english=True)
+        export_request = ExportWeeklyRequest(**filters, english=True, meeting_format=True)  # BR-64
         download_button(
             lambda: feature.export_weekly_report(export_request),
             label="Download weekly report (Excel)",
             key=self.key("export"),
             primary=True,
-            file_name=f"weekly-report_{from_date.isoformat()}_{to_date.isoformat()}.xlsx",
+            file_name=f"Sewing - Weekly Fac report - {from_date:%d.%m} to {to_date:%d.%m}.xlsx",
         )
 
-        chart_area = st.container()
-        rank_area = st.container()
-        with rank_area:  # the choice sits under the 4 charts but all 5 charts need its value
-            metric = st.segmented_control(
-                "Ranking metric",
-                [item.value for item in RankingMetric],
-                default=RankingMetric.EFFICIENCY_B.value,
-                required=True,
-                format_func=english_name,
-                key=self.key("ranking_metric"),
-                persist_state="session",
-            )
-        with chart_area, st.spinner(REPORT_SPINNER):
-            charts = feature.get_charts(ChartsRequest(**filters, ranking_metric=metric))
-        with chart_area:
-            daily_charts(charts, data.metrics, self.key)
-        with rank_area:
-            ranking_charts(charts, metric, self.key)
+        with st.spinner(REPORT_SPINNER):
+            charts = feature.get_charts(ChartsRequest(**filters, products=True))
+        daily_charts(charts, data.metrics, self.key)
+        products_section(charts, self.key)  # BR-92 to BR-96 (sửa 2026-11-13 lần 4: replaces the ranking)

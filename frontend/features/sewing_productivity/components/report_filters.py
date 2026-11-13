@@ -10,11 +10,12 @@ from backend.core.base import EmptyRequest
 from backend.features.sewing_productivity import SewingProductivityController
 from backend.features.sewing_productivity.dto.display_names import english_name
 from backend.features.sewing_productivity.dto.filter_dto import FilterOptionsResponse
-from backend.features.sewing_productivity.dto.overview_dto import Factory
+from backend.features.sewing_productivity.dto.overview_dto import REPORT_FACTORIES, Factory
 from frontend.core.components import empty_state
 from frontend.core.formatting import format_datetime
 
-FACTORIES = tuple(factory.value for factory in Factory)  # fixed list (section 3): a factory without data stays listed
+# fixed list (section 3): a factory without data stays listed; the closed Fac 1 HCM never (BR-98, 2026-11-13)
+FACTORIES = tuple(factory.value for factory in REPORT_FACTORIES)
 DEFAULT_FACTORY = Factory.FAC_1.value
 DATE_FORMAT = "DD/MM/YYYY"
 ALL_LABEL = "All"

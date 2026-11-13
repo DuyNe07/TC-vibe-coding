@@ -34,6 +34,10 @@ class FilterBusiness(BaseBusiness[DateRange]):
         """BR-31 first day of the month of the newest data day."""
         return latest.replace(day=1)
 
+    def default_year_start(self, latest: date) -> date:
+        """BR-31 (sửa 2026-11-06) Screen 4: 1 January of the year of the newest data day."""
+        return latest.replace(month=1, day=1)
+
     def apply_groups(self, rows: list[CleanRow], customer_groups: set[str], product_groups: set[str]) -> list[CleanRow]:
         """BR-29 the rows kept by the customer and product filters (an empty filter keeps everything)."""
         return [

@@ -5,7 +5,8 @@ from decimal import Decimal
 
 from pydantic import Field, model_validator
 
-from backend.features.sewing_productivity.models.enums import Factory
+from backend.core.base import BaseValueObject
+from backend.features.sewing_productivity.models.enums import Factory, UploadStatus
 from backend.features.sewing_productivity.models.stored_record import StoredRecord
 
 
@@ -53,11 +54,56 @@ class StyleProductRule(StoredRecord):
     product_name: str = Field(min_length=1)
 
 
+class UploadSheetCount(BaseValueObject):
+    """BR-72 one sheet of one upload."""
+
+    sheet: str
+    read_rows: int = Field(ge=0)
+    valid_rows: int = Field(ge=0)
+    skipped_rows: int = Field(ge=0)
+
+
+class UploadChangeCount(BaseValueObject):
+    """BR-73 what one upload did to one sheet of one factory."""
+
+    sheet: str
+    factory: Factory
+    added: int = Field(default=0, ge=0)
+    updated: int = Field(default=0, ge=0)
+    hidden: int = Field(default=0, ge=0)
+
+
+class UploadSkippedNote(BaseValueObject):
+    """BR-72 one skipped row, as listed after the save."""
+
+    sheet: str
+    row_number: int
+    reason: str
+
+
+class UploadWarningNote(BaseValueObject):
+    """BR-72 one BR-08 warning, as listed after the save."""
+
+    kind: str
+    warning_date: date | None = None
+    count: int
+    detail: str = ""
+
+
 class UploadLog(StoredRecord):
+    """Section 4.10. The fields added on 2026-11-09 have defaults: rows saved before read as "Saved, no details"."""
+
     uploaded_at: datetime
     uploaded_by: str = Field(min_length=1)
     file_name: str = Field(min_length=1)
-    from_date: date
-    to_date: date
+    from_date: date | None = None  # empty only on a rejected upload (sửa 2026-11-09)
+    to_date: date | None = None
     saved_rows: int = Field(ge=0)
     skipped_rows: int = Field(ge=0)
+    status: UploadStatus = UploadStatus.SAVED  # BR-74
+    reject_reason: str = ""
+    has_details: bool = False
+    sheet_counts: list[UploadSheetCount] = []  # BR-72
+    changes: list[UploadChangeCount] = []  # BR-73
+    skipped: list[UploadSkippedNote] = []  # BR-72, the first SKIPPED_ROWS_KEPT
+    warnings: list[UploadWarningNote] = []  # BR-72

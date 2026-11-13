@@ -4,7 +4,12 @@ from datetime import date
 from decimal import Decimal
 
 from backend.core.base import BaseValueObject
-from backend.features.sewing_productivity.models.source_records import ProductionRecord, TargetRecord, WorkerRecord
+from backend.features.sewing_productivity.models.source_records import (
+    LineStrength,
+    ProductionRecord,
+    TargetRecord,
+    WorkerRecord,
+)
 
 
 class DateRange(BaseValueObject):
@@ -75,6 +80,7 @@ class RawTargetRow(BaseValueObject):
 class RawWorkerRow(BaseValueObject):
     work_date: date
     counts: dict[str, Decimal | None]
+    totals: dict[str, Decimal | None] = {}  # TOTAL block (headcount), absent in older files
 
 
 class RawWorkbook(BaseValueObject):
@@ -82,6 +88,27 @@ class RawWorkbook(BaseValueObject):
     production: list[RawProductionRow]
     targets: list[RawTargetRow]
     workers: list[RawWorkerRow]
+
+
+class RawStrengthRow(BaseValueObject):
+    """BR-81 one row of the Line Strength file, as read."""
+
+    row_number: int
+    factory_code: str = ""
+    line_text: str = ""
+    groups: list[str] = []
+    buyers: str = ""
+    changeover_speed: str = ""
+    remark: str = ""
+
+
+class RawStrengthFile(BaseValueObject):
+    """BR-81 the first sheet of a workbook read as a Line Strength file. `recognized`: FAC, LINE and STRONG ITEM GROUP
+    were found, so the file is a Line Strength file; `missing`: its other required columns that are absent."""
+
+    recognized: bool = False
+    missing: tuple[str, ...] = ()
+    rows: list[RawStrengthRow] = []
 
 
 class SkippedRow(BaseValueObject):
@@ -97,6 +124,17 @@ class UploadWarning(BaseValueObject):
     detail: str = ""
 
 
+class StrengthUpload(BaseValueObject):
+    """UC-33 a Line Strength file once read (BR-81): the lines kept and the rows skipped."""
+
+    lines: list[LineStrength]
+    skipped: list[SkippedRow]
+
+    @property
+    def read_rows(self) -> int:
+        return len(self.lines) + len(self.skipped)
+
+
 class ParsedUpload(BaseValueObject):
     production: list[ProductionRecord]
     targets: list[TargetRecord]
@@ -107,3 +145,4 @@ class ParsedUpload(BaseValueObject):
     production_range: DateRange
     target_range: DateRange
     worker_range: DateRange
+    derived_workers: bool = False  # BR-97: a past-year file with only Production data

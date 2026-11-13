@@ -3,6 +3,7 @@
 from pydantic import ConfigDict
 
 from backend.core.base import BaseDTO, BaseRequestDTO, BaseResponseDTO
+from backend.features.sewing_productivity.dto.line_detail_dto import LineStrengthDTO
 
 
 class ProductGroupRowDTO(BaseDTO):
@@ -54,6 +55,7 @@ class CatalogsResponse(BaseResponseDTO):
     unclassified_products: list[UnclassifiedProductDTO]
     customer_names: list[CustomerNameDTO]
     styles_without_product: list[StyleWithoutProductDTO]
+    line_strengths: list[LineStrengthDTO] = []  # UC-34 (thêm 2026-11-12), read only
 
 
 class SaveProductGroupsRequest(BaseRequestDTO):

@@ -1,6 +1,8 @@
-"""Screen 9 - Catalogs: 4 tabs, each with a table edited in place and the list of what is still missing."""
+"""Screen 9 - Catalogs: 4 tabs, each with a table edited in place and the list of what is still missing; since
+2026-11-12 a 5th tab shows the line strengths read from the Line Strength file (UC-34, read only)."""
 
 from collections.abc import Callable, Mapping, Sequence
+from datetime import datetime
 from typing import Any
 
 import streamlit as st
@@ -16,16 +18,30 @@ from backend.features.sewing_productivity.dto.catalog_dto import (
     SaveProductGroupsRequest,
     SaveStyleProductsRequest,
 )
+from backend.features.sewing_productivity.dto.display_names import english_name
+from backend.features.sewing_productivity.dto.line_detail_dto import LineStrengthDTO
 from frontend.core.base_page import BasePage
 from frontend.core.components import data_table, editable_table, section_title, show_error
+from frontend.core.formatting import format_datetime
 from frontend.features.sewing_productivity.components.page_messages import (
     leave_flash,
     show_flash,
     show_no_permission,
 )
 
-TAB_LABELS = ("Product groups", "Customer groups", "Fac Vinh Long line numbers", "Product name by style")
+TAB_LABELS = (
+    "Product groups",
+    "Customer groups",
+    "Fac Vinh Long line numbers",
+    "Product name by style",
+    "Line strength",  # UC-34 (thêm 2026-11-12)
+)
 COUNT_COLUMN = {"Rows": st.column_config.NumberColumn(format="localized")}
+STRENGTH_COLUMNS = [
+    "Factory", "Line", "Strong item group 1", "Strong item group 2", "Strong item group 3", "Strong item group 4",
+    "Buyer's strength", "Changeover speed", "Remark",
+]  # fmt: skip
+NO_STRENGTH = "No line strength yet. Upload the Line Strength file on the Data Update screen."
 
 
 class CatalogsPage(BasePage):
@@ -45,7 +61,9 @@ class CatalogsPage(BasePage):
         show_flash(self.state)
 
         # not lazy: a closed tab would lose what is being edited, because an edit table cannot keep its state
-        products, customers, lines, styles = st.tabs(TAB_LABELS, key=self.key("tabs"))
+        products, customers, lines, styles, strengths = st.tabs(TAB_LABELS, key=self.key("tabs"))
+        with strengths:  # UC-34 (thêm 2026-11-12): read only, filled from the Line Strength file
+            self._line_strengths(catalogs.line_strengths)
         with products:
             self._grid(
                 "products",
@@ -112,6 +130,32 @@ class CatalogsPage(BasePage):
                 key=self.key("styles_without_product"),
                 empty_message="Every style has a product name.",
             )
+
+    def _line_strengths(self, items: Sequence[LineStrengthDTO]) -> None:
+        """UC-34 the strength of every line (section 4.11); to change it, upload the file again on Data Update."""
+        if not items:
+            st.info(NO_STRENGTH, icon=":material/info:")
+            return
+        latest = max(items, key=lambda item: item.updated_at or datetime.min)
+        when = format_datetime(latest.updated_at)
+        st.caption(
+            f"From {latest.file_name}, saved {when}. To change it, edit the file and upload it again on Data Update."
+        )
+        data_table(
+            [
+                {
+                    "Factory": english_name(item.factory),
+                    "Line": item.line,
+                    **{f"Strong item group {n}": group for n, group in enumerate(item.strong_groups, start=1)},
+                    "Buyer's strength": item.buyers,
+                    "Changeover speed": item.changeover_speed,
+                    "Remark": item.remark,
+                }
+                for item in items
+            ],
+            column_order=STRENGTH_COLUMNS,
+            key=self.key("line_strengths"),
+        )
 
     def _grid(
         self,

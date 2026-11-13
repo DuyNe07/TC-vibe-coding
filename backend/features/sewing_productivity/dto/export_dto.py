@@ -15,6 +15,7 @@ class ExportWeeklyRequest(BaseRequestDTO):
     customer_groups: list[str] = []
     product_groups: list[str] = []
     english: bool = False  # BR-52: English names in the file
+    meeting_format: bool = False  # BR-64: the layout of the weekly meeting workbook (Overall + Fac x-detailed)
 
 
 class ExportDailyRequest(BaseRequestDTO):

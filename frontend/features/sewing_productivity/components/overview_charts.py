@@ -13,7 +13,6 @@ from backend.features.sewing_productivity.dto.display_names import (
     EFFICIENCY_SUM,
     EFFICIENCY_SYSTEM,
     HCM_COLUMN,
-    TARGET_SYSTEM,
     TOTAL_COLUMN,
     english_name,
 )
@@ -21,11 +20,11 @@ from backend.features.sewing_productivity.dto.overview_dto import (
     ChartPointDTO,
     ChartsResponse,
     OverviewMetricDTO,
-    RankedLineDTO,
     RankingMetric,
 )
-from frontend.core.components import bar_chart, line_chart, panel
-from frontend.core.formatting import format_number
+from frontend.core.components import line_chart, panel
+from frontend.core.session_state import SessionState
+from frontend.features.sewing_productivity.components.number_format import format_number
 from frontend.features.sewing_productivity.components.report_cells import BELOW_MARK, NOT_AVAILABLE
 from frontend.features.sewing_productivity.components.report_filters import DEFAULT_FACTORY, NO_DATA_IN_RANGE
 
@@ -58,11 +57,18 @@ CARDS = (
     Card("Tiền CM", "Revenue (USD)", ":material/payments:", "green", "$", "", 0),
     Card("Sản lượng", "Output (pcs)", ":material/checkroom:", "blue", "", "", 0),
     Card("Giá CM trung bình", "Avg CM price (USD/pc)", ":material/sell:", "violet", "$", "", MONEY_DECIMALS),
+    Card("SMV bình quân", "Avg SMV (min)", ":material/timer:", "#0F9D8F", "", "", MONEY_DECIMALS),  # BR-66 teal
     Card("MO 8h", "MO 8h (USD)", ":material/schedule:", "orange", "$", "", MONEY_DECIMALS),
     Card("Hiệu suất B", EFFICIENCY_SUM, ":material/speed:", "red", "", "%", PERCENT_DECIMALS),
+    Card("%Direct labor", "%Direct labor (%)", ":material/groups:", "#5B7083", "", "%", PERCENT_DECIMALS),  # BR-65
 )
-CARD_HEIGHT = 270  # every card the same height, room for a total that wraps on a narrow screen
+CARD_HEIGHT = 310  # every card the same height
+CARD_TITLE_HEIGHT = 58  # two lines of title in every card, so the totals and the bars line up across the row
+CARD_TOTAL_HEIGHT = 80  # "Total" and the big number, the same height in every card
+CARD_LINE_HEIGHT = 52  # one more site line (name and bar) in a card
 CARD_SITE_NAMES = {DEFAULT_FACTORY: "Vinh Long", HCM_COLUMN: "HCM"}
+HCM_MEMBERS = ("Fac 2", "Fac 3", "Fac 5")  # BR-60, the factories added together in HCM (BR-51)
+HCM_DETAIL = "hcm_detail_open"
 CARD_SITE_COLORS = {DEFAULT_FACTORY: "blue", HCM_COLUMN: "orange"}
 PeriodValues = Mapping[str, Mapping[str, float | None]]
 
@@ -91,27 +97,56 @@ def _markdown(text: str) -> str:
     return text.replace("$", "\\$")
 
 
-def _card(card: Card, metric: OverviewMetricDTO, sites: Sequence[str]) -> None:
+def _colored(color: str, text: str) -> str:
+    """Markdown coloured text: a theme colour name, or a "#hex" colour the theme palette has no name for (teal)."""
+    if color.startswith("#"):
+        return f':color[{text}]{{foreground="{color}"}}'
+    return f":{color}[{text}]"
+
+
+def _card(card: Card, metric: OverviewMetricDTO, sites: Sequence[str], height: int) -> None:
     """One card of the same height as the others: what it is (colour, icon, unit), the total, then each site.
 
-    Each site has a bar: the bigger site fills it, the other one shows its size against it."""
+    Each site has a bar: the biggest line fills it, the others show their size against it. The title and the total
+    sit in blocks of a fixed height, so a title on one line and a title on two lines leave every row level."""
     largest = max((metric.values.get(site) or 0 for site in sites), default=0)
-    with st.container(border=True, height=CARD_HEIGHT):
-        st.markdown(f":{card.color}[{card.icon} **{card.label}**]")  # wraps; a badge would cut a long label
-        # a heading, not st.metric: st.metric cuts a long number with "...", a heading wraps it
-        st.caption("Total")
-        st.markdown(f"### :{card.color}[{_markdown(_card_value(card, metric, TOTAL_COLUMN, mark=False))}]")
+    with st.container(border=True, height=height):
+        with st.container(border=False, height=CARD_TITLE_HEIGHT):
+            st.markdown(_colored(card.color, f"{card.icon} **{card.label}**"))  # wraps; a badge would cut it
+        with st.container(border=False, height=CARD_TOTAL_HEIGHT, gap=None):
+            st.caption("Total")
+            # a heading, not st.metric: st.metric cuts a long number with "...", a heading wraps it
+            st.subheader(
+                _colored(card.color, _markdown(_card_value(card, metric, TOTAL_COLUMN, mark=False))), anchor=False
+            )
         for site in sites:
             value = metric.values.get(site) or 0
             st.progress(
                 min(max(value / largest, 0), 1) if largest > 0 else 0,
-                text=f":{CARD_SITE_COLORS[site]}[{CARD_SITE_NAMES[site]}] "
+                text=f":{CARD_SITE_COLORS.get(site, 'gray')}[{CARD_SITE_NAMES.get(site, '· ' + site)}] "
                 f"**{_markdown(_card_value(card, metric, site))}**",
             )
 
 
-def group_summary(metrics: Sequence[OverviewMetricDTO], factories: Sequence[str]) -> None:
-    """BR-58 five cards: the total of the chosen factories in big type, Vinh Long and HCM under it.
+def _hcm_detail_button(state: SessionState, key: Callable[[str], str]) -> bool:
+    """BR-60 the small "+" that opens Fac 2, Fac 3, Fac 5 under HCM in every card ("-" closes them)."""
+    opened = bool(state.get(HCM_DETAIL, False))
+    if st.button(
+        "Hide HCM factories" if opened else "HCM factories",
+        icon=":material/remove:" if opened else ":material/add:",
+        type="tertiary",
+        key=key("hcm_detail"),
+    ):
+        state.set(HCM_DETAIL, not opened)
+        st.rerun()
+    return opened
+
+
+def group_summary(
+    metrics: Sequence[OverviewMetricDTO], factories: Sequence[str], state: SessionState, key: Callable[[str], str]
+) -> None:
+    """BR-58 seven cards: the total of the chosen factories in big type, Vinh Long and HCM under it (BR-60: and the
+    HCM factories when the "+" is open).
 
     Markdown cards, not metric tiles: a tile cuts a long number, a card wraps it."""
     by_name = {metric.metric: metric for metric in metrics}
@@ -120,12 +155,18 @@ def group_summary(metrics: Sequence[OverviewMetricDTO], factories: Sequence[str]
     sites = []
     if DEFAULT_FACTORY in factories:
         sites.append(DEFAULT_FACTORY)
-    if any(HCM_COLUMN in metric.values for metric in metrics):
+    has_hcm = any(HCM_COLUMN in metric.values for metric in metrics)
+    if has_hcm:
         sites.append(HCM_COLUMN)
+    height = CARD_HEIGHT
     with panel("Vinh Long - HCM", icon="🏭", description="Total = every chosen factory together. Money in USD."):
+        if has_hcm and _hcm_detail_button(state, key):
+            members = [factory for factory in HCM_MEMBERS if factory in factories]
+            sites.extend(members)
+            height += CARD_LINE_HEIGHT * len(members)
         for column, card in zip(st.columns(len(CARDS)), CARDS, strict=True):
             with column:
-                _card(card, by_name[card.metric], sites)
+                _card(card, by_name[card.metric], sites, height)
 
 
 def _daily_chart(
@@ -154,54 +195,15 @@ def _daily_chart(
         st.caption("The figure beside each factory name is its result for the whole period.")
 
 
-def _output_chart(charts: ChartsResponse, key: str) -> None:
-    with panel(f"Output vs {TARGET_SYSTEM} by factory"):
-        if charts.not_applicable_message:
-            st.info(charts.not_applicable_message, icon=":material/info:")
-            return
-        rows = []
-        items = [*charts.output_vs_target, *([charts.hcm_output] if charts.hcm_output else [])]
-        for item in reversed(items):  # a horizontal chart draws its first row at the bottom
-            name = f"{english_name(item.factory)}: {_value_text(item.output, 0, '')}"
-            if item.target_a is not None:
-                name = f"{name} / {_value_text(item.target_a, 0, '')}"
-            rows.append({BAR_NAME: name, "Type": f"Output{LEGEND_PADDING}", "Quantity": round(item.output)})
-            if item.target_a is not None:
-                rows.append(
-                    {BAR_NAME: name, "Type": f"Target (system){LEGEND_PADDING}", "Quantity": round(item.target_a)}
-                )
-        bar_chart(
-            rows,
-            x=BAR_NAME,
-            y="Quantity",
-            color="Type",
-            horizontal=True,
-            stacked=False,
-            key=key,
-            empty_message=NO_DATA_IN_RANGE,
-        )
-        st.caption(f"Beside each factory: output / {TARGET_SYSTEM}.")
-
-
 def daily_charts(charts: ChartsResponse, metrics: Sequence[OverviewMetricDTO], key: Callable[[str], str]) -> None:
-    """Two columns: the 3 efficiencies, MO 8h and output against the system target.
+    """Two columns: %Efficiency (with ratio) and MO 8h by day.
 
-    Only the system efficiency, MO 8h and the output chart stop under a customer or product filter."""
+    BR-67: no daily chart of the system or no-ratio efficiency. MO 8h stops under a customer or product filter.
+    BR-92 (sửa 2026-11-13 lần 4): the output vs system target chart and the line ranking left the page."""
     message = charts.not_applicable_message
     period: PeriodValues = {metric.metric: metric.values for metric in metrics}
     left, right = st.columns(2)
     with left:
-        _daily_chart(
-            f"{EFFICIENCY_SYSTEM} by day",
-            [*charts.efficiency_a, *charts.hcm_efficiency_a],
-            EFFICIENCY_SYSTEM,
-            period["Hiệu suất A"],
-            PERCENT_DECIMALS,
-            PERCENT,
-            key("chart_eff_a"),
-            message,
-        )
-    with right:
         _daily_chart(
             f"{EFFICIENCY_SUM} by day",
             [*charts.efficiency_b, *charts.hcm_efficiency_b],
@@ -210,18 +212,6 @@ def daily_charts(charts: ChartsResponse, metrics: Sequence[OverviewMetricDTO], k
             PERCENT_DECIMALS,
             PERCENT,
             key("chart_eff_b"),
-            "",
-        )
-    left, right = st.columns(2)
-    with left:
-        _daily_chart(
-            f"{EFFICIENCY_NO_RATIO} by day",
-            [*charts.efficiency_no_ratio, *charts.hcm_efficiency_no_ratio],
-            EFFICIENCY_NO_RATIO,
-            period["Hiệu suất (không tỉ lệ)"],
-            PERCENT_DECIMALS,
-            PERCENT,
-            key("chart_eff_no_ratio"),
             "",
         )
     with right:
@@ -234,33 +224,4 @@ def daily_charts(charts: ChartsResponse, metrics: Sequence[OverviewMetricDTO], k
             "",
             key("chart_mo8h"),
             message,
-        )
-    _output_chart(charts, key("chart_output"))
-
-
-def _ranking_chart(title: str, lines: Sequence[RankedLineDTO], metric: str, key: str, message: str) -> None:
-    label, decimals, suffix = RANKING_COLUMNS[metric]
-    with panel(title):
-        if message and not lines:
-            st.info(message, icon=":material/info:")
-            return
-        # the factory is part of the name: the chart sums per name, and LINE 1 exists in several factories.
-        # A horizontal chart draws its first row at the bottom, so the list is turned around.
-        rows = [
-            {
-                BAR_NAME: f"{english_name(item.factory)} · {item.line}: {_value_text(item.value, decimals, suffix)}",
-                label: round(item.value, decimals),
-            }
-            for item in reversed(lines)
-        ]
-        bar_chart(rows, x=BAR_NAME, y=label, horizontal=True, stacked=False, key=key, empty_message=NO_DATA_IN_RANGE)
-
-
-def ranking_charts(charts: ChartsResponse, metric: str, key: Callable[[str], str]) -> None:
-    left, right = st.columns(2)
-    with left:
-        _ranking_chart("Top 10 lines", charts.top_lines, metric, key("chart_top"), charts.not_applicable_message)
-    with right:
-        _ranking_chart(
-            "Bottom 10 lines", charts.bottom_lines, metric, key("chart_bottom"), charts.not_applicable_message
         )

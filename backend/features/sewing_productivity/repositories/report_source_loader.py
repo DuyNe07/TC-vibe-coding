@@ -1,6 +1,8 @@
 """Loads everything a report reads, once per service call (tables come from the RAM cache of the repositories)."""
 
+from backend.features.sewing_productivity.constants import SHEET_LINE_STRENGTH
 from backend.features.sewing_productivity.models.clean_values import CatalogSet, ReportSource, catalog_key
+from backend.features.sewing_productivity.models.enums import UploadStatus
 from backend.features.sewing_productivity.repositories.settings_repositories import (
     CustomerGroupRuleRepository,
     FactoryGoalRepository,
@@ -10,6 +12,7 @@ from backend.features.sewing_productivity.repositories.settings_repositories imp
     WeeklyChangeoverRepository,
 )
 from backend.features.sewing_productivity.repositories.source_repositories import (
+    LineStrengthRepository,
     ProductionRecordRepository,
     TargetRecordRepository,
     UploadLogRepository,
@@ -41,5 +44,14 @@ def load_report_source() -> ReportSource:
         goals=FactoryGoalRepository().list_seeded(),
         weekly_changeovers=WeeklyChangeoverRepository().list_all(),
         catalogs=load_catalogs(),
-        last_upload_at=max((log.uploaded_at for log in uploads), default=None),
+        last_upload_at=max(  # BR-74 a rejected file, or a Line Strength file (UC-33), is not the last data upload
+            (
+                log.uploaded_at
+                for log in uploads
+                if log.status == UploadStatus.SAVED
+                and not any(count.sheet == SHEET_LINE_STRENGTH for count in log.sheet_counts)
+            ),
+            default=None,
+        ),
+        strengths=LineStrengthRepository().list_all(),  # BR-86 (thêm 2026-11-13)
     )

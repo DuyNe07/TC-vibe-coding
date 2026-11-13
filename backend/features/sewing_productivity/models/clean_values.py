@@ -7,7 +7,12 @@ from decimal import Decimal
 from backend.core.base import BaseValueObject
 from backend.features.sewing_productivity.models.enums import Factory
 from backend.features.sewing_productivity.models.settings_records import FactoryGoal, WeeklyChangeover
-from backend.features.sewing_productivity.models.source_records import ProductionRecord, TargetRecord, WorkerRecord
+from backend.features.sewing_productivity.models.source_records import (
+    LineStrength,
+    ProductionRecord,
+    TargetRecord,
+    WorkerRecord,
+)
 from backend.features.sewing_productivity.models.stored_record import stable_id
 
 _LINE_NUMBER = re.compile(r"(\d+)\s*$")
@@ -80,3 +85,4 @@ class ReportSource(BaseValueObject):
     weekly_changeovers: list[WeeklyChangeover] = []
     catalogs: CatalogSet = CatalogSet()
     last_upload_at: datetime | None = None
+    strengths: list[LineStrength] = []  # 4.11, BR-86 (thêm 2026-11-13)

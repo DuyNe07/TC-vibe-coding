@@ -4,7 +4,7 @@ from datetime import date
 from decimal import Decimal
 from typing import Final
 
-from backend.features.sewing_productivity.models.enums import Factory, FactoryGroup
+from backend.features.sewing_productivity.models.enums import REPORT_FACTORIES, Factory, FactoryGroup
 
 FEATURE_KEY: Final = "sewing_productivity"
 UPDATER_ROLE: Final = "UPDATER"
@@ -18,6 +18,9 @@ SHEET_PRODUCTION: Final = "Production data"
 SHEET_TARGET: Final = "Target system"
 SHEET_WORKER: Final = "Worker"
 REQUIRED_SHEETS: Final = (SHEET_PRODUCTION, SHEET_TARGET, SHEET_WORKER)
+# BR-97 (thêm 2026-11-13): a file with only Production data is a past year when every day is before this one
+PRODUCTION_ONLY_BEFORE: Final = date(2026, 1, 1)
+SHEET_WORKER_DERIVED: Final = "Worker (tính từ Production data)"  # BR-97 the upload history names it so
 HEADER_INDEX_PRODUCTION: Final = 1
 HEADER_INDEX_TARGET: Final = 0
 HEADER_INDEX_WORKER: Final = 1
@@ -59,6 +62,13 @@ TARGET_OPTIONAL_COLUMNS: Final = {
     "po_number": ("PO",),
 }
 WORKER_COLUMNS: Final = {"SF2": Factory.FAC_2, "SF3": Factory.FAC_3, "SF5": Factory.FAC_5, "SFVL": Factory.FAC_1}
+# Section 5.1 (2026-11-06): the TOTAL block of sheet Worker (headcount), optional; the first column of each title wins
+WORKER_TOTAL_COLUMNS: Final = {
+    "Fac.2": Factory.FAC_2,
+    "Fac.3": Factory.FAC_3,
+    "Fac.5": Factory.FAC_5,
+    "Fac.1(VL)": Factory.FAC_1,
+}
 
 # BR-06: keys made with normalize_key
 FACTORY_BY_SOURCE_NAME: Final = {
@@ -66,6 +76,7 @@ FACTORY_BY_SOURCE_NAME: Final = {
     "shcm factory 2": Factory.FAC_2,
     "shcm factory 3": Factory.FAC_3,
     "shcm factory 5": Factory.FAC_5,
+    "shcm factory 1": Factory.FAC_1_HCM,  # BR-98 (thêm 2026-11-13): the closed factory of the 2025 data
 }
 MISMATCHED_PRODUCTION_VALUE: Final = "trai so truong"
 MISMATCHED_TARGET_VALUE: Final = "mismatched strength"
@@ -82,7 +93,7 @@ FRIDAY_WEEKDAY: Final = 4  # BR-31
 DAYS_IN_WEEK: Final = 7  # BR-31
 TOTAL_LINE_LABEL: Final = "Tổng"
 PERIOD_LABEL: Final = "Cả kỳ"
-ALL_FACTORIES: Final = tuple(Factory)
+ALL_FACTORIES: Final = REPORT_FACTORIES  # BR-98 (sửa 2026-11-13): the closed Fac 1 HCM is left out
 NO_RATIO_TABLE_TITLE: Final = "Hiệu suất (không tỉ lệ)"  # BR-55
 HCM_COLUMN: Final = FactoryGroup.HCM.value  # BR-51
 TOTAL_COLUMN: Final = FactoryGroup.TOTAL.value  # BR-58
@@ -136,3 +147,29 @@ LINE_MAPPING_SEED: Final = (  # (old line number, new line number)
     (24, 10), (25, 8), (26, 9), (27, 27), (28, 6), (29, 31), (30, 1), (31, 4), (32, 32), (33, 33), (34, 34),
 )  # fmt: skip
 LINE_LABEL_FORMAT: Final = "LINE {}"
+MIN_PERIODS_TO_COMPARE: Final = 2  # BR-71 the cards of Screen 4 need the last period and the one before it
+SKIPPED_ROWS_KEPT: Final = 1_000  # BR-72 skipped rows kept in one upload history row (the total stays exact)
+# Line Strength file (section 5.1, BR-81, thêm 2026-11-12): column -> accepted header names
+SHEET_LINE_STRENGTH: Final = "Line Strength"  # the name shown in the upload history for this file (BR-82)
+STRENGTH_RECOGNIZING_COLUMNS: Final = {"factory": ("FAC",), "line": ("LINE",), "groups": ("STRONG ITEM GROUP",)}
+STRENGTH_OTHER_COLUMNS: Final = {
+    "buyers": ("BUYER'S STRENGTH", "BUYERS STRENGTH"),
+    "changeover_speed": ("CHANGEOVER SPEED",),
+    "remark": ("REMARK",),
+}
+STRENGTH_GROUP_COLUMNS: Final = 4  # STRONG ITEM GROUP 1 to 4, side by side
+STRENGTH_HEADER_ROW: Final = 0
+STRENGTH_FACTORY_CODES: Final = {"XM1": "Fac 1", "XM2": "Fac 2", "XM3": "Fac 3", "XM5": "Fac 5"}
+MESSAGE_BR81_COLUMNS: Final = "File Line Strength thiếu cột: {columns}. Hãy dùng đúng file Sewing Line Strength."
+MESSAGE_BR81_FACTORY: Final = 'Dòng {row}: chưa nhận diện được xưởng "{code}".'
+MESSAGE_BR81_DUPLICATE: Final = "Dòng {row}: trùng xưởng và chuyền với một dòng phía trên, đã bỏ qua."
+MESSAGE_STRENGTH_SAVED: Final = "Đã lưu sở trường của {count} chuyền."
+
+# BR-91 (thêm 2026-11-13 lần 3): "Line trend" by week shows this many weeks up to the chosen To date (the shared
+# column chart keeps 30 columns)
+TREND_WEEKS = 26
+
+# BR-93 to BR-96 (thêm 2026-11-13 lần 4): Overview "Products & customers"; the shared chart has 6 colours
+MIX_TOP_GROUPS = 5
+MIX_OTHER_GROUP = "Other"
+MIX_TOP_CUSTOMERS = 10
