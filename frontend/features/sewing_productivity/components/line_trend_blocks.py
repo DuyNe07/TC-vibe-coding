@@ -1,17 +1,16 @@
-"""Screen 2 Line Detail, "Line trend" of the line picked (BR-90, thêm 2026-11-13 lần 2): week / month / year buttons,
-Output as columns, the chosen figure as a line under it on the same time axis, the exact numbers right below.
+"""Screen 2 Line Detail, "Line trend" of the line picked (BR-90, thêm 2026-11-13 lần 2): week / month / year buttons
+and the exact numbers in a table right below.
 
-The shared charts cannot yet draw columns and a line in one frame nor write the numbers on the points: the number table
-right under the charts carries them (UI concept 2026-11-13 lần 2)."""
+BR-99 (sửa 2026-11-13 lần 5): ONE chart - Output as columns on the left scale, the chosen figure (%Efficiency or MO 8h)
+as a line on the right scale - with the numbers written on the marks; "Show numbers" hides them (hover still shows)."""
 
 from collections.abc import Callable
 
 import streamlit as st
 
-from backend.core.config import get_settings
 from backend.features.sewing_productivity.dto.line_detail_dto import LineTrendPointDTO, PeriodKind
 from frontend.core.base_page import BasePage
-from frontend.core.components import bar_chart, data_table, line_chart, section_title
+from frontend.core.components import bar_chart, combo_chart, data_table, section_title
 from frontend.features.sewing_productivity.components.report_cells import (
     BELOW_NOTE,
     full_table_height,
@@ -25,31 +24,27 @@ MO8H = "MO 8h"
 OUTPUT = "Output (pcs)"
 CHART_X = "Period start"
 FIGURE_COLUMN = "Figure"
-CHART_HEIGHT = 260
+CHART_HEIGHT = 420
 # figure -> DTO field, decimals, suffix, "below threshold" flag
 FIGURES = {
     OUTPUT: ("output", 0, "", None),
     EFFICIENCY: ("efficiency", 1, "%", "efficiency_below"),
     MO8H: ("mo8h", 2, "", "mo8h_below"),
 }
-# BR-91 (thêm 2026-11-13 lần 3) the colour groups of the Output columns, in the order of the chart colours
-ON_TARGET = "On target"
-BELOW_THRESHOLD = "Below threshold"
-NO_NUMBER = "No %Efficiency"
 RANGE_TEXT = {
     PeriodKind.WEEK: "last 26 weeks up to the chosen To date",
     PeriodKind.MONTH: "months from 01/01 to the chosen To date",
     PeriodKind.YEAR: "year from 01/01 to the chosen To date",
 }
-FILTERED_MO8H = "MO 8h is not shown while filtering by customer or product group."
+FILTERED_MO8H = "MO 8h is not shown while filtering by customer or product group: only Output is drawn."
 
 TrendLoader = Callable[[PeriodKind], list[LineTrendPointDTO]]
 
 
 def line_trend(page: BasePage, line: str, load: TrendLoader) -> None:
-    """BR-90, BR-91 the periods of the line up to the chosen "To" date."""
+    """BR-90, BR-91, BR-99 the periods of the line up to the chosen "To" date, in one chart and a table."""
     section_title("Line trend")
-    left, right = st.columns([3, 2])
+    left, middle, right = st.columns([3, 2, 1.4], vertical_alignment="bottom")
     with left:
         kind = st.segmented_control(
             "Period",
@@ -58,66 +53,52 @@ def line_trend(page: BasePage, line: str, load: TrendLoader) -> None:
             required=True,
             key=page.key("trend_kind"),
         )
-    with right:
+    with middle:
         figure = st.segmented_control(
             "Line shows", [EFFICIENCY, MO8H], default=EFFICIENCY, required=True, key=page.key("trend_line")
         )
+    with right:
+        labels = st.toggle("Show numbers", value=True, key=page.key("trend_labels"), persist_state="session")
     points = load(PeriodKind(kind))
     span = RANGE_TEXT[PeriodKind(kind)]
     if not points:
         st.info(f"{line} made nothing in the {span}.", icon=":material/info:")
         return
-    st.caption(
-        f"The {span}. Output columns: blue = %Efficiency on target, orange = below threshold. Hover a chart to read a "
-        "point; the exact numbers are in the table."
-    )
-    _output_chart(page, line, points)
-    _figure_chart(page, line, points, figure)
+    st.caption(f"The {span}. Columns: Output (left scale). Line: {figure} (right scale).")
+    _chart(page, line, points, figure, labels)
     _number_table(page, line, points)
 
 
-def _status(point: LineTrendPointDTO) -> str:
-    """BR-91 the colour group of a period's Output column."""
-    if point.efficiency is None:
-        return NO_NUMBER
-    return BELOW_THRESHOLD if point.efficiency_below else ON_TARGET
-
-
-def _output_chart(page: BasePage, line: str, points: list[LineTrendPointDTO]) -> None:
-    """BR-91 one column per period, coloured by its %Efficiency. Each colour group is its own column of the rows, in a
-    fixed order, so On target is always the first colour (blue) and Below threshold the second (orange)."""
+def _chart(page: BasePage, line: str, points: list[LineTrendPointDTO], figure: str, labels: bool) -> None:
+    """BR-99 one column per period and the chosen figure as a line on its own scale."""
+    field, decimals, _suffix, _flag = FIGURES[figure]
     kept = [point for point in points if point.output is not None]
-    groups = [ON_TARGET, BELOW_THRESHOLD] + ([NO_NUMBER] if any(_status(p) == NO_NUMBER for p in kept) else [])
+    has_line = any(getattr(point, field) is not None for point in kept)
+    options = {"height": CHART_HEIGHT, "key": page.key(f"trend_chart_{line}")}
+    if not has_line:  # MO 8h under a customer / product filter: nothing to draw as a line
+        st.caption(FILTERED_MO8H)
+        bar_chart(
+            [{CHART_X: point.start, OUTPUT: point.output} for point in kept],
+            x=CHART_X,
+            y=OUTPUT,
+            stacked=False,
+            labels=labels,
+            **options,
+        )
+        return
     rows = [
-        {CHART_X: point.start, **{group: point.output if _status(point) == group else 0 for group in groups}}
+        {
+            CHART_X: point.start,
+            OUTPUT: round(point.output),
+            figure: None if (value := getattr(point, field)) is None else round(value, decimals),
+        }
         for point in kept
     ]
-    options = {"x": CHART_X, "y": groups, "height": CHART_HEIGHT, "key": page.key(f"trend_output_{line}")}
-    if len(rows) < get_settings().chart_max_categories:
-        bar_chart(rows, **options)
-    else:  # the shared column chart keeps 30 columns and merges the rest: a filled line instead (as Sewing metrics)
-        line_chart([{CHART_X: point.start, OUTPUT: point.output} for point in kept], **{**options, "y": OUTPUT})
-
-
-def _figure_chart(page: BasePage, line: str, points: list[LineTrendPointDTO], figure: str) -> None:
-    field, decimals, _suffix, _flag = FIGURES[figure]
-    rows = [
-        {CHART_X: point.start, figure: round(value, decimals)}
-        for point in points
-        if (value := getattr(point, field)) is not None
-    ]
-    line_chart(
-        rows,
-        x=CHART_X,
-        y=figure,
-        height=CHART_HEIGHT,
-        key=page.key(f"trend_{field}_{line}"),
-        empty_message=FILTERED_MO8H if figure == MO8H else "No number to draw.",
-    )
+    combo_chart(rows, x=CHART_X, bars=OUTPUT, lines=figure, secondary_y=True, labels=labels, **options)
 
 
 def _number_table(page: BasePage, line: str, points: list[LineTrendPointDTO]) -> None:
-    """One row per figure, one column per period (the order of the charts); ▼ below threshold (BR-76)."""
+    """One row per figure, one column per period (the order of the chart); ▼ below threshold (BR-76)."""
     periods = [point.period for point in points]
     rows = []
     for figure, (field, decimals, suffix, flag) in FIGURES.items():
