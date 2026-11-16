@@ -45,6 +45,9 @@ class SaveUploadResponse(BaseResponseDTO):
     saved_rows: int
     to_date: date | None = None
     message: str
+    # fix log 2026-11-16: the check result of the same reading (BR-57 lists its skipped rows and warnings after the
+    # save), so "Check & save" reads the file once
+    check: UploadCheckResponse | None = None
 
 
 class UploadSheetCountDTO(BaseDTO):

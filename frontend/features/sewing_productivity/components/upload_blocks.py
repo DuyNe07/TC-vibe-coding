@@ -7,7 +7,6 @@ from backend.core.exceptions import AppError
 from backend.features.sewing_productivity import SewingProductivityController
 from backend.features.sewing_productivity.dto.display_names import english_name
 from backend.features.sewing_productivity.dto.upload_dto import (
-    CheckUploadRequest,
     SaveUploadRequest,
     UploadCheckResponse,
     UploadWarningDTO,
@@ -51,27 +50,17 @@ def _forget_result(state: SessionState) -> None:
         state.pop(name, None)
 
 
-def _check_file(state: SessionState, feature: SewingProductivityController, file: UploadedFileDTO) -> None:
-    _forget_result(state)
-    state.pop("save_message", None)
-    state.pop(SAVED_RESULT, None)
-    state.set("checked_fingerprint", _fingerprint(file))
-    try:
-        with st.spinner("Checking the file, this can take about a minute...", show_time=True):
-            state.set("check_result", feature.check_upload(CheckUploadRequest(file=file)))
-    except AppError as exc:  # the file was refused: step 2 shows why, and the rest of the page keeps working
-        state.set("check_error", exc)
-
-
 def _save_file(state: SessionState, feature: SewingProductivityController, file: UploadedFileDTO) -> None:
     """Runs in the full page run after the confirmation, so the backend sees who is logged in."""
     try:
-        with st.spinner("Saving the data, this can take about a minute...", show_time=True):
+        with st.spinner("Checking and saving the file, this can take about a minute...", show_time=True):
             saved = feature.save_upload(SaveUploadRequest(file=file))
-    except AppError as exc:
+    except AppError as exc:  # a refused file, or another save still running: step 2 says why
         state.set("check_error", exc)
         return
-    state.set(SAVED_RESULT, state.get("check_result"))  # its warnings stay readable after the file box is emptied
+    # its skipped rows and warnings stay readable after the file box is emptied (fix log 2026-11-16: from the save
+    # itself, the file is read once)
+    state.set(SAVED_RESULT, saved.check or state.get("check_result"))
     _forget_result(state)
     state.set("save_message", saved.message)
     state.set("upload_version", state.get("upload_version", 0) + 1)  # a new widget key empties the file box
@@ -82,11 +71,13 @@ def _check_and_save(state: SessionState, feature: SewingProductivityController, 
     """BR-57 one button: a file the check accepts is saved at once, its skipped rows and warnings shown afterwards.
 
     Only a refused file stops at step 2. The daily file always ends with rows that have no date yet, so stopping on
-    skipped rows would stop every day."""
-    _check_file(state, feature, file)
-    result: UploadCheckResponse | None = state.get("check_result")
-    if result is not None and result.can_save:
-        _save_file(state, feature, file)
+    skipped rows would stop every day. Fix log 2026-11-16: the save does every check of UC-01 itself and returns its
+    result, so the file is read and checked once (it was read twice: about half of the waiting time)."""
+    _forget_result(state)
+    state.pop("save_message", None)
+    state.pop(SAVED_RESULT, None)
+    state.set("checked_fingerprint", _fingerprint(file))
+    _save_file(state, feature, file)
 
 
 @st.dialog("Confirm save", icon=":material/save:")
