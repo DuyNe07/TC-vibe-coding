@@ -24,5 +24,6 @@ class ExportQuotesService(BaseService[ExportQuotesRequest, FileDownloadDTO]):
         )
         self.logger.info("Export %s quotes", len(found))
         return QuoteExportFileBuilder(
-            [quote_dto(q) for q in found], f"gia-bao-khach-{utc_now():%Y%m%d-%H%M}.xlsx"
+            [quote_dto(q) for q in found],
+            f"gia-bao-khach-{utc_now().astimezone():%Y%m%d-%H%M}.xlsx",  # giờ máy chủ (sửa 2026-11-17)
         ).build()

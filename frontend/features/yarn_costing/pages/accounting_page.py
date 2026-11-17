@@ -20,7 +20,7 @@ from frontend.core.formatting import format_number
 from frontend.features.yarn_costing.components.columns import count_col, date_col, datetime_col, money, percent
 from frontend.features.yarn_costing.components.data_warnings import show_data_warnings
 from frontend.features.yarn_costing.components.dialogs import confirm_dialog
-from frontend.features.yarn_costing.components.display import percent_text, percent_value, plain, vnd
+from frontend.features.yarn_costing.components.display import local_dt, percent_text, percent_value, plain, vnd
 from frontend.features.yarn_costing.components.flash import show_flash
 from frontend.features.yarn_costing.components.labels import factory_codes, factory_label
 from frontend.features.yarn_costing.components.permissions import action_state, explain
@@ -66,7 +66,7 @@ class AccountingPage(BasePage):
                         "Số mã": m.row_count,
                         "Tổng số lượng (kg)": plain(m.total_quantity),
                         "Người tải": m.imported_by,
-                        "Lúc tải": m.imported_at,
+                        "Lúc tải": local_dt(m.imported_at),
                     }
                     for m in months
                 ],

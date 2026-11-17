@@ -165,7 +165,9 @@ class QuoteExportFileBuilder(BaseBuilder[FileDownloadDTO]):
                 {
                     "Số báo giá": q.quote_no,
                     "Tháng": q.period,
-                    "Ngày tính": q.created_at.strftime("%d/%m/%Y") if q.created_at else "",
+                    "Ngày tính": q.created_at.astimezone().strftime("%d/%m/%Y")
+                    if q.created_at
+                    else "",  # giờ máy chủ (sửa 2026-11-17)
                     "Người tính": q.created_by,
                     "Khách hàng": q.customer_name,
                     "Mã dòng": q.line_code,
@@ -196,7 +198,9 @@ class QuoteExportFileBuilder(BaseBuilder[FileDownloadDTO]):
                     "Tỷ lệ Supima": pct(q.supima_percent),
                     "Truyền điểm coin": "Có" if q.supima_coin else "Không",
                     "Phí coin (USD/kg)": rnd(q.coin_fee_usd, USD_DECIMALS),
-                    "Phương án bông": " + ".join(f"{s.origin.value} {pct(s.percent)}%" for s in q.cotton_plan),
+                    "Phương án bông": " + ".join(
+                        f"{s.origin.value} {pct(s.percent)}%" for s in q.cotton_plan if s.percent > 0
+                    ),  # bỏ xuất xứ 0% (sửa 2026-11-17)
                     "Ghi chú": q.note,
                 }
             )

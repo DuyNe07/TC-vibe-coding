@@ -1099,3 +1099,26 @@ def test_fix_full_supima_shows_supima_group_and_ignores_cotton_plan() -> None:
     # pha một phần: vẫn dùng và lưu phương án bông như trước
     half = CalculateQuoteService().handle(supima_request()).quote
     assert half.components[0].price_group == "Cotton (phương án)" and len(half.cotton_plan) == 2
+
+
+# ---- Fix 2026-11-17: file Excel báo giá - bỏ xuất xứ 0%, ngày tính theo giờ máy chủ ----
+def test_fix_export_skips_zero_origin_and_uses_local_day() -> None:
+    from datetime import UTC
+
+    from backend.features.yarn_costing.repositories.material_price_repository import QuoteRepository
+
+    supima_setup()
+    put_supima_yarn()
+    plan = [
+        CottonShareDTO(origin=CottonOrigin.USA, percent=D("0.31")),
+        CottonShareDTO(origin=CottonOrigin.BRAZIL, percent=D("0.69")),
+        CottonShareDTO(origin=CottonOrigin.AUSTRALIA, percent=D(0)),  # màn hình luôn gửi đủ 3 xuất xứ
+    ]
+    saved = CalculateQuoteService().handle(supima_request(cotton_plan=plan, commit=True)).quote
+    late = datetime(2026, 11, 17, 23, 30, tzinfo=UTC)  # 23:30 UTC = 06:30 ngày 18 giờ Việt Nam (máy chủ UTC+7)
+    repo = QuoteRepository()
+    repo.save(repo.get(saved.id).model_copy(update={"created_at": late}))
+    file = ExportQuotesService().handle(ExportQuotesRequest())
+    row = ExcelReader(sheet_name="Gia bao khach").read(UploadedFileDTO(filename=file.filename, content=file.content))[0]
+    assert row["Phương án bông"] == "USA 31.0% + Brazil 69.0%"
+    assert row["Ngày tính"] == late.astimezone().strftime("%d/%m/%Y")

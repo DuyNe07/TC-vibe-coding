@@ -45,6 +45,7 @@ from frontend.features.yarn_costing.components.columns import (
 )
 from frontend.features.yarn_costing.components.dialogs import confirm_dialog
 from frontend.features.yarn_costing.components.display import (
+    local_dt,
     pct_cell,
     plain,
     usd,
@@ -287,7 +288,7 @@ class MaterialPricePage(BasePage):
                         "Mã sợi thành phẩm": m.yarn_count,
                         "Mã phụ liệu": m.accessory_count,
                         "Người tải": m.imported_by,
-                        "Lúc tải": m.imported_at,
+                        "Lúc tải": local_dt(m.imported_at),
                     }
                     for m in months_saved
                 ],

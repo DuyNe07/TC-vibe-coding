@@ -77,6 +77,14 @@ def plain(value: Any) -> float | None:
     return _num(value)
 
 
+def local_dt(value: Any) -> Any:
+    """Stored moments are UTC: show them in the server's local time (like ``format_datetime``), without a timezone so
+    the table does not show UTC (sửa 2026-11-17). Dates and empty cells are returned unchanged."""
+    if isinstance(value, datetime) and value.tzinfo is not None:
+        return value.astimezone().replace(tzinfo=None)
+    return value
+
+
 def fmt_date(value: date | datetime | None) -> str:
     if value is None:
         return "-"

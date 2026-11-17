@@ -54,6 +54,7 @@ from frontend.features.yarn_costing.components.dialogs import confirm_dialog
 from frontend.features.yarn_costing.components.display import (
     fmt_date,
     from_percent,
+    local_dt,
     optional_decimal,
     pct,
     plain,
@@ -410,7 +411,7 @@ class MasterDataPage(BasePage):
                     "Ngày hiệu lực": v.effective_date,
                     "Lý do": v.reason,
                     "Người áp dụng": v.created_by,
-                    "Lúc áp dụng": v.created_at,
+                    "Lúc áp dụng": local_dt(v.created_at),
                     "Số dòng": len(v.lines),
                 }
                 for v in versions
@@ -642,7 +643,7 @@ class MasterDataPage(BasePage):
                         "Tỷ giá": plain(r.rate),
                         "Ghi chú": r.note,
                         "Người nhập": r.created_by,
-                        "Lúc nhập": r.created_at,
+                        "Lúc nhập": local_dt(r.created_at),
                     }
                     for r in reference.exchange_rates
                 ],

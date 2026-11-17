@@ -44,6 +44,7 @@ from frontend.features.yarn_costing.components.display import (
     count_text,
     fmt_date,
     from_percent,
+    local_dt,
     text_or_dash,
     yes_no,
 )
@@ -261,7 +262,7 @@ class PriceListPage(BasePage):
                     "Tên khách gọi": a.customer_yarn_name,
                     "Ghi chú": a.note,
                     "Người thêm": a.created_by,
-                    "Ngày": a.created_at,
+                    "Ngày": local_dt(a.created_at),
                     "id": a.id,
                 }
                 for a in items

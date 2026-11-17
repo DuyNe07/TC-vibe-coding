@@ -33,6 +33,7 @@ from frontend.core.components import data_table, download_button, editable_table
 from frontend.core.formatting import format_number
 from frontend.features.yarn_costing.components.columns import count_col, datetime_col
 from frontend.features.yarn_costing.components.dialogs import confirm_dialog
+from frontend.features.yarn_costing.components.display import local_dt
 from frontend.features.yarn_costing.components.flash import show_flash
 from frontend.features.yarn_costing.components.labels import factory_codes, factory_label
 from frontend.features.yarn_costing.components.material_ui import run_save, try_call
@@ -274,7 +275,7 @@ class NameCheckPage(BasePage):
             {
                 "Chữ": p.word,
                 "Số lần": p.count,
-                "Lần cuối": p.last_at,
+                "Lần cuối": local_dt(p.last_at),
                 "Người gõ": ", ".join(dict.fromkeys(u.typed_by for u in p.uses if u.typed_by)),
                 "Mã yêu cầu": ", ".join(dict.fromkeys(u.yarn_code for u in p.uses)),
                 "Lý do": "; ".join(dict.fromkeys(u.reason for u in p.uses if u.reason)),

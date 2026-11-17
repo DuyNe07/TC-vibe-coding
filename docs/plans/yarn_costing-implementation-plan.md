@@ -441,3 +441,17 @@ Prompt 1 câu 4-5).
   được dùng giao diện); kiểm bằng tests/architecture/test_pages_render.py + chạy lại màn hình trên dữ liệu tạm tách biệt (không còn
   "None"/"nan") | scripts/check.py ALL CHECKS PASSED, doctor APP IS HEALTHY; trình duyệt thật: Giá nguyên liệu 84 ô, 0 ô "None"; Tính giá
   báo khách S4-1000 → dòng "Sợi tồn (không có sợi tồn cùng mã kế toán)" để trống.
+- 2026-11-17 | (1) Bấm "Dùng lại để tính mới" → "Trang gặp lỗi không mong muốn" (StreamlitWidgetAlreadyInstantiatedError trên ô Tháng
+  tính); (2) cột ngày giờ (Ngày ở Các lần đã tính, Lúc tải, Lúc nhập, Lúc thay đổi, Lúc chạy, Nhật ký...) hiện giờ UTC, lệch 7 tiếng; tên
+  file Excel báo giá và cột "Ngày tính" cũng theo UTC; (3) cột "Phương án bông" của file Excel ghi cả xuất xứ 0% | (1) pages: nút ở khối
+  "Các lần đã tính" (vẽ sau) ghi đè giá trị các ô của khối "Tính giá" đã vẽ trong cùng lần chạy; (2) dữ liệu lưu giờ UTC có múi giờ, bảng
+  Streamlit hiện nguyên UTC; (3) màn hình luôn gửi đủ 3 xuất xứ | (1) `quote_page`: nút chỉ ghi báo giá chờ (`pending_reuse`) rồi chạy lại,
+  `_apply_reuse` điền các ô ở đầu lần chạy sau, trước khi ô được vẽ; ô Tháng tính bỏ `index=` (mặc định qua session state); (2)
+  `display.local_dt` đổi giờ UTC sang giờ máy chủ (như `format_datetime` của khung) cho mọi cột ngày giờ của chức năng; builder Excel và
+  tên file dùng `astimezone()`; (3) builder bỏ xuất xứ tỷ lệ 0 | test `test_material_price.py::
+  test_fix_export_skips_zero_origin_and_uses_local_day` (lỗi 1, 2 trên màn hình: không thêm được test backend dùng giao diện) |
+  scripts/check.py ALL CHECKS PASSED (324 test), doctor APP IS HEALTHY; trình duyệt thật (dữ liệu dev): lưu BG-2026-0002 (Xuất khẩu, Gom,
+  FOB) → cột Ngày 14:39 (đúng giờ Việt Nam); đổi form sang Nội địa / Tách / CIF rồi "Dùng lại" → không lỗi, điền lại Tháng, Sợi, Xuất khẩu,
+  Gom, FOB, khách hàng, ghi chú; chọn CIF → F&I 0,03; Tính thử → FOB 5,3973, CIF 5,4273; Xoá lần tính → "Đã xoá báo giá BG-2026-0002.";
+  nhật ký app không có ERROR mới. Dòng test trên dev (đã đánh dấu xoá, không chuyển sang production): quote d814bacc…, d725f66e…; audit_log
+  23a189e4…, 9d6cb7da…, f90689d4…, 340ed198…, 71a140bd….

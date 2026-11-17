@@ -35,7 +35,7 @@ from frontend.features.yarn_costing.components.columns import (
     usd_col,
 )
 from frontend.features.yarn_costing.components.dialogs import confirm_dialog
-from frontend.features.yarn_costing.components.display import pct, plain, usd, usd_cell, vnd_cell
+from frontend.features.yarn_costing.components.display import local_dt, pct, plain, usd, usd_cell, vnd_cell
 from frontend.features.yarn_costing.components.flash import show_flash
 from frontend.features.yarn_costing.components.material_ui import (
     current_period,
@@ -50,7 +50,8 @@ from frontend.features.yarn_costing.components.permissions import action_state, 
 RESULT_KEY = "quote_result"
 DEFAULTS_FOR = "defaults_for"  # tháng đã điền hệ số norm mặc định
 FI_FROM_QUOTE = "fi_from_quote"  # (tháng, F&I) của báo giá CIF vừa "Dùng lại"
-FI_TOKEN = "fi_token"  # tăng mỗi lần "Dùng lại" để ô F&I nhận số mới
+FI_TOKEN = "fi_token"
+PENDING_REUSE = "pending_reuse"  # báo giá chờ "Dùng lại": áp vào các ô ở đầu lần chạy sau, trước khi ô được vẽ  # tăng mỗi lần "Dùng lại" để ô F&I nhận số mới
 PRICED = (YarnStatus.DA_TINH_GIA, YarnStatus.CO_MA_KE_TOAN)
 HUNDRED = Decimal(100)
 COMPONENT_COLUMNS = ["Nguyên liệu", "Tỷ lệ %", "Tiêu hao %", "Nhóm giá"]
@@ -88,6 +89,9 @@ class QuotePage(BasePage):
 
     # ---- UC-62 ----
     def _calculator(self, feature: YarnCostingController) -> None:
+        pending = st.session_state.pop(self.key(PENDING_REUSE), None)
+        if pending is not None:  # sửa 2026-11-17: chỉ ghi vào các ô trước khi chúng được vẽ
+            self._apply_reuse(pending)
         disabled, why = action_state("UC-62")
         lines = [
             r
@@ -104,10 +108,8 @@ class QuotePage(BasePage):
         }
         with panel("Tính giá", icon="🧮"):
             c1, c2 = st.columns([1, 3])
-            period = c1.selectbox(
-                "Tháng tính", month_options(), index=month_options().index(current_period()), format_func=month_text,
-                key=self.key("period"),
-            )  # fmt: skip
+            st.session_state.setdefault(self.key("period"), current_period())  # no index=: "Dùng lại" sets the month
+            period = c1.selectbox("Tháng tính", month_options(), format_func=month_text, key=self.key("period"))
             line_code = c2.selectbox(
                 "Sợi (dòng giá Thường của S4)",
                 list(labels),
@@ -419,7 +421,7 @@ class QuotePage(BasePage):
             rows = [
                 {
                     "Số báo giá": q.quote_no,
-                    "Ngày": q.created_at,
+                    "Ngày": local_dt(q.created_at),
                     "Người tính": q.created_by,
                     "Khách hàng": q.customer_name,
                     "Tên chuẩn": q.yarn_name,
@@ -468,7 +470,8 @@ class QuotePage(BasePage):
             disabled, why = action_state("UC-63")
             b1, b2, _ = st.columns([1, 1, 3])
             if b1.button("Dùng lại để tính mới", icon="♻️", key=self.key("reuse"), disabled=disabled, help=why):
-                self._reuse(quote)
+                st.session_state[self.key(PENDING_REUSE)] = quote
+                st.rerun()
             if b2.button("Xoá lần tính", icon="🗑️", key=self.key("delete"), disabled=disabled, help=why):
                 confirm_dialog(
                     self.state,
@@ -496,8 +499,9 @@ class QuotePage(BasePage):
         )
         return f"{normal} | {supima}"
 
-    def _reuse(self, q: QuoteDTO) -> None:
-        """Fill the Tính giá block with the numbers of a saved quote, then rerun."""
+    def _apply_reuse(self, q: QuoteDTO) -> None:
+        """Fill the Tính giá block with the numbers of a saved quote. Called at the start of a run, before the inputs
+        exist (Streamlit refuses to change an input that is already drawn - sửa 2026-11-17)."""
         state = st.session_state
         period = q.period if q.period in month_options() else current_period()
         state[self.key("period")] = period
@@ -524,4 +528,3 @@ class QuotePage(BasePage):
         state[self.key(f"supima.{q.line_code}")] = float(q.supima_percent * HUNDRED)
         state[self.key(f"coin.{q.line_code}")] = q.supima_coin
         self.state.pop(RESULT_KEY)
-        st.rerun()

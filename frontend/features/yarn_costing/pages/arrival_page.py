@@ -26,7 +26,7 @@ from frontend.core.components import data_table, editable_table, file_upload, pa
 from frontend.core.formatting import format_number
 from frontend.features.yarn_costing.components.columns import count_col, datetime_col, money
 from frontend.features.yarn_costing.components.dialogs import confirm_dialog
-from frontend.features.yarn_costing.components.display import plain
+from frontend.features.yarn_costing.components.display import local_dt, plain
 from frontend.features.yarn_costing.components.flash import show_flash
 from frontend.features.yarn_costing.components.material_ui import material_denied, month_text, run_save
 from frontend.features.yarn_costing.components.permissions import action_state, explain
@@ -86,7 +86,7 @@ class ArrivalPage(BasePage):
                         "Số lô": i.lot_count,
                         "Bị loại": i.rejected_count,
                         "Người nhập": i.imported_by,
-                        "Lúc nhập": i.imported_at,
+                        "Lúc nhập": local_dt(i.imported_at),
                     }
                     for i in data.imports
                 ],
