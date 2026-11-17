@@ -8,6 +8,7 @@ import streamlit as st
 from backend.core.gateway import gateway
 from backend.features.yarn_costing import YarnCostingController
 from backend.features.yarn_costing.dto.material_dto import (
+    AverageMode,
     CottonOrigin,
     CottonShareDTO,
     GetMaterialAveragesRequest,
@@ -93,14 +94,28 @@ class MaterialPricePage(BasePage):
     # ---- UC-59 ----
     def _averages(self, feature: YarnCostingController) -> None:
         months = month_options()
-        period = st.selectbox(
-            "Tháng tính",
-            months,
-            index=months.index(current_period()),
-            format_func=month_text,
-            key=self.key("avg_period"),
+        left, right = st.columns([1, 2])
+        with left:
+            period = st.selectbox(
+                "Tháng tính",
+                months,
+                index=months.index(current_period()),
+                format_func=month_text,
+                key=self.key("avg_period"),
+            )
+        with right:  # BR-114 (bổ sung 2026-11-17)
+            mode = AverageMode(
+                st.radio(
+                    "Cách tính bình quân",
+                    [m.value for m in AverageMode],
+                    horizontal=True,
+                    key=self.key("avg_mode"),
+                    help="Tách: Nội địa và Xuất khẩu mỗi bên một giá. Gom: mọi mã kho và lô hàng về của nhóm cộng chung.",
+                )
+            )
+        data: MaterialAveragesResponse = feature.get_material_averages(
+            GetMaterialAveragesRequest(period=period, mode=mode)
         )
-        data: MaterialAveragesResponse = feature.get_material_averages(GetMaterialAveragesRequest(period=period))
         if data.problem:
             st.warning(data.problem, icon="⚠️")
             return
@@ -117,7 +132,7 @@ class MaterialPricePage(BasePage):
         rows = [
             {
                 "Nhóm": r.group_name,
-                "Nội địa / XK": r.market.value,
+                "Nội địa / XK": r.market_label or r.market.value,
                 "SL tồn (kg)": plain(r.stock_qty),
                 "Giá tồn": usd(r.stock_unit),
                 "SL về (kg)": plain(r.arrival_qty),
@@ -146,9 +161,9 @@ class MaterialPricePage(BasePage):
             row = next(
                 r
                 for r in data.rows
-                if r.group_name == selected[0]["Nhóm"] and r.market.value == selected[0]["Nội địa / XK"]
+                if r.group_name == selected[0]["Nhóm"] and (r.market_label or r.market.value) == selected[0]["Nội địa / XK"]
             )
-            st.markdown(f"**Chi tiết: {row.group_name} - {row.market.value}**")
+            st.markdown(f"**Chi tiết: {row.group_name} - {row.market_label or row.market.value}**")
             data_table(
                 [
                     {

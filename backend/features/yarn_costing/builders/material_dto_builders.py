@@ -19,6 +19,7 @@ from backend.features.yarn_costing.models.material_price import (
     MaterialPriceGroup,
     Quote,
     StockOutCompareRow,
+    market_label,
 )
 
 
@@ -40,15 +41,17 @@ def average_dto(average: GroupAverage, rate: Decimal) -> AverageRowDTO:
         group_name=average.group_name,
         market=average.market,
         stock_qty=average.stock_qty,
-        stock_unit=average.stock_value / average.stock_qty if average.stock_qty > 0 else None,
+        stock_unit=_stock_unit(average),
         arrival_qty=average.arrival_qty,
-        arrival_unit=average.arrival_value / average.arrival_qty if average.arrival_qty > 0 else None,
+        arrival_unit=_arrival_unit(average),
         total_qty=average.total_qty,
         average=average.average,
         recovery=average.recovery,
         net_usd=average.net,
         net_vnd=average.net * rate if average.net is not None else None,
         note=average.note,
+        mode=average.mode,
+        market_label=market_label(average.market, average.mode),
         sources=[
             AverageSourceDTO(
                 kind=s.kind, code=s.code, name=s.name, market=s.market, quantity=s.quantity, unit_usd=s.unit_usd
@@ -56,6 +59,19 @@ def average_dto(average: GroupAverage, rate: Decimal) -> AverageRowDTO:
             for s in average.sources
         ],
     )
+
+
+def _stock_unit(average: GroupAverage) -> Decimal | None:
+    """BR-115: the cotton-plan row shows the plan-weighted stock price (its own value fields stay 0)."""
+    if average.group_id == COTTON_PLAN_ID:
+        return average.plan_stock_unit
+    return average.stock_value / average.stock_qty if average.stock_qty > 0 else None
+
+
+def _arrival_unit(average: GroupAverage) -> Decimal | None:
+    if average.group_id == COTTON_PLAN_ID:
+        return average.plan_arrival_unit
+    return average.arrival_value / average.arrival_qty if average.arrival_qty > 0 else None
 
 
 def quote_dto(quote: Quote) -> QuoteDTO:
@@ -93,6 +109,7 @@ def quote_dto(quote: Quote) -> QuoteDTO:
         supima_percent=quote.supima_percent,
         supima_coin=quote.supima_coin,
         coin_fee_usd=quote.coin_fee_usd,
+        avg_mode=quote.avg_mode,
     )
 
 

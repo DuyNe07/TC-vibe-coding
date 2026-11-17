@@ -71,7 +71,9 @@ class CalculateQuoteService(BaseService[CalculateQuoteRequest, QuoteResponse]):
             raise YarnValidationError(MSG_PERIOD)
         inputs = load_month_inputs(request.period)
         prices = MaterialPriceBusiness()
-        rate, monthly, averages, problem = prices.month_view(inputs, MaterialStockBusiness().mapping_key)
+        rate, monthly, averages, problem = prices.month_view(
+            inputs, MaterialStockBusiness().mapping_key, request.avg_mode
+        )  # BR-114 (bổ sung 2026-11-17): Tách / Gom
         if problem:
             raise YarnValidationError(problem)
         if rate is None:
@@ -87,7 +89,9 @@ class CalculateQuoteService(BaseService[CalculateQuoteRequest, QuoteResponse]):
         if uses_cotton:
             if request.cotton_plan is not None:
                 business.ensure_plan(plan)
-            cotton = prices.plan_average(request.market, averages, inputs.groups, monthly, plan, request.period)
+            cotton = prices.plan_average(
+                request.market, averages, inputs.groups, monthly, plan, request.period, request.avg_mode
+            )
             business.ensure_supima_ratio(request.supima_percent)
             if request.supima_percent > 0:
                 supima, coin_fee = self._supima(yarn, request, monthly, averages, inputs.groups, business)
@@ -122,6 +126,7 @@ class CalculateQuoteService(BaseService[CalculateQuoteRequest, QuoteResponse]):
             supima_percent=request.supima_percent if uses_cotton else Decimal(0),
             supima_coin=bool(supima is not None and request.supima_coin),
             coin_fee_usd=coin_fee,
+            avg_mode=request.avg_mode,
         )
         quote = business.calculate(base, priced, line.total_vnd, stock_qty, stock_cost)
         if not request.commit:

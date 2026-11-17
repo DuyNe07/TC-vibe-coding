@@ -9,6 +9,7 @@ from pydantic import Field
 
 from backend.core.base import BaseEntity, BaseValueObject
 from backend.features.yarn_costing.models.enums import (
+    AverageMode,
     CottonOrigin,
     FactoryCode,
     Incoterm,
@@ -24,6 +25,11 @@ from backend.features.yarn_costing.models.exchange_rate import ExchangeRate
 ZERO = Decimal(0)
 COTTON_PLAN_ID = "cotton-plan"  # fixed group "Cotton (phương án)" (BR-92), never stored in 4.22
 COTTON_PLAN_NAME = "Cotton (phương án)"
+
+
+def market_label(market: MaterialMarket, mode: AverageMode) -> str:
+    """BR-114: rows of a Gom average are labelled "Gom" instead of the market."""
+    return AverageMode.GOM.value if mode == AverageMode.GOM else market.value
 
 
 class MaterialPriceGroup(BaseEntity):
@@ -217,6 +223,8 @@ class Quote(BaseEntity):
     supima_percent: Decimal = ZERO
     supima_coin: bool = False
     coin_fee_usd: Decimal = ZERO
+    # BR-114 (bổ sung 2026-11-17): báo giá lưu trước đó đọc ra là Tách
+    avg_mode: AverageMode = AverageMode.TACH
 
 
 # ---- values computed on the fly (not stored) ----
@@ -246,6 +254,10 @@ class GroupAverage(BaseValueObject):
     net: Decimal | None = None
     note: str = ""
     sources: list[AverageSource] = Field(default_factory=list)
+    mode: AverageMode = AverageMode.TACH  # BR-114 (bổ sung 2026-11-17)
+    # BR-115 (bổ sung 2026-11-17): giá tồn / giá về của dòng "Cotton (phương án)" theo phương án (None = ô trống)
+    plan_stock_unit: Decimal | None = None
+    plan_arrival_unit: Decimal | None = None
 
     @property
     def total_qty(self) -> Decimal:

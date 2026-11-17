@@ -9,6 +9,7 @@ from backend.core.gateway import gateway
 from backend.features.yarn_costing import YarnCostingController
 from backend.features.yarn_costing.dto.common_dto import LineType, YarnStatus
 from backend.features.yarn_costing.dto.material_dto import (
+    AverageMode,
     CalculateQuoteRequest,
     CottonOrigin,
     CottonShareDTO,
@@ -111,7 +112,7 @@ class QuotePage(BasePage):
                 return
             form: QuoteFormResponse = feature.get_quote_form(GetQuoteFormRequest(line_code=line_code, period=period))
             self._defaults(form)
-            c1, c2, c3 = st.columns(3)
+            c1, c2, c4, c3 = st.columns(4)
             kinds = [PriceKind.THUONG, PriceKind.THI_NGHIEM] if form.has_trial_line else [PriceKind.THUONG]
             kind = c1.radio("Giá gia công", kinds, format_func=lambda k: k.value, horizontal=True, key=self.key("kind"))
             market = c2.radio(
@@ -120,6 +121,14 @@ class QuotePage(BasePage):
                 format_func=lambda m: m.value,
                 horizontal=True,
                 key=self.key("market"),
+            )
+            avg_mode = c4.radio(  # BR-114 (bổ sung 2026-11-17)
+                "Cách tính bình quân",
+                list(AverageMode),
+                format_func=lambda m: m.value,
+                horizontal=True,
+                key=self.key("avg_mode"),
+                help="Tách: giá nguyên liệu theo loại hàng đã chọn. Gom: mọi mã kho và lô hàng về của nhóm cộng chung.",
             )
             incoterm = c3.radio(
                 "Giá bán",
@@ -198,6 +207,7 @@ class QuotePage(BasePage):
                 cotton_plan=plan,
                 supima_percent=supima,
                 supima_coin=coin,
+                avg_mode=avg_mode,
             )
             b1, b2, _ = st.columns([1, 1, 3])
             if b1.button("Tính thử", icon="🧮", key=self.key("try"), disabled=disabled, help=why):
@@ -286,7 +296,12 @@ class QuotePage(BasePage):
         )
         st.caption(
             f"Tháng {month_text(q.period)} · tỷ giá {format_number(float(rate), 0)} · dòng {q.line_code} ({q.price_kind.value}) · "
-            f"{q.market.value} · mã kế toán {q.accounting_code or '-'} · khách {q.customer_name or '-'}"
+            f"{q.market.value} · mã kế toán {q.accounting_code or '-'} · khách {q.customer_name or '-'} · "
+            + (
+                "Bình quân: Gom"
+                if q.avg_mode == AverageMode.GOM
+                else f"Bình quân: Tách ({q.market.value})"
+            )
         )
         data_table(
             [
@@ -381,6 +396,7 @@ class QuotePage(BasePage):
                     "Mã kế toán": q.accounting_code,
                     "Thường / TN": q.price_kind.value,
                     "Nội địa / XK": q.market.value,
+                    "Cách tính bình quân": q.avg_mode.value,
                     "SL đơn (kg)": plain(q.order_qty),
                     "Giá vốn BQ": usd(q.avg_cost_usd),
                     "GP %": pct(q.gp_percent),
@@ -456,6 +472,7 @@ class QuotePage(BasePage):
         state[self.key("line")] = q.line_code
         state[self.key("kind")] = q.price_kind
         state[self.key("market")] = q.market
+        state[self.key("avg_mode")] = q.avg_mode
         state[self.key("incoterm")] = q.incoterm
         state[self.key(f"accounting.{q.line_code}")] = q.accounting_code or None
         state[self.key("customer")] = q.customer_name

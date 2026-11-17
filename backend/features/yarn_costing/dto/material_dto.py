@@ -6,6 +6,7 @@ from decimal import Decimal
 from backend.core.base import BaseDTO, BaseRequestDTO, BaseResponseDTO, UploadedFileDTO
 from backend.features.yarn_costing.dto.import_dto import RejectedRowDTO
 from backend.features.yarn_costing.models.enums import (
+    AverageMode,
     CottonOrigin,
     FactoryCode,
     Incoterm,
@@ -186,10 +187,13 @@ class AverageRowDTO(BaseDTO):
     net_vnd: Decimal | None = None
     note: str = ""
     sources: list[AverageSourceDTO] = []
+    mode: AverageMode = AverageMode.TACH  # BR-114 (bổ sung 2026-11-17)
+    market_label: str = ""  # "Nội địa" / "Xuất khẩu" / "Gom"
 
 
 class GetMaterialAveragesRequest(BaseRequestDTO):
     period: str
+    mode: AverageMode = AverageMode.TACH  # BR-114 (bổ sung 2026-11-17)
 
 
 class MaterialAveragesResponse(BaseResponseDTO):
@@ -399,6 +403,7 @@ class QuoteDTO(BaseDTO):
     supima_percent: Decimal = ZERO
     supima_coin: bool = False
     coin_fee_usd: Decimal = ZERO
+    avg_mode: AverageMode = AverageMode.TACH  # BR-114 (bổ sung 2026-11-17)
 
 
 class CalculateQuoteRequest(BaseRequestDTO):
@@ -420,6 +425,7 @@ class CalculateQuoteRequest(BaseRequestDTO):
     cotton_plan: list[CottonShareDTO] | None = None  # BR-110: None = phương án khai báo tháng
     supima_percent: Decimal = ZERO  # BR-111 (fraction)
     supima_coin: bool = False
+    avg_mode: AverageMode = AverageMode.TACH  # BR-114 (bổ sung 2026-11-17)
 
 
 class QuoteResponse(BaseResponseDTO):

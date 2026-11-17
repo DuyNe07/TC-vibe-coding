@@ -173,6 +173,7 @@ class QuoteExportFileBuilder(BaseBuilder[FileDownloadDTO]):
                     "Mã kế toán": q.accounting_code,
                     "Thường / Thí nghiệm": q.price_kind.value,
                     "Nội địa / Xuất khẩu": q.market.value,
+                    "Cách tính bình quân": q.avg_mode.value,  # BR-114 (bổ sung 2026-11-17)
                     "SL đơn (kg)": rnd(q.order_qty, 2),
                     "Tỷ giá": rnd(q.exchange_rate),
                     "Giá NL (USD/kg)": rnd(q.material_usd, USD_DECIMALS),

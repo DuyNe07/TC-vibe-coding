@@ -116,6 +116,13 @@ class MaterialMarket(StrEnum):
     CHUNG = "Chung"
 
 
+class AverageMode(StrEnum):
+    """BR-114 (bổ sung 2026-11-17): Tách = bình quân theo Nội địa / Xuất khẩu (BR-92); Gom = mọi mã kho và lô của nhóm cộng chung."""
+
+    TACH = "Tách"
+    GOM = "Gom"
+
+
 class MaterialDecision(StrEnum):
     CHUA_KHAI_BAO = "Chưa khai báo"
     THEO_NHOM = "Tính theo nhóm"

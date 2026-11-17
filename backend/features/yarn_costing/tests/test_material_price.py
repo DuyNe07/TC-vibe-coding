@@ -36,6 +36,7 @@ from backend.features.yarn_costing.dto.material_dto import (
     StockItemRowDTO,
 )
 from backend.features.yarn_costing.models.enums import (
+    AverageMode,
     CottonOrigin,
     FactoryCode,
     Incoterm,
@@ -284,7 +285,8 @@ def test_ac119_market_suggested_from_code_suffix() -> None:
     settings = StockItemSettingRepository().by_code()
     assert settings[INDO_D].market == MaterialMarket.NOI_DIA
     assert settings[INDO_X].market == MaterialMarket.XUAT_KHAU
-    assert settings["MN1001203811643001ID"].market == MaterialMarket.NOI_DIA
+    # BR-86 sửa 2026-11-17 (người dùng yêu cầu): đuôi ID = tạm nhập tái xuất → Xuất khẩu (trước đây Nội địa)
+    assert settings["MN1001203811643001ID"].market == MaterialMarket.XUAT_KHAU
     assert settings["MN1000143812806001"].market == MaterialMarket.CHUNG
 
 
@@ -873,3 +875,106 @@ def test_ac151_saved_quote_and_export_show_supima() -> None:
     assert row["Tỷ lệ Supima"] == 50 and row["Truyền điểm coin"] == "Có"
     assert row["Phí coin (USD/kg)"] == pytest.approx(0.5796) and row["Phương án bông"] == "USA 31.0% + Brazil 69.0%"
     assert saved.quote_no
+
+
+# ---- Tách / Gom (bổ sung 2026-11-17): BR-86 sửa, BR-114, BR-115, AC-153..AC-159 ----
+def gom_averages(period: str = "2026-11"):
+    return GetMaterialAveragesService().handle(GetMaterialAveragesRequest(period=period, mode=AverageMode.GOM))
+
+
+INDO_GOM = (D("1102424762") / D(25800) + D("524306369") / D(25800) + D(50000) * D("1.28")) / (
+    D("40280.2") + D("15823.01") + D(50000)
+)
+
+
+def test_ac153_gom_merges_every_code_and_lot_once() -> None:
+    november_setup()
+    rows = [r for r in gom_averages().rows if r.group_name == "Poly nguyên sinh – Indorama"]
+    assert len(rows) == 1
+    gom = rows[0]
+    assert round(gom.average, 8) == round(INDO_GOM, 8)
+    assert gom.stock_qty == D("40280.2") + D("15823.01") and gom.arrival_qty == D(50000)
+    assert sorted(s.code for s in gom.sources if s.kind == "Tồn") == sorted([INDO_D, INDO_X])
+    assert sum(1 for s in gom.sources if s.kind == "Hàng về") == 1  # lô Chung chỉ cộng một lần
+    tach = averages()
+    assert round(row_of(tach, "Poly nguyên sinh – Indorama", MaterialMarket.NOI_DIA).average, 4) == D("1.1822")
+    assert round(row_of(tach, "Poly nguyên sinh – Indorama", MaterialMarket.XUAT_KHAU).average, 4) == D("1.2810")
+
+
+def test_ac154_supima_export_needs_gom() -> None:
+    supima_setup()
+    put_supima_yarn()
+    message = r"Nhóm 'Cotton Pima' \(Xuất khẩu\) chưa có giá tháng 11/2026: không có tồn và hàng về\."
+    with pytest.raises(AppError, match=message):
+        CalculateQuoteService().handle(supima_request(market=MaterialMarket.XUAT_KHAU))
+    request = supima_request(market=MaterialMarket.XUAT_KHAU, avg_mode=AverageMode.GOM)
+    quote = CalculateQuoteService().handle(request).quote
+    assert quote.avg_mode == AverageMode.GOM and quote.market == MaterialMarket.XUAT_KHAU
+    assert round(quote.components[0].supima_net, 6) == round(PIMA_NET, 6)
+    add_group("Nhóm trống")
+    empty = next(r for r in gom_averages().rows if r.group_name == "Nhóm trống")
+    assert empty.market_label == "Gom" and empty.average is None
+    assert empty.note == "Nhóm 'Nhóm trống' (Gom) chưa có giá tháng 11/2026: không có tồn và hàng về."
+
+
+def test_ac155_saved_quote_and_export_show_average_mode() -> None:
+    supima_setup()
+    put_supima_yarn()
+    CalculateQuoteService().handle(supima_request(commit=True))  # không chọn → Tách (như báo giá cũ)
+    CalculateQuoteService().handle(supima_request(avg_mode=AverageMode.GOM, commit=True))
+    modes = sorted(q.avg_mode.value for q in ListQuotesService().handle(ListQuotesRequest()).items)
+    assert modes == ["Gom", "Tách"]
+    file = ExportQuotesService().handle(ExportQuotesRequest())
+    rows = ExcelReader(sheet_name="Gia bao khach").read(UploadedFileDTO(filename=file.filename, content=file.content))
+    assert sorted(r["Cách tính bình quân"] for r in rows) == ["Gom", "Tách"]
+    header = list(rows[0])
+    assert header.index("Cách tính bình quân") == header.index("Nội địa / Xuất khẩu") + 1
+
+
+def test_ac156_average_table_gom_one_row_per_group() -> None:
+    november_setup()
+    gom = gom_averages()
+    names = [r.group_name for r in gom.rows]
+    assert len(names) == len(set(names)) and all(r.market_label == "Gom" for r in gom.rows)
+    tach = averages()
+    assert {r.market_label for r in tach.rows} == {"Nội địa", "Xuất khẩu"}
+    assert sum(1 for r in tach.rows if r.group_name == "Poly nguyên sinh – Indorama") == 2
+
+
+def test_ac157_market_suggestion_by_suffix_keeps_declared_codes() -> None:
+    from backend.features.yarn_costing.business.material_stock_business import MaterialStockBusiness
+
+    business = MaterialStockBusiness()
+    assert business.market_of("MN1001203812233001IDR") == MaterialMarket.NOI_DIA
+    assert business.market_of("MN1001203811643001ID") == MaterialMarket.XUAT_KHAU
+    assert business.market_of("MN1001203812233001IR") == MaterialMarket.XUAT_KHAU
+    assert business.market_of("MN1000143814845025I") == MaterialMarket.CHUNG
+    assert business.market_of("MN1000143812806001") == MaterialMarket.CHUNG
+    ImportStockFileService().handle(ImportStockFileRequest(file=stock_file(), commit=True))
+    gid = add_group("Poly tái chế – BHF")
+    declare_codes({"MN1001203811643001ID": (gid, MaterialMarket.NOI_DIA), INDO_D: (gid, MaterialMarket.CHUNG)})
+    ImportStockFileService().handle(ImportStockFileRequest(file=stock_file(), commit=True))
+    settings = StockItemSettingRepository().by_code()
+    assert settings["MN1001203811643001ID"].market == MaterialMarket.NOI_DIA  # đã khai báo → giữ nguyên
+    assert settings[INDO_D].market == MaterialMarket.CHUNG
+
+
+def test_ac158_cotton_plan_row_shows_plan_prices() -> None:
+    november_setup()
+    result = averages()
+    usa = row_of(result, "Cotton USA", MaterialMarket.NOI_DIA)
+    brazil = row_of(result, "Cotton Brazil", MaterialMarket.NOI_DIA)
+    plan = row_of(result, "Cotton (phương án)", MaterialMarket.NOI_DIA)
+    assert round(plan.stock_unit, 8) == round(D("0.31") * usa.stock_unit + D("0.69") * brazil.stock_unit, 8)
+    assert round(plan.arrival_unit, 8) == round(D("0.31") * usa.arrival_unit + D("0.69") * brazil.arrival_unit, 8)
+    assert round(plan.net_usd, 4) == D("1.8032")  # Giá tính không đổi (AC-120)
+    export = row_of(result, "Cotton (phương án)", MaterialMarket.XUAT_KHAU)
+    assert export.stock_unit is None and export.arrival_unit is not None  # Xuất khẩu không có tồn bông → ô trống
+
+
+def test_ac159_default_is_tach_and_unchanged() -> None:
+    supima_setup()
+    put_supima_yarn()
+    default = CalculateQuoteService().handle(supima_request()).quote
+    expected = D("0.5") * plan_net() / (1 - D("0.242")) + D("0.5") * PIMA_NET / (1 - D("0.217"))
+    assert default.avg_mode == AverageMode.TACH and round(default.material_usd, 6) == round(expected, 6)

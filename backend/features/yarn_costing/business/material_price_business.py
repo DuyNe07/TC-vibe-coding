@@ -9,6 +9,7 @@ from decimal import Decimal
 from backend.core.base import BaseBusiness
 from backend.features.yarn_costing.exceptions import YarnValidationError
 from backend.features.yarn_costing.models.enums import (
+    AverageMode,
     CottonOrigin,
     FactoryCode,
     MaterialDecision,
@@ -34,6 +35,7 @@ from backend.features.yarn_costing.models.material_price import (
     StockItemSetting,
     StockLine,
     StockOutCompareRow,
+    market_label,
 )
 
 KeyOf = Callable[[str, str], tuple[str, str]]
@@ -184,9 +186,10 @@ class MaterialPriceBusiness(BaseBusiness[MaterialPriceGroup]):
         return saved if saved is not None else self.draft(period, self.latest_before(period, settings))
 
     def month_view(
-        self, inputs: MonthInputs, mapping_key: KeyOf
+        self, inputs: MonthInputs, mapping_key: KeyOf, mode: AverageMode = AverageMode.TACH
     ) -> tuple[Decimal | None, MonthlyMaterialSetting, list[GroupAverage], str]:
-        """(tỷ giá M, khai báo tháng M, BR-92 averages, problem) - problem = missing rate or missing stock file of M−1."""
+        """(tỷ giá M, khai báo tháng M, BR-92 / BR-114 averages, problem) - problem = missing rate or missing stock file
+        of M−1."""
         period = inputs.period
         monthly = self.setting_of(period, inputs.monthly)
         rate = self.rate_of_month(inputs.rates, period)
@@ -204,6 +207,7 @@ class MaterialPriceBusiness(BaseBusiness[MaterialPriceGroup]):
             mapping_key,
             monthly,
             rate,
+            mode,
         )
         return rate, monthly, averages, ""
 
@@ -232,11 +236,13 @@ class MaterialPriceBusiness(BaseBusiness[MaterialPriceGroup]):
         mapping_key: KeyOf,
         monthly: MonthlyMaterialSetting,
         rate: Decimal,
+        mode: AverageMode = AverageMode.TACH,
     ) -> list[GroupAverage]:
         """Average of every group × market for month M (stock of month M−1 + S4 lots arriving in M), cotton plan first.
-        ``mapping_key(supplier, description)`` gives the 4.27 key of a lot."""
+        ``mapping_key(supplier, description)`` gives the 4.27 key of a lot. BR-114 Gom: every code / lot goes into both
+        markets once, so the two markets of a group carry the same (merged) average."""
         pools: dict[tuple[str, MaterialMarket], GroupAverage] = {
-            (gid, market): GroupAverage(group_id=gid, group_name=g.name, market=market)
+            (gid, market): GroupAverage(group_id=gid, group_name=g.name, market=market, mode=mode)
             for gid, g in groups.items()
             for market in MARKETS
         }
@@ -251,7 +257,7 @@ class MaterialPriceBusiness(BaseBusiness[MaterialPriceGroup]):
             ):
                 continue
             value = line.closing_value / rate
-            for market in self._markets(setting.market):
+            for market in self._markets(setting.market, mode):
                 pool = pools[(setting.price_group_id, market)]
                 pools[(setting.price_group_id, market)] = pool.model_copy(
                     update={
@@ -281,7 +287,7 @@ class MaterialPriceBusiness(BaseBusiness[MaterialPriceGroup]):
             ):
                 continue
             unit = self.lot_unit_usd(lot, rate)
-            for market in self._markets(lot.market):
+            for market in self._markets(lot.market, mode):
                 pool = pools[(mapping.price_group_id, market)]  # type: ignore[index]
                 pools[(mapping.price_group_id, market)] = pool.model_copy(  # type: ignore[index]
                     update={
@@ -310,9 +316,9 @@ class MaterialPriceBusiness(BaseBusiness[MaterialPriceGroup]):
                     pool.model_copy(update={"average": average, "recovery": recovery, "net": average - recovery})
                 )
             else:
-                note = MSG_NO_DATA.format(group=pool.group_name, market=market.value, month=month)
+                note = MSG_NO_DATA.format(group=pool.group_name, market=market_label(market, mode), month=month)
                 result.append(pool.model_copy(update={"recovery": recovery, "note": note}))
-        plans = [self._cotton_plan(market, result, groups, monthly, month) for market in MARKETS]
+        plans = [self._cotton_plan(market, result, groups, monthly, month, mode) for market in MARKETS]
         result.sort(key=lambda a: (a.group_name.casefold(), a.market != MaterialMarket.NOI_DIA))
         return [*plans, *result]
 
@@ -324,10 +330,11 @@ class MaterialPriceBusiness(BaseBusiness[MaterialPriceGroup]):
         monthly: MonthlyMaterialSetting,
         plan: Sequence[CottonShare],
         period: str,
+        mode: AverageMode = AverageMode.TACH,
     ) -> GroupAverage:
         """BR-110: Cotton (phương án) of one quote with its own plan (the monthly recovery of the plan still applies)."""
         own = monthly.model_copy(update={"cotton_plan": [s for s in plan if s.percent > 0]})
-        return self._cotton_plan(market, averages, groups, own, month_text(period))
+        return self._cotton_plan(market, averages, groups, own, month_text(period), mode)
 
     def lot_unit_usd(self, lot: ArrivalLot, rate: Decimal) -> Decimal:
         """BR-92: Giá nhập kho (USD/kg), empty → Unit price (VND ÷ tỷ giá M)."""
@@ -335,8 +342,8 @@ class MaterialPriceBusiness(BaseBusiness[MaterialPriceGroup]):
             return lot.receiving_price
         return lot.unit_price / rate if lot.price_currency == PriceCurrency.VND else lot.unit_price
 
-    def _markets(self, market: MaterialMarket) -> tuple[MaterialMarket, ...]:
-        return MARKETS if market == MaterialMarket.CHUNG else (market,)
+    def _markets(self, market: MaterialMarket, mode: AverageMode = AverageMode.TACH) -> tuple[MaterialMarket, ...]:
+        return MARKETS if market == MaterialMarket.CHUNG or mode == AverageMode.GOM else (market,)
 
     def _cotton_plan(
         self,
@@ -345,14 +352,19 @@ class MaterialPriceBusiness(BaseBusiness[MaterialPriceGroup]):
         groups: dict[str, MaterialPriceGroup],
         monthly: MonthlyMaterialSetting,
         month: str,
+        mode: AverageMode = AverageMode.TACH,
     ) -> GroupAverage:
         recovery = monthly.recovery_of(COTTON_PLAN_ID)
-        base = GroupAverage(group_id=COTTON_PLAN_ID, group_name=COTTON_PLAN_NAME, market=market, recovery=recovery)
+        base = GroupAverage(
+            group_id=COTTON_PLAN_ID, group_name=COTTON_PLAN_NAME, market=market, recovery=recovery, mode=mode
+        )
         if not monthly.cotton_plan:
             return base.model_copy(update={"note": MSG_NO_PLAN.format(month=month)})
         total = ZERO
         parts: list[str] = []
         stock_qty = arrival_qty = ZERO
+        stock_unit: Decimal | None = ZERO  # BR-115: Σ tỷ lệ × giá tồn (về) của xuất xứ; xuất xứ thiếu → None
+        arrival_unit: Decimal | None = ZERO
         sources: list[AverageSource] = []
         for share in monthly.cotton_plan:
             pools = [
@@ -365,12 +377,26 @@ class MaterialPriceBusiness(BaseBusiness[MaterialPriceGroup]):
             ]
             qty = sum((a.total_qty for a in pools), ZERO)
             if qty <= 0:
-                note = MSG_NO_DATA.format(group=f"Cotton {share.origin.value}", market=market.value, month=month)
+                note = MSG_NO_DATA.format(
+                    group=f"Cotton {share.origin.value}", market=market_label(market, mode), month=month
+                )
                 return base.model_copy(update={"note": note})
             origin_avg = sum((a.stock_value + a.arrival_value for a in pools), ZERO) / qty
             total += share.percent * origin_avg
-            stock_qty += sum((a.stock_qty for a in pools), ZERO)
-            arrival_qty += sum((a.arrival_qty for a in pools), ZERO)
+            origin_stock = sum((a.stock_qty for a in pools), ZERO)
+            origin_arrival = sum((a.arrival_qty for a in pools), ZERO)
+            stock_qty += origin_stock
+            arrival_qty += origin_arrival
+            stock_unit = (
+                stock_unit + share.percent * sum((a.stock_value for a in pools), ZERO) / origin_stock
+                if stock_unit is not None and origin_stock > 0
+                else None
+            )
+            arrival_unit = (
+                arrival_unit + share.percent * sum((a.arrival_value for a in pools), ZERO) / origin_arrival
+                if arrival_unit is not None and origin_arrival > 0
+                else None
+            )
             sources += [s for a in pools for s in a.sources]
             parts.append(f"{share.origin.value} {(share.percent * HUNDRED).normalize():f}%")
         return base.model_copy(
@@ -379,6 +405,8 @@ class MaterialPriceBusiness(BaseBusiness[MaterialPriceGroup]):
                 "net": total - recovery,
                 "stock_qty": stock_qty,
                 "arrival_qty": arrival_qty,
+                "plan_stock_unit": stock_unit,
+                "plan_arrival_unit": arrival_unit,
                 "note": " + ".join(parts).replace(".", ","),
                 "sources": sources,
             }

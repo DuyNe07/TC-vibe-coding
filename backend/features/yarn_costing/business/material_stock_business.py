@@ -104,10 +104,11 @@ class MaterialStockBusiness(BaseBusiness[StockLine]):
         return StockSection.PHU_LIEU
 
     def market_of(self, code: str) -> MaterialMarket:
-        suffix = code.strip().upper()[CORE_LENGTH:]
-        if "D" in suffix:
+        """BR-86 (sửa 2026-11-17): IDR = xơ đã đóng thuế → Nội địa; ID / IR = tạm nhập tái xuất → Xuất khẩu; còn lại → Chung."""
+        suffix = "".join(code.split()).upper()[CORE_LENGTH:]
+        if suffix == "IDR":
             return MaterialMarket.NOI_DIA
-        if "R" in suffix:
+        if suffix in ("ID", "IR"):
             return MaterialMarket.XUAT_KHAU
         return MaterialMarket.CHUNG
 
