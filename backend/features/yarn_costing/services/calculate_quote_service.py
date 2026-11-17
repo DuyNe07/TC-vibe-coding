@@ -87,7 +87,7 @@ class CalculateQuoteService(BaseService[CalculateQuoteRequest, QuoteResponse]):
         )
         cotton, supima, coin_fee = None, None, Decimal(0)
         if uses_cotton:
-            if request.cotton_plan is not None:
+            if request.cotton_plan is not None and request.supima_percent < 1:  # 100% Supima: phương án không dùng
                 business.ensure_plan(plan)
             cotton = prices.plan_average(
                 request.market, averages, inputs.groups, monthly, plan, request.period, request.avg_mode
@@ -122,7 +122,7 @@ class CalculateQuoteService(BaseService[CalculateQuoteRequest, QuoteResponse]):
             note=request.note.strip(),
             created_by=label,
             created_username=self.current_user.username if self.current_user else "",
-            cotton_plan=plan if uses_cotton else [],
+            cotton_plan=plan if uses_cotton and request.supima_percent < 1 else [],  # 100% Supima: không dùng phương án
             supima_percent=request.supima_percent if uses_cotton else Decimal(0),
             supima_coin=bool(supima is not None and request.supima_coin),
             coin_fee_usd=coin_fee,
@@ -174,6 +174,7 @@ class CalculateQuoteService(BaseService[CalculateQuoteRequest, QuoteResponse]):
         loss_groups = LossGroupRepository().list_all()
         partial = request.supima_percent < 1
         mix = SupimaMix(
+            group=found,
             ratio=request.supima_percent,
             net=found.net,
             coin_fee=fee,

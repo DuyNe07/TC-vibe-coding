@@ -424,3 +424,12 @@ Prompt 1 câu 4-5).
   nữa | test `test_quote_page_defaults.py` giữ nguyên | scripts/check.py ALL CHECKS PASSED, doctor APP IS HEALTHY; trên trình duyệt thật
   (localhost:8501, tài khoản người dùng đã đăng nhập): S4-1000 chọn CIF → F&I 0,0300; FOB → CIF lại → 0,0300; Tính thử Nội địa / Tách →
   BQ 4,6957, FOB 5,3973, CIF 5,4273; Xuất khẩu / Tách → câu "chưa có giá" Pima; Xuất khẩu / Gom → tính được, "Bình quân: Gom".
+- 2026-11-17 | Sợi Supima 100% (S4-433 CM 36/1 supima): màn hình vẫn hiện ô USA / Brazil / Australia và bảng thành phần hiện nhóm
+  "Cotton (phương án)" với Giá BQ 1,9783 / hồi phế 0,18 dù giá thật lấy từ Supima; phương án bông vẫn được lưu và vẫn bắt buộc có giá |
+  (1) pages: khối Pha bông chỉ xét "có thành phần bông", không xét tỷ lệ Supima; (2) business `material_components`: dòng bông luôn mang số
+  của Cotton (phương án), chỉ chi phí đổi sang Supima; (3) services: lưu và kiểm tra phương án cả khi 100% | `SupimaMix.group` (giá BQ nhóm
+  Supima); `material_components`: s = 100% dùng nhóm Supima cho nhóm / Giá BQ / Hồi phế / Giá tính (chi phí không đổi); service: s = 100%
+  không kiểm tra, không lưu phương án; `quote_page._cotton_block`: s = 100% ẩn 3 ô phương án, hiện chú thích | test
+  `test_material_price.py::test_fix_full_supima_shows_supima_group_and_ignores_cotton_plan` | scripts/check.py ALL CHECKS PASSED, doctor APP
+  IS HEALTHY; trên trình duyệt thật: S4-433 → khối Pha bông chỉ còn Tỷ lệ Supima 100% + chú thích; tick coin, Tính thử → dòng "Cotton |
+  Cotton Pima | 3,6267 | 0,30 | 3,3267 | 4,9889", phí coin 0,5796; đổi Supima 50% → ô USA 31 / Brazil 69 hiện lại.

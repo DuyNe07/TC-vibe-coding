@@ -1075,3 +1075,27 @@ def test_ac165_starting_table_keeps_old_suggestions() -> None:
     assert settings[INDO_D].market == MaterialMarket.NOI_DIA and settings[INDO_X].market == MaterialMarket.XUAT_KHAU
     assert settings["MN1001203811643001ID"].market == MaterialMarket.XUAT_KHAU
     assert settings["MN1000143812806001"].market == MaterialMarket.CHUNG
+
+
+# ---- Fix 2026-11-17: Supima 100% không dùng bông phương án (BR-111) ----
+def test_fix_full_supima_shows_supima_group_and_ignores_cotton_plan() -> None:
+    supima_setup()
+    put_supima_yarn()
+    put_supima_yarn("S4-6002", "CM 30/1 SUPIMA")
+    request = supima_request(line_code="S4-6002", supima_percent=D(1), supima_coin=True)
+    full = CalculateQuoteService().handle(request).quote
+    part = full.components[0]
+    pima_avg = D("816415770") / D(25800) / D("8694.91")
+    assert part.price_group == "Cotton Pima" and round(part.average_usd, 6) == round(pima_avg, 6)
+    assert part.recovery_usd == D("0.30") and round(part.net_usd, 6) == round(PIMA_NET, 6)
+    fee = D("0.552") * D("1.05")
+    assert round(full.material_usd, 6) == round((PIMA_NET + fee) / (1 - D("0.217")), 6)  # cách tính không đổi
+    assert full.cotton_plan == []  # file Excel: cột Phương án bông trống
+    # phương án lạ / không có giá không làm hỏng sợi 100% Supima (Australia không có nhóm giá)
+    odd = [CottonShareDTO(origin=CottonOrigin.AUSTRALIA, percent=D("0.5"))]
+    request = supima_request(line_code="S4-6002", supima_percent=D(1), cotton_plan=odd)
+    again = CalculateQuoteService().handle(request).quote
+    assert round(again.material_usd, 6) == round(PIMA_NET / (1 - D("0.217")), 6)
+    # pha một phần: vẫn dùng và lưu phương án bông như trước
+    half = CalculateQuoteService().handle(supima_request()).quote
+    assert half.components[0].price_group == "Cotton (phương án)" and len(half.cotton_plan) == 2

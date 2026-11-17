@@ -238,19 +238,25 @@ class QuotePage(BasePage):
         if not any(ids_by_name.get(r.get("Nhóm giá") or "") == COTTON_PLAN_ID for r in edited):
             return None, Decimal(0), False
         monthly = {s.origin: float(s.percent * HUNDRED) for s in form.cotton_plan}
+        supima_key = self.key(f"supima.{line_code}")
+        st.session_state.setdefault(supima_key, float(form.supima_percent * HUNDRED))
+        full_supima = float(st.session_state.get(supima_key) or 0) >= 100  # sửa 2026-11-17: 100% không dùng phương án
         with st.container(border=True):
             st.markdown("**Pha bông** - phương án cho lần tính này (mặc định theo khai báo tháng) và tỷ lệ Supima")
             cols = st.columns(5)
-            plan = []
-            for col, origin in zip(cols[:3], ORIGINS, strict=True):
-                key = self.key(f"plan.{line_code}.{origin.value}")
-                st.session_state.setdefault(key, monthly.get(origin, 0.0))
-                value = col.number_input(
-                    f"{origin.value} %", min_value=0.0, max_value=100.0, step=1.0, format="%g", key=key
-                )
-                plan.append(CottonShareDTO(origin=origin, percent=dec(value) / HUNDRED))
-            supima_key = self.key(f"supima.{line_code}")
-            st.session_state.setdefault(supima_key, float(form.supima_percent * HUNDRED))
+            plan: list[CottonShareDTO] | None = None
+            if full_supima:
+                with cols[0]:
+                    st.caption("Supima 100%: không dùng phương án bông thường (USA / Brazil / Australia).")
+            else:
+                plan = []
+                for col, origin in zip(cols[:3], ORIGINS, strict=True):
+                    key = self.key(f"plan.{line_code}.{origin.value}")
+                    st.session_state.setdefault(key, monthly.get(origin, 0.0))
+                    value = col.number_input(
+                        f"{origin.value} %", min_value=0.0, max_value=100.0, step=1.0, format="%g", key=key
+                    )
+                    plan.append(CottonShareDTO(origin=origin, percent=dec(value) / HUNDRED))
             supima = cols[3].number_input(
                 "Tỷ lệ Supima %", min_value=0.0, max_value=100.0, step=5.0, format="%g", key=supima_key
             )

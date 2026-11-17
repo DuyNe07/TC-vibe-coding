@@ -187,6 +187,8 @@ class QuoteBusiness(BaseBusiness[Quote]):
             found = next((a for a in averages if a.group_id == group_id and a.market == market), None)
             if group_id == COTTON_PLAN_ID and cotton is not None:
                 found = cotton
+            if group_id == COTTON_PLAN_ID and supima is not None and supima.ratio >= ONE and supima.group is not None:
+                found = supima.group  # sửa 2026-11-17: 100% Supima không dùng bông phương án (giá, nhóm hiển thị)
             if found is None or found.net is None or found.average is None:
                 missing.append(found.note if found is not None and found.note else group_id)
                 components.append(

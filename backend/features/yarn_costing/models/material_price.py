@@ -333,3 +333,5 @@ class SupimaMix(BaseValueObject):
     coin_fee: Decimal = ZERO
     loss: Decimal = ZERO  # tổng tiêu hao nhóm "CM (SUPIMA 100%)"
     normal_loss: Decimal = ZERO  # tổng tiêu hao nhóm "CM" / "CM COMPACT"
+    # sửa 2026-11-17: giá bình quân của nhóm Supima - s = 100% hiện nhóm / Giá BQ / Hồi phế của Supima, không của bông phương án
+    group: GroupAverage | None = None

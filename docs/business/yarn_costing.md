@@ -2451,6 +2451,10 @@ không có vai trò phù hợp (BR-47, BR-48); phía xử lý vẫn kiểm tra l
 - Giả định (2026-11-13): pha Supima chỉ cho thành phần chọn nhóm "Cotton (phương án)"; tiêu hao "bông thường" / "Supima" là tổng
   tiêu hao các công đoạn của nhóm tham chiếu (giống tiêu hao lũy kế từ chải thô); sợi 100% Supima dùng tiêu hao của chính sợi;
   hồi phế Supima khai báo theo nhóm giá Supima ở khai báo tháng (ví dụ 0,30).
+- Giả định (triển khai, 2026-11-17): Tỷ lệ Supima = 100% → khối Pha bông ẩn các ô USA / Brazil / Australia và hiện "Supima 100%: không dùng
+  phương án bông thường (USA / Brazil / Australia)."; bảng thành phần hiện nhóm "Cotton Pima" (nhóm giá Supima tháng M) với Giá BQ, Hồi phế,
+  Giá tính của nhóm đó; báo giá lưu phương án bông trống (cột "Phương án bông" của file 5.12 trống); phương án bông không được kiểm tra và
+  không cần có giá. Cách tính BR-111 không đổi. Pha một phần (0 < s < 100%) giữ nguyên như trước.
 - Mở rộng 2026-11-11: kiểm tra chính tả và sửa tên sợi - từ điển tên chuẩn, bảng tên nghi sai, chữ mới chờ duyệt (tự ghi lại, tự thêm khi tính
   giá), đổi tên một sợi / hàng loạt bằng Excel (giữ tên cũ để tìm), ô ghép tên khi Sales gửi yêu cầu (nhóm lạ tự thêm), chặn sai khi gửi,
   chuẩn hoá viết hoa một lượt + loại mã trùng tên (4.12 thêm trường, 4.29-4.31, 5.13, UC-65..UC-71, UC-15 / UC-16 sửa, BR-100..BR-109, Screen
