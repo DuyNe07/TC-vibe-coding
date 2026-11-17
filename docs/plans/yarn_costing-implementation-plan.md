@@ -433,3 +433,11 @@ Prompt 1 câu 4-5).
   `test_material_price.py::test_fix_full_supima_shows_supima_group_and_ignores_cotton_plan` | scripts/check.py ALL CHECKS PASSED, doctor APP
   IS HEALTHY; trên trình duyệt thật: S4-433 → khối Pha bông chỉ còn Tỷ lệ Supima 100% + chú thích; tick coin, Tính thử → dòng "Cotton |
   Cotton Pima | 3,6267 | 0,30 | 3,3267 | 4,9889", phí coin 0,5796; đổi Supima 50% → ô USA 31 / Brazil 69 hiện lại.
+- 2026-11-17 | Ô số không có giá trị hiện chữ "None" (Tính giá báo khách: dòng "Sợi tồn" khi không có sợi tồn, cột Giá CIF của báo giá FOB;
+  Giá nguyên liệu: Giá tồn / Giá về / Giá BQ / Giá tính của nhóm không có hàng, So giá xuất: giá so / chênh lệch khi chưa có giá) |
+  bảng của Streamlit hiện ô số trống (NaN) thành "None"; khung `data_table` không có tuỳ chọn để trống, nên sửa ở trang | components
+  `display.usd_cell / vnd_cell / pct_cell` (số đã định dạng, trống → ""), `columns.num_text_col` (cột chữ căn phải); dùng cho các cột có
+  thể trống ở `quote_page.py` và `material_price_page.py`; cột luôn có số giữ kiểu số | không thêm test được ở backend (test backend không
+  được dùng giao diện); kiểm bằng tests/architecture/test_pages_render.py + chạy lại màn hình trên dữ liệu tạm tách biệt (không còn
+  "None"/"nan") | scripts/check.py ALL CHECKS PASSED, doctor APP IS HEALTHY; trình duyệt thật: Giá nguyên liệu 84 ô, 0 ô "None"; Tính giá
+  báo khách S4-1000 → dòng "Sợi tồn (không có sợi tồn cùng mã kế toán)" để trống.

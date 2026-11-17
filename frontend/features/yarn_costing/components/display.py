@@ -28,6 +28,25 @@ def usd(value: Any) -> float | None:
     return None if number is None else round(number, 4)
 
 
+# sửa 2026-11-17: bảng của Streamlit hiện ô số trống thành chữ "None" - các cột có thể trống dùng chữ đã định dạng
+def usd_cell(value: Any) -> str:
+    """USD/kg as text with 4 decimals, "" when there is no value."""
+    number = _num(value)
+    return "" if number is None else f"{number:.4f}"
+
+
+def vnd_cell(value: Any) -> str:
+    """VND as text rounded to the dong with thousand separators, "" when there is no value."""
+    number = _num(value)
+    return "" if number is None else f"{number:,.0f}"
+
+
+def pct_cell(value: Any) -> str:
+    """Value already in percent as text ("12.34%"), "" when there is no value."""
+    number = _num(value)
+    return "" if number is None else f"{number:.2f}%"
+
+
 def pct(value: Any) -> float | None:
     """Fraction -> percent number (0.015 -> 1.5)."""
     number = _num(value)

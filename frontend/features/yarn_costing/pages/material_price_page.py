@@ -35,9 +35,23 @@ from backend.features.yarn_costing.dto.material_dto import (
 from frontend.core.base_page import BasePage
 from frontend.core.components import data_table, editable_table, empty_state, file_upload, panel, stat_row
 from frontend.core.formatting import format_number
-from frontend.features.yarn_costing.components.columns import count_col, datetime_col, money, percent, usd_col
+from frontend.features.yarn_costing.components.columns import (
+    count_col,
+    datetime_col,
+    money,
+    num_text_col,
+    percent,
+    usd_col,
+)
 from frontend.features.yarn_costing.components.dialogs import confirm_dialog
-from frontend.features.yarn_costing.components.display import percent_value, plain, usd, vnd
+from frontend.features.yarn_costing.components.display import (
+    pct_cell,
+    plain,
+    usd,
+    usd_cell,
+    vnd,
+    vnd_cell,
+)
 from frontend.features.yarn_costing.components.flash import show_flash
 from frontend.features.yarn_costing.components.material_ui import (
     current_period,
@@ -137,13 +151,13 @@ class MaterialPricePage(BasePage):
                 "Nhóm": r.group_name,
                 "Nội địa / XK": r.market_label or r.market.value,
                 "SL tồn (kg)": plain(r.stock_qty),
-                "Giá tồn": usd(r.stock_unit),
+                "Giá tồn": usd_cell(r.stock_unit),
                 "SL về (kg)": plain(r.arrival_qty),
-                "Giá về": usd(r.arrival_unit),
-                "Giá BQ": usd(r.average),
+                "Giá về": usd_cell(r.arrival_unit),
+                "Giá BQ": usd_cell(r.average),
                 "Hồi phế": usd(r.recovery),
-                "Giá tính USD": usd(r.net_usd),
-                "Giá tính VND": vnd(r.net_vnd),
+                "Giá tính USD": usd_cell(r.net_usd),
+                "Giá tính VND": vnd_cell(r.net_vnd),
                 "Ghi chú": r.note,
             }
             for r in data.rows
@@ -153,8 +167,8 @@ class MaterialPricePage(BasePage):
             column_config={
                 "SL tồn (kg)": money("SL tồn (kg)"),
                 "SL về (kg)": money("SL về (kg)"),
-                **{k: usd_col(k) for k in ("Giá tồn", "Giá về", "Giá BQ", "Hồi phế", "Giá tính USD")},
-                "Giá tính VND": money("Giá tính VND"),
+                "Hồi phế": usd_col("Hồi phế"),
+                **{k: num_text_col(k) for k in ("Giá tồn", "Giá về", "Giá BQ", "Giá tính USD", "Giá tính VND")},
             },
             selection="single",
             empty_message="Chưa có nhóm giá nào. Khai báo nhóm ở thẻ Khai báo.",
@@ -164,7 +178,8 @@ class MaterialPricePage(BasePage):
             row = next(
                 r
                 for r in data.rows
-                if r.group_name == selected[0]["Nhóm"] and (r.market_label or r.market.value) == selected[0]["Nội địa / XK"]
+                if r.group_name == selected[0]["Nhóm"]
+                and (r.market_label or r.market.value) == selected[0]["Nội địa / XK"]
             )
             st.markdown(f"**Chi tiết: {row.group_name} - {row.market_label or row.market.value}**")
             data_table(
@@ -408,9 +423,7 @@ class MaterialPricePage(BasePage):
         ):
             stat_row([("Chưa khai báo", format_number(setup.undeclared_count))])
             if setup.unknown_suffix_count:  # BR-116 (bổ sung 2026-11-17)
-                st.warning(
-                    f"Có {setup.unknown_suffix_count} mã kho có đuôi chưa có trong bảng đuôi mã.", icon="⚠️"
-                )
+                st.warning(f"Có {setup.unknown_suffix_count} mã kho có đuôi chưa có trong bảng đuôi mã.", icon="⚠️")
             only_new = st.toggle(
                 "Chỉ hiện mã chưa khai báo", value=setup.undeclared_count > 0, key=self.key("only_new")
             )
@@ -639,16 +652,16 @@ class MaterialPricePage(BasePage):
             row |= {"Nhóm giá": r.group_name, "Loại hàng": r.market.value if r.market else ""}
         row |= {"SL xuất (kg)": plain(r.out_qty), "Đơn giá xuất (USD/kg)": usd(r.out_unit_usd)}
         if material:
-            row["Giá BQ tháng (USD/kg)"] = usd(r.compare_usd)
+            row["Giá BQ tháng (USD/kg)"] = usd_cell(r.compare_usd)
         else:
             row |= {
                 "Đơn giá xuất (VND/kg)": vnd(r.out_unit_vnd),
                 "Báo giá so sánh": f"{r.quote_no} ({r.quote_date:%d/%m/%Y})" if r.quote_no and r.quote_date else "",
-                "Giá vốn BQ báo giá": usd(r.compare_usd),
+                "Giá vốn BQ báo giá": usd_cell(r.compare_usd),
             }
         row |= {
-            "Chênh lệch": usd(r.difference),
-            "Chênh lệch %": percent_value(r.difference_percent),
+            "Chênh lệch": usd_cell(r.difference),
+            "Chênh lệch %": pct_cell(r.difference_percent),
             "Cảnh báo": "🔴 Lệch nhiều" if r.is_gap else "",
             "Ghi chú": r.note,
         }
@@ -658,9 +671,9 @@ class MaterialPricePage(BasePage):
         return {
             "SL xuất (kg)": money("SL xuất (kg)"),
             "Đơn giá xuất (VND/kg)": money("Đơn giá xuất (VND/kg)"),
-            "Chênh lệch %": percent("Chênh lệch %"),
+            "Đơn giá xuất (USD/kg)": usd_col("Đơn giá xuất (USD/kg)"),
             **{
-                k: usd_col(k)
-                for k in ("Đơn giá xuất (USD/kg)", "Giá BQ tháng (USD/kg)", "Giá vốn BQ báo giá", "Chênh lệch")
+                k: num_text_col(k)
+                for k in ("Giá BQ tháng (USD/kg)", "Giá vốn BQ báo giá", "Chênh lệch", "Chênh lệch %")
             },
         }

@@ -37,6 +37,11 @@ def usd_col(label: str) -> Any:
     return COL.NumberColumn(label, format=USD_FORMAT)
 
 
+def num_text_col(label: str) -> Any:
+    """Number already formatted as text (``usd_cell`` / ``vnd_cell``): right-aligned, empty cell stays empty."""
+    return COL.TextColumn(label, alignment="right")
+
+
 def date_col(label: str) -> Any:
     return COL.DateColumn(label, format="DD/MM/YYYY")
 

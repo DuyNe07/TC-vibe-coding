@@ -27,9 +27,15 @@ from backend.features.yarn_costing.dto.price_dto import ListPriceLinesRequest
 from frontend.core.base_page import BasePage
 from frontend.core.components import data_table, download_button, editable_table, empty_state, panel, stat_row
 from frontend.core.formatting import format_number
-from frontend.features.yarn_costing.components.columns import count_col, datetime_col, money, percent, usd_col
+from frontend.features.yarn_costing.components.columns import (
+    count_col,
+    datetime_col,
+    num_text_col,
+    percent,
+    usd_col,
+)
 from frontend.features.yarn_costing.components.dialogs import confirm_dialog
-from frontend.features.yarn_costing.components.display import pct, plain, usd, vnd
+from frontend.features.yarn_costing.components.display import pct, plain, usd, usd_cell, vnd_cell
 from frontend.features.yarn_costing.components.flash import show_flash
 from frontend.features.yarn_costing.components.material_ui import (
     current_period,
@@ -321,11 +327,7 @@ class QuotePage(BasePage):
         st.caption(
             f"Tháng {month_text(q.period)} · tỷ giá {format_number(float(rate), 0)} · dòng {q.line_code} ({q.price_kind.value}) · "
             f"{q.market.value} · mã kế toán {q.accounting_code or '-'} · khách {q.customer_name or '-'} · "
-            + (
-                "Bình quân: Gom"
-                if q.avg_mode == AverageMode.GOM
-                else f"Bình quân: Tách ({q.market.value})"
-            )
+            + ("Bình quân: Gom" if q.avg_mode == AverageMode.GOM else f"Bình quân: Tách ({q.market.value})")
         )
         data_table(
             [
@@ -382,10 +384,14 @@ class QuotePage(BasePage):
             items += [("F&I", q.fi_usd), ("Giá CIF", q.cif_usd)]
         data_table(
             [
-                {"Khoản": label, "USD/kg": usd(value), "VND/kg": vnd(value * rate) if value is not None else None}
+                {
+                    "Khoản": label,
+                    "USD/kg": usd_cell(value),
+                    "VND/kg": vnd_cell(value * rate) if value is not None else "",
+                }
                 for label, value in items
             ],
-            column_config={"USD/kg": usd_col("USD/kg"), "VND/kg": money("VND/kg")},
+            column_config={"USD/kg": num_text_col("USD/kg"), "VND/kg": num_text_col("VND/kg")},
             key=self.key(f"prices_out.{scope}"),
         )
 
@@ -427,7 +433,7 @@ class QuotePage(BasePage):
                     "Commission %": pct(q.commission_percent),
                     "FOB / CIF": q.incoterm.value,
                     "Giá FOB": usd(q.fob_usd),
-                    "Giá CIF": usd(q.cif_usd),
+                    "Giá CIF": usd_cell(q.cif_usd),  # báo giá FOB: ô trống
                 }
                 for q in items
             ]
@@ -438,7 +444,8 @@ class QuotePage(BasePage):
                     "SL đơn (kg)": count_col("SL đơn (kg)"),
                     "GP %": percent("GP %"),
                     "Commission %": percent("Commission %"),
-                    **{k: usd_col(k) for k in ("Giá vốn BQ", "Giá FOB", "Giá CIF")},
+                    **{k: usd_col(k) for k in ("Giá vốn BQ", "Giá FOB")},
+                    "Giá CIF": num_text_col("Giá CIF"),
                 },
                 selection="single",
                 empty_message="Chưa có lần tính nào phù hợp bộ lọc.",
