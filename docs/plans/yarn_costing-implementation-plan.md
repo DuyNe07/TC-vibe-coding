@@ -417,3 +417,10 @@ Prompt 1 câu 4-5).
   `test_quote_page_defaults.py` (mặc định theo tháng của form; báo giá FOB lưu F&I 0, CIF giữ F&I) | scripts/check.py ALL CHECKS PASSED,
   doctor APP IS HEALTHY; chạy lại màn hình trên dữ liệu tạm tách biệt: Dùng lại FOB → CIF = 0,03; tháng 11 → 12: 110% / 0,03 → 115% /
   0,05; sửa tay 0,07 cùng tháng giữ 0,07.
+- 2026-11-17 (lần 2) | Trên trình duyệt thật, ngay cả khi mở màn mới, chọn CIF thì ô F&I = 0,0000 (bản sửa trên chỉ đúng khi chạy thử
+  không có trình duyệt) | ô F&I chỉ hiện khi CIF; Streamlit 1.64 bỏ giá trị đã điền sẵn qua session state cho ô đang ẩn, nên lúc ô hiện ra
+  nó nhận số mặc định 0 | `pages/quote_page.py` `_fi_input`: ô F&I nhận mặc định ngay khi hiện (`value=` = F&I của báo giá CIF vừa
+  "Dùng lại" cùng tháng, ngược lại khai báo tháng), khoá ô đổi theo tháng và theo mỗi lần "Dùng lại"; không điền sẵn F&I qua session state
+  nữa | test `test_quote_page_defaults.py` giữ nguyên | scripts/check.py ALL CHECKS PASSED, doctor APP IS HEALTHY; trên trình duyệt thật
+  (localhost:8501, tài khoản người dùng đã đăng nhập): S4-1000 chọn CIF → F&I 0,0300; FOB → CIF lại → 0,0300; Tính thử Nội địa / Tách →
+  BQ 4,6957, FOB 5,3973, CIF 5,4273; Xuất khẩu / Tách → câu "chưa có giá" Pima; Xuất khẩu / Gom → tính được, "Bình quân: Gom".

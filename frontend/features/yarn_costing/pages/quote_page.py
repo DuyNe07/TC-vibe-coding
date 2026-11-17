@@ -42,7 +42,9 @@ from frontend.features.yarn_costing.components.material_ui import (
 from frontend.features.yarn_costing.components.permissions import action_state, explain
 
 RESULT_KEY = "quote_result"
-DEFAULTS_FOR = "defaults_for"  # tháng đã điền hệ số norm / F&I mặc định
+DEFAULTS_FOR = "defaults_for"  # tháng đã điền hệ số norm mặc định
+FI_FROM_QUOTE = "fi_from_quote"  # (tháng, F&I) của báo giá CIF vừa "Dùng lại"
+FI_TOKEN = "fi_token"  # tăng mỗi lần "Dùng lại" để ô F&I nhận số mới
 PRICED = (YarnStatus.DA_TINH_GIA, YarnStatus.CO_MA_KE_TOAN)
 HUNDRED = Decimal(100)
 COMPONENT_COLUMNS = ["Nguyên liệu", "Tỷ lệ %", "Tiêu hao %", "Nhóm giá"]
@@ -184,11 +186,7 @@ class QuotePage(BasePage):
             commission = c3.number_input(
                 "Commission (% giá bán)", min_value=0.0, max_value=99.0, step=0.5, key=self.key("commission")
             )
-            fi = (
-                c4.number_input("F&I (USD/kg)", min_value=0.0, step=0.005, format="%.4f", key=self.key("fi"))
-                if incoterm == Incoterm.CIF
-                else 0.0
-            )
+            fi = self._fi_input(c4, form, period) if incoterm == Incoterm.CIF else 0.0
             note = st.text_input("Ghi chú", max_chars=500, key=self.key("note"))
             request = CalculateQuoteRequest(
                 period=period,
@@ -261,16 +259,30 @@ class QuotePage(BasePage):
                 coin = cols[4].checkbox("Truyền điểm Supima coin trên TG", key=self.key(f"coin.{line_code}"))
         return plan, dec(supima) / HUNDRED, coin
 
+    def _fi_input(self, column: Any, form: QuoteFormResponse, period: str) -> float:
+        """F&I (only shown for CIF). Streamlit drops the value of a hidden input, so the default is given when the
+        input appears: the F&I of a reused CIF quote of this month, else the month's declaration (BR-88). The key
+        changes with the month and with each "Dùng lại", so a new month / quote gets its own value (sửa 2026-11-17)."""
+        reused = st.session_state.get(self.key(FI_FROM_QUOTE))
+        value = reused[1] if reused and reused[0] == period else float(form.default_fi)
+        token = st.session_state.get(self.key(FI_TOKEN), 0)
+        return column.number_input(
+            "F&I (USD/kg)",
+            min_value=0.0,
+            value=value,
+            step=0.005,
+            format="%.4f",
+            key=self.key(f"fi.{period}.{token}"),
+        )
+
     def _defaults(self, form: QuoteFormResponse, period: str) -> None:
         """Fill the inputs with the month defaults the first time (or after "Dùng lại"); choosing another month
-        refills Hệ số norm and F&I with that month's declaration (BR-88, sửa 2026-11-17)."""
+        refills Hệ số norm with that month's declaration (BR-88, sửa 2026-11-17; F&I: ``_fi_input``)."""
         if st.session_state.get(self.key(DEFAULTS_FOR)) != period:
             st.session_state[self.key("factor")] = float(form.norm_factor * HUNDRED)
-            st.session_state[self.key("fi")] = float(form.default_fi)
             st.session_state[self.key(DEFAULTS_FOR)] = period
         defaults = {
             "factor": float(form.norm_factor * HUNDRED),
-            "fi": float(form.default_fi),
             "gp": 0.0,
             "commission": 0.0,
             "qty": 0.0,
@@ -488,10 +500,9 @@ class QuotePage(BasePage):
         state[self.key("factor")] = float(q.norm_factor * HUNDRED)
         state[self.key("gp")] = float(q.gp_percent * HUNDRED)
         state[self.key("commission")] = float(q.commission_percent * HUNDRED)
-        if q.incoterm == Incoterm.CIF:
-            state[self.key("fi")] = float(q.fi_usd)
-        else:  # báo giá FOB lưu F&I = 0: để ô F&I nhận lại mặc định của tháng (sửa 2026-11-17)
-            state.pop(self.key("fi"), None)
+        # F&I (sửa 2026-11-17): báo giá CIF → F&I của báo giá; FOB (lưu F&I = 0) → ô F&I nhận mặc định của tháng
+        state[self.key(FI_FROM_QUOTE)] = (period, float(q.fi_usd)) if q.incoterm == Incoterm.CIF else None
+        state[self.key(FI_TOKEN)] = state.get(self.key(FI_TOKEN), 0) + 1
         state[self.key("note")] = q.note
         shares = {s.origin: float(s.percent * HUNDRED) for s in q.cotton_plan}
         if shares:  # BR-110 / BR-111: the plan, Supima share and coin tick of the reused quote
