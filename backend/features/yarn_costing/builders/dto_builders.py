@@ -16,6 +16,8 @@ from backend.features.yarn_costing.dto.master_dto import (
 from backend.features.yarn_costing.dto.pricing_dto import PriceHistoryDTO, PriceLineDTO, StageCostDTO
 from backend.features.yarn_costing.dto.reference_dto import ExchangeRateDTO, FactoryDTO, RateVersionDTO
 from backend.features.yarn_costing.dto.request_dto import YarnDTO, YarnSummaryDTO
+from backend.features.yarn_costing.dto.sales_dto import CustomerNameDTO
+from backend.features.yarn_costing.models.customer_name import CustomerYarnName
 from backend.features.yarn_costing.models.enums import FactoryCode, YarnStatus
 from backend.features.yarn_costing.models.exchange_rate import ExchangeRate
 from backend.features.yarn_costing.models.loss_group import LossGroup
@@ -277,6 +279,8 @@ def summary_dto(yarn: Yarn, rate: Decimal | None = None) -> YarnSummaryDTO:
         is_locked=yarn.is_locked,
         first_priced_at=yarn.first_priced_at,
         loss_group_key=yarn.loss_group_key,
+        customer_name=yarn.customer_name,
+        duplicate_reason=yarn.duplicate_reason,
     )
 
 
@@ -311,3 +315,16 @@ class YarnDtoBuilder(BaseBuilder[YarnDTO]):
 
     def build(self) -> YarnDTO:
         return yarn_dto(self.yarn, self.rate, self.packaging_name)
+
+
+def customer_name_dto(alias: CustomerYarnName) -> CustomerNameDTO:
+    return CustomerNameDTO(
+        id=alias.id,
+        base_code=alias.base_code,
+        customer_name=alias.customer_name,
+        customer_yarn_name=alias.customer_yarn_name,
+        note=alias.note,
+        created_by=alias.created_by,
+        created_at=alias.created_at,
+        updated_by=alias.updated_by,
+    )

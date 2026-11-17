@@ -28,6 +28,25 @@ def usd(value: Any) -> float | None:
     return None if number is None else round(number, 4)
 
 
+# sửa 2026-11-17: bảng của Streamlit hiện ô số trống thành chữ "None" - các cột có thể trống dùng chữ đã định dạng
+def usd_cell(value: Any) -> str:
+    """USD/kg as text with 4 decimals, "" when there is no value."""
+    number = _num(value)
+    return "" if number is None else f"{number:.4f}"
+
+
+def vnd_cell(value: Any) -> str:
+    """VND as text rounded to the dong with thousand separators, "" when there is no value."""
+    number = _num(value)
+    return "" if number is None else f"{number:,.0f}"
+
+
+def pct_cell(value: Any) -> str:
+    """Value already in percent as text ("12.34%"), "" when there is no value."""
+    number = _num(value)
+    return "" if number is None else f"{number:.2f}%"
+
+
 def pct(value: Any) -> float | None:
     """Fraction -> percent number (0.015 -> 1.5)."""
     number = _num(value)
@@ -56,6 +75,14 @@ def rate2(value: Any) -> float | None:
 def plain(value: Any) -> float | None:
     """Decimal -> float for table cells without rounding."""
     return _num(value)
+
+
+def local_dt(value: Any) -> Any:
+    """Stored moments are UTC: show them in the server's local time (like ``format_datetime``), without a timezone so
+    the table does not show UTC (sửa 2026-11-17). Dates and empty cells are returned unchanged."""
+    if isinstance(value, datetime) and value.tzinfo is not None:
+        return value.astimezone().replace(tzinfo=None)
+    return value
 
 
 def fmt_date(value: date | datetime | None) -> str:

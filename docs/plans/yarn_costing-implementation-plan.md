@@ -398,3 +398,60 @@ Prompt 1 câu 4-5).
 - 2026-11-03 | test AC-84 (`test_component_import.py::test_permissions_and_locked_groups`) dùng mã kế toán chờ để làm khoá nhóm |
   từ BR-70 mã chờ không còn khoá | test khoá bằng mã kế toán trên dòng giá (đúng BR-32), giữ nguyên điều kiện kiểm tra của AC-84 |
   pytest chức năng đạt.
+- 2026-11-11 | màn "Kiểm tra tên sợi", khối "Đổi tên sợi": chỉ gõ được mã, không có danh sách chọn; tên hiện tại chỉ hiện với
+  sợi nằm trong bảng nghi sai, sợi khác ô tên mới để trống | lớp pages: ô "Mã sợi" là ô chữ tự do, tên lấy từ dòng nghi sai đã
+  chọn | đổi thành ô chọn có tìm kiếm trên mọi mã gốc (trừ Đã huỷ / Từ chối), hiện tên hiện tại, trạng thái, nhóm tiêu hao và điền
+  sẵn tên (gợi ý nếu là sợi nghi sai); chọn dòng ở bảng vẫn điền sẵn ô chọn | test `test_yarn_name.py::
+  test_fix_rename_any_yarn_listed_with_current_name` | scripts/check.py, doctor, chạy thử màn không trình duyệt trên dữ liệu tạm
+  tách biệt (sợi tên đúng chọn được, hiện tên hiện tại).
+- 2026-11-13 | "Nguyên liệu sắp về": bấm "Lưu 264 lô" như không có tác dụng; bảng còn 224 lô; nhật ký ghi người lưu là "Hệ thống"
+  | (1) services: lô cũ được đánh dấu xoá từng lô một, mỗi lần đọc lại cả bảng qua mạng → lưu mất 40-50 giây không có báo hiệu,
+  người dùng bấm lại nhiều lần, các lần lưu chồng nhau; (2) components/dialogs.py: hộp xác nhận chạy lại riêng nên mất tài khoản
+  đăng nhập (nhật ký "Hệ thống", bỏ qua kiểm tra vai trò) | đánh dấu xoá cả bảng một lần (`ArrivalLotRepository.clear()`); hộp
+  xác nhận giữ tài khoản đã mở nó và hiện "Đang lưu, vui lòng chờ…" | test `test_material_price.py::
+  test_fix_reimport_replaces_all_lots_in_one_go` | scripts/check.py, doctor; tái hiện trên dữ liệu tạm tách biệt (264 lô / 4 giây).
+- 2026-11-17 | Tính giá báo khách: bấm "Dùng lại để tính mới" một báo giá FOB rồi chọn CIF thì ô F&I = 0 (không về 0,03 mặc định);
+  đổi Tháng tính thì Hệ số norm / F&I không lấy lại khai báo của tháng mới | trang chỉ điền mặc định một lần (`setdefault`) và "Dùng lại"
+  chép F&I = 0 mà báo giá FOB lưu | `pages/quote_page.py`: "Dùng lại" chỉ chép F&I của báo giá CIF, FOB thì để ô nhận mặc định tháng;
+  khi tháng tính đổi (ghi nhớ `defaults_for`), điền lại Hệ số norm và F&I theo khai báo tháng đó; sửa tay trong cùng tháng vẫn giữ | test
+  `test_quote_page_defaults.py` (mặc định theo tháng của form; báo giá FOB lưu F&I 0, CIF giữ F&I) | scripts/check.py ALL CHECKS PASSED,
+  doctor APP IS HEALTHY; chạy lại màn hình trên dữ liệu tạm tách biệt: Dùng lại FOB → CIF = 0,03; tháng 11 → 12: 110% / 0,03 → 115% /
+  0,05; sửa tay 0,07 cùng tháng giữ 0,07.
+- 2026-11-17 (lần 2) | Trên trình duyệt thật, ngay cả khi mở màn mới, chọn CIF thì ô F&I = 0,0000 (bản sửa trên chỉ đúng khi chạy thử
+  không có trình duyệt) | ô F&I chỉ hiện khi CIF; Streamlit 1.64 bỏ giá trị đã điền sẵn qua session state cho ô đang ẩn, nên lúc ô hiện ra
+  nó nhận số mặc định 0 | `pages/quote_page.py` `_fi_input`: ô F&I nhận mặc định ngay khi hiện (`value=` = F&I của báo giá CIF vừa
+  "Dùng lại" cùng tháng, ngược lại khai báo tháng), khoá ô đổi theo tháng và theo mỗi lần "Dùng lại"; không điền sẵn F&I qua session state
+  nữa | test `test_quote_page_defaults.py` giữ nguyên | scripts/check.py ALL CHECKS PASSED, doctor APP IS HEALTHY; trên trình duyệt thật
+  (localhost:8501, tài khoản người dùng đã đăng nhập): S4-1000 chọn CIF → F&I 0,0300; FOB → CIF lại → 0,0300; Tính thử Nội địa / Tách →
+  BQ 4,6957, FOB 5,3973, CIF 5,4273; Xuất khẩu / Tách → câu "chưa có giá" Pima; Xuất khẩu / Gom → tính được, "Bình quân: Gom".
+- 2026-11-17 | Sợi Supima 100% (S4-433 CM 36/1 supima): màn hình vẫn hiện ô USA / Brazil / Australia và bảng thành phần hiện nhóm
+  "Cotton (phương án)" với Giá BQ 1,9783 / hồi phế 0,18 dù giá thật lấy từ Supima; phương án bông vẫn được lưu và vẫn bắt buộc có giá |
+  (1) pages: khối Pha bông chỉ xét "có thành phần bông", không xét tỷ lệ Supima; (2) business `material_components`: dòng bông luôn mang số
+  của Cotton (phương án), chỉ chi phí đổi sang Supima; (3) services: lưu và kiểm tra phương án cả khi 100% | `SupimaMix.group` (giá BQ nhóm
+  Supima); `material_components`: s = 100% dùng nhóm Supima cho nhóm / Giá BQ / Hồi phế / Giá tính (chi phí không đổi); service: s = 100%
+  không kiểm tra, không lưu phương án; `quote_page._cotton_block`: s = 100% ẩn 3 ô phương án, hiện chú thích | test
+  `test_material_price.py::test_fix_full_supima_shows_supima_group_and_ignores_cotton_plan` | scripts/check.py ALL CHECKS PASSED, doctor APP
+  IS HEALTHY; trên trình duyệt thật: S4-433 → khối Pha bông chỉ còn Tỷ lệ Supima 100% + chú thích; tick coin, Tính thử → dòng "Cotton |
+  Cotton Pima | 3,6267 | 0,30 | 3,3267 | 4,9889", phí coin 0,5796; đổi Supima 50% → ô USA 31 / Brazil 69 hiện lại.
+- 2026-11-17 | Ô số không có giá trị hiện chữ "None" (Tính giá báo khách: dòng "Sợi tồn" khi không có sợi tồn, cột Giá CIF của báo giá FOB;
+  Giá nguyên liệu: Giá tồn / Giá về / Giá BQ / Giá tính của nhóm không có hàng, So giá xuất: giá so / chênh lệch khi chưa có giá) |
+  bảng của Streamlit hiện ô số trống (NaN) thành "None"; khung `data_table` không có tuỳ chọn để trống, nên sửa ở trang | components
+  `display.usd_cell / vnd_cell / pct_cell` (số đã định dạng, trống → ""), `columns.num_text_col` (cột chữ căn phải); dùng cho các cột có
+  thể trống ở `quote_page.py` và `material_price_page.py`; cột luôn có số giữ kiểu số | không thêm test được ở backend (test backend không
+  được dùng giao diện); kiểm bằng tests/architecture/test_pages_render.py + chạy lại màn hình trên dữ liệu tạm tách biệt (không còn
+  "None"/"nan") | scripts/check.py ALL CHECKS PASSED, doctor APP IS HEALTHY; trình duyệt thật: Giá nguyên liệu 84 ô, 0 ô "None"; Tính giá
+  báo khách S4-1000 → dòng "Sợi tồn (không có sợi tồn cùng mã kế toán)" để trống.
+- 2026-11-17 | (1) Bấm "Dùng lại để tính mới" → "Trang gặp lỗi không mong muốn" (StreamlitWidgetAlreadyInstantiatedError trên ô Tháng
+  tính); (2) cột ngày giờ (Ngày ở Các lần đã tính, Lúc tải, Lúc nhập, Lúc thay đổi, Lúc chạy, Nhật ký...) hiện giờ UTC, lệch 7 tiếng; tên
+  file Excel báo giá và cột "Ngày tính" cũng theo UTC; (3) cột "Phương án bông" của file Excel ghi cả xuất xứ 0% | (1) pages: nút ở khối
+  "Các lần đã tính" (vẽ sau) ghi đè giá trị các ô của khối "Tính giá" đã vẽ trong cùng lần chạy; (2) dữ liệu lưu giờ UTC có múi giờ, bảng
+  Streamlit hiện nguyên UTC; (3) màn hình luôn gửi đủ 3 xuất xứ | (1) `quote_page`: nút chỉ ghi báo giá chờ (`pending_reuse`) rồi chạy lại,
+  `_apply_reuse` điền các ô ở đầu lần chạy sau, trước khi ô được vẽ; ô Tháng tính bỏ `index=` (mặc định qua session state); (2)
+  `display.local_dt` đổi giờ UTC sang giờ máy chủ (như `format_datetime` của khung) cho mọi cột ngày giờ của chức năng; builder Excel và
+  tên file dùng `astimezone()`; (3) builder bỏ xuất xứ tỷ lệ 0 | test `test_material_price.py::
+  test_fix_export_skips_zero_origin_and_uses_local_day` (lỗi 1, 2 trên màn hình: không thêm được test backend dùng giao diện) |
+  scripts/check.py ALL CHECKS PASSED (324 test), doctor APP IS HEALTHY; trình duyệt thật (dữ liệu dev): lưu BG-2026-0002 (Xuất khẩu, Gom,
+  FOB) → cột Ngày 14:39 (đúng giờ Việt Nam); đổi form sang Nội địa / Tách / CIF rồi "Dùng lại" → không lỗi, điền lại Tháng, Sợi, Xuất khẩu,
+  Gom, FOB, khách hàng, ghi chú; chọn CIF → F&I 0,03; Tính thử → FOB 5,3973, CIF 5,4273; Xoá lần tính → "Đã xoá báo giá BG-2026-0002.";
+  nhật ký app không có ERROR mới. Dòng test trên dev (đã đánh dấu xoá, không chuyển sang production): quote d814bacc…, d725f66e…; audit_log
+  23a189e4…, 9d6cb7da…, f90689d4…, 340ed198…, 71a140bd….

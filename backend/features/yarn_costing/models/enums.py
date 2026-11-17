@@ -94,3 +94,101 @@ class PriceEvent(StrEnum):
     TINH_LAI_CHUA_TINH = "Tính lại mã chưa tính được"
     KHONG_SAN_XUAT = "Không sản xuất"  # BR-72
     BO_KHONG_SAN_XUAT = "Bỏ đánh dấu không sản xuất"  # BR-74
+
+
+# ---- Đợt 2 (bổ sung 2026-11-10): giá nguyên liệu bình quân, hàng sắp về, giá báo khách ----
+class PriceGroupKind(StrEnum):
+    COTTON = "Cotton theo xuất xứ"
+    XO = "Xơ theo nhà cung cấp"
+
+
+class CottonOrigin(StrEnum):
+    USA = "USA"
+    BRAZIL = "Brazil"
+    AUSTRALIA = "Australia"
+
+
+class MaterialMarket(StrEnum):
+    """Loại hàng của mã kho / lô sắp về (Chung = vào cả Nội địa và Xuất khẩu); lần tính báo giá chỉ chọn NOI_DIA / XUAT_KHAU."""
+
+    NOI_DIA = "Nội địa"
+    XUAT_KHAU = "Xuất khẩu"
+    CHUNG = "Chung"
+
+
+class AverageMode(StrEnum):
+    """BR-114 (bổ sung 2026-11-17): Tách = bình quân theo Nội địa / Xuất khẩu (BR-92); Gom = mọi mã kho và lô của nhóm cộng chung."""
+
+    TACH = "Tách"
+    GOM = "Gom"
+
+
+class MaterialDecision(StrEnum):
+    CHUA_KHAI_BAO = "Chưa khai báo"
+    THEO_NHOM = "Tính theo nhóm"
+    KHONG_TINH = "Không tính"
+
+
+class StockSection(StrEnum):
+    NGUYEN_LIEU = "Nguyên liệu"
+    SOI_THANH_PHAM = "Sợi thành phẩm"
+    PHU_LIEU = "Phụ liệu"
+
+
+class PriceKind(StrEnum):
+    THUONG = "Thường"
+    THI_NGHIEM = "Thí nghiệm"
+
+
+class Incoterm(StrEnum):
+    FOB = "FOB"
+    CIF = "CIF"
+
+
+class PriceCurrency(StrEnum):
+    USD = "USD"
+    VND = "VND"
+
+
+# ---- Tên sợi (bổ sung 2026-11-11): từ điển, chữ mới, nhóm sợi / từ khoá ----
+class NameWordKind(StrEnum):
+    CHUAN = "Chữ chuẩn"
+    SAI = "Cách viết sai"
+
+
+class NameWordSource(StrEnum):
+    KHOI_TAO = "Khởi tạo"
+    PHONG_SO = "Phòng SO"
+    TU_THEM = "Tự thêm khi tính giá"
+
+
+class PendingWordStatus(StrEnum):
+    CHO_DUYET = "Chờ duyệt"
+    DA_THEM = "Đã thêm"
+    DA_SUA = "Đã sửa"
+    TU_THEM = "Tự thêm"
+
+
+class NamePartKind(StrEnum):
+    NHOM = "Nhóm sợi"
+    TU_KHOA = "Từ khoá"
+
+
+class NamePartSource(StrEnum):
+    KHOI_TAO = "Khởi tạo"
+    PHONG_SO = "Phòng SO"
+    SALES_MOI = "Sales thêm - mới"
+
+
+class NameMode(StrEnum):
+    GHEP = "Ghép"
+    GO_TAY = "Gõ tay"
+
+
+class NameIssueKind(StrEnum):
+    CHU_LA = "Chữ lạ"
+    NGOAC = "Thiếu / thừa ngoặc"
+    TY_LE = "Tỷ lệ ≠ 100"
+    KHONG_DOC = "Chưa đọc được thành phần"
+    CHU_THUONG = "Chữ thường"
+    TRUNG = "Trùng tên"

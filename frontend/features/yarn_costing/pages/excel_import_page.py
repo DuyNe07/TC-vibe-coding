@@ -26,7 +26,7 @@ from frontend.features.yarn_costing.components.columns import count_col, date_co
 from frontend.features.yarn_costing.components.component_import import render_component_import
 from frontend.features.yarn_costing.components.data_warnings import show_data_warnings
 from frontend.features.yarn_costing.components.dialogs import confirm_dialog
-from frontend.features.yarn_costing.components.display import fmt_date, percent_value, vnd
+from frontend.features.yarn_costing.components.display import fmt_date, local_dt, percent_value, vnd
 from frontend.features.yarn_costing.components.factory_picker import factory_segment
 from frontend.features.yarn_costing.components.flash import show_flash
 from frontend.features.yarn_costing.components.labels import IMPORT_MODE_LABELS, label_of
@@ -289,7 +289,7 @@ class ExcelImportPage(BasePage):
                         "Ngày chốt": b.cutoff_date,
                         "Tên file": b.file_name,
                         "Người nhập": b.imported_by,
-                        "Lúc nhập": b.imported_at,
+                        "Lúc nhập": local_dt(b.imported_at),
                         "Tạo": b.created_count,
                         "Cập nhật": b.updated_count,
                         "Bị loại": b.rejected_count,

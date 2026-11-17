@@ -12,6 +12,7 @@ from frontend.core.base_page import BasePage
 from frontend.core.components import data_table, panel
 from frontend.features.yarn_costing.components.columns import datetime_col
 from frontend.features.yarn_costing.components.data_warnings import show_data_warnings
+from frontend.features.yarn_costing.components.display import local_dt
 from frontend.features.yarn_costing.components.labels import ALL, all_or
 
 
@@ -55,7 +56,7 @@ class UserAuditPage(BasePage):
             data_table(
                 [
                     {
-                        "Lúc": a.at,
+                        "Lúc": local_dt(a.at),
                         "Tài khoản": a.username,
                         "Họ tên": a.display_name,
                         "Thao tác": a.action,

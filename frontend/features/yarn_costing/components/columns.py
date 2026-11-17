@@ -10,7 +10,7 @@ from backend.features.yarn_costing.dto.dashboard_dto import PriceAnomalyDTO, Sir
 from backend.features.yarn_costing.dto.price_dto import PriceLineRowDTO
 from backend.features.yarn_costing.dto.pricing_dto import PriceHistoryDTO, PriceLineDTO, StageCostDTO
 from backend.features.yarn_costing.dto.request_dto import YarnSummaryDTO
-from frontend.features.yarn_costing.components.display import minutes4, pct, plain, rate2, usd, vnd
+from frontend.features.yarn_costing.components.display import local_dt, minutes4, pct, plain, rate2, usd, vnd
 
 COL = st.column_config
 
@@ -35,6 +35,11 @@ def percent(label: str) -> Any:
 
 def usd_col(label: str) -> Any:
     return COL.NumberColumn(label, format=USD_FORMAT)
+
+
+def num_text_col(label: str) -> Any:
+    """Number already formatted as text (``usd_cell`` / ``vnd_cell``): right-aligned, empty cell stays empty."""
+    return COL.TextColumn(label, alignment="right")
 
 
 def date_col(label: str) -> Any:
@@ -85,13 +90,14 @@ def price_line_rows(items: Iterable[PriceLineRowDTO]) -> list[dict[str, Any]]:
             "Tỷ giá": vnd(row.exchange_rate),
             "Loại đóng gói": row.packaging_code or "",
             "Tên loại đóng gói": row.packaging_name,
-            "Ngày tính giá": row.first_priced_at,
+            "Ngày tính giá": local_dt(row.first_priced_at),
             "Ngày hiệu lực": row.effective_date,
             "Trạng thái": row.status.value,
             "Mã kế toán": row.accounting_code or "",
             "% CK/PP": pct(row.adjustment_percent),
             "Lý do CK/PP": row.adjustment_reason,
             "Đơn hàng": row.order_ref,
+            "Tên theo khách": row.customer_names_text,
         }
         for row in items
     ]
@@ -178,12 +184,14 @@ def yarn_summary_rows(
                 "Loại đóng gói": f"{pack} - {names[pack]}" if pack and names.get(pack) else pack,
                 "Trạng thái": y.status.value,
                 "Người tạo": y.requested_by,
-                "Ngày tạo": y.requested_at,
+                "Ngày tạo": local_dt(y.requested_at),
                 "Người xử lý": y.handled_by,
-                "Ngày xử lý": y.handled_at,
+                "Ngày xử lý": local_dt(y.handled_at),
                 "Lý do từ chối / chưa tính được": y.reason,
                 "Tổng (VND/kg)": vnd(y.total_vnd),
                 "USD/kg": usd(y.usd_per_kg),
+                "Khách hàng": y.customer_name,
+                "Lý do gửi khi đã có sợi trùng": y.duplicate_reason,
             }
         )
     return rows
@@ -231,7 +239,7 @@ def history_rows(history: Iterable[PriceHistoryDTO]) -> list[dict[str, Any]]:
     return [
         {
             "Mã dòng": h.line_code,
-            "Lúc thay đổi": h.changed_at,
+            "Lúc thay đổi": local_dt(h.changed_at),
             "Người thực hiện": h.changed_by,
             "Nguyên nhân": h.event.value,
             "Lần tính lại": h.batch_id or "",
@@ -265,7 +273,7 @@ def batch_rows(batches: Iterable[RecalcBatchDTO]) -> list[dict[str, Any]]:
             "Ngày hiệu lực": b.effective_date,
             "Lý do": b.reason,
             "Người chạy": b.run_by,
-            "Lúc chạy": b.run_at,
+            "Lúc chạy": local_dt(b.run_at),
             "Số mã đã tính": b.yarn_count,
             "Số dòng thay đổi": b.changed_line_count,
             "Số mã chưa tính được": b.failed_yarn_count,
