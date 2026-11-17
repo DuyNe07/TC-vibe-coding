@@ -42,6 +42,7 @@ from frontend.features.yarn_costing.components.material_ui import (
 from frontend.features.yarn_costing.components.permissions import action_state, explain
 
 RESULT_KEY = "quote_result"
+DEFAULTS_FOR = "defaults_for"  # tháng đã điền hệ số norm / F&I mặc định
 PRICED = (YarnStatus.DA_TINH_GIA, YarnStatus.CO_MA_KE_TOAN)
 HUNDRED = Decimal(100)
 COMPONENT_COLUMNS = ["Nguyên liệu", "Tỷ lệ %", "Tiêu hao %", "Nhóm giá"]
@@ -111,7 +112,7 @@ class QuotePage(BasePage):
                 empty_state("Chọn sợi để tính giá báo khách.")
                 return
             form: QuoteFormResponse = feature.get_quote_form(GetQuoteFormRequest(line_code=line_code, period=period))
-            self._defaults(form)
+            self._defaults(form, period)
             c1, c2, c4, c3 = st.columns(4)
             kinds = [PriceKind.THUONG, PriceKind.THI_NGHIEM] if form.has_trial_line else [PriceKind.THUONG]
             kind = c1.radio("Giá gia công", kinds, format_func=lambda k: k.value, horizontal=True, key=self.key("kind"))
@@ -260,8 +261,13 @@ class QuotePage(BasePage):
                 coin = cols[4].checkbox("Truyền điểm Supima coin trên TG", key=self.key(f"coin.{line_code}"))
         return plan, dec(supima) / HUNDRED, coin
 
-    def _defaults(self, form: QuoteFormResponse) -> None:
-        """Fill the inputs with the month defaults the first time (or after "Dùng lại")."""
+    def _defaults(self, form: QuoteFormResponse, period: str) -> None:
+        """Fill the inputs with the month defaults the first time (or after "Dùng lại"); choosing another month
+        refills Hệ số norm and F&I with that month's declaration (BR-88, sửa 2026-11-17)."""
+        if st.session_state.get(self.key(DEFAULTS_FOR)) != period:
+            st.session_state[self.key("factor")] = float(form.norm_factor * HUNDRED)
+            st.session_state[self.key("fi")] = float(form.default_fi)
+            st.session_state[self.key(DEFAULTS_FOR)] = period
         defaults = {
             "factor": float(form.norm_factor * HUNDRED),
             "fi": float(form.default_fi),
@@ -468,7 +474,9 @@ class QuotePage(BasePage):
     def _reuse(self, q: QuoteDTO) -> None:
         """Fill the Tính giá block with the numbers of a saved quote, then rerun."""
         state = st.session_state
-        state[self.key("period")] = q.period if q.period in month_options() else current_period()
+        period = q.period if q.period in month_options() else current_period()
+        state[self.key("period")] = period
+        state[self.key(DEFAULTS_FOR)] = period  # hệ số / F&I lấy từ báo giá, không bị điền lại theo tháng
         state[self.key("line")] = q.line_code
         state[self.key("kind")] = q.price_kind
         state[self.key("market")] = q.market
@@ -480,7 +488,10 @@ class QuotePage(BasePage):
         state[self.key("factor")] = float(q.norm_factor * HUNDRED)
         state[self.key("gp")] = float(q.gp_percent * HUNDRED)
         state[self.key("commission")] = float(q.commission_percent * HUNDRED)
-        state[self.key("fi")] = float(q.fi_usd)
+        if q.incoterm == Incoterm.CIF:
+            state[self.key("fi")] = float(q.fi_usd)
+        else:  # báo giá FOB lưu F&I = 0: để ô F&I nhận lại mặc định của tháng (sửa 2026-11-17)
+            state.pop(self.key("fi"), None)
         state[self.key("note")] = q.note
         shares = {s.origin: float(s.percent * HUNDRED) for s in q.cotton_plan}
         if shares:  # BR-110 / BR-111: the plan, Supima share and coin tick of the reused quote

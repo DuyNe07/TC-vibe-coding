@@ -410,3 +410,10 @@ Prompt 1 câu 4-5).
   đăng nhập (nhật ký "Hệ thống", bỏ qua kiểm tra vai trò) | đánh dấu xoá cả bảng một lần (`ArrivalLotRepository.clear()`); hộp
   xác nhận giữ tài khoản đã mở nó và hiện "Đang lưu, vui lòng chờ…" | test `test_material_price.py::
   test_fix_reimport_replaces_all_lots_in_one_go` | scripts/check.py, doctor; tái hiện trên dữ liệu tạm tách biệt (264 lô / 4 giây).
+- 2026-11-17 | Tính giá báo khách: bấm "Dùng lại để tính mới" một báo giá FOB rồi chọn CIF thì ô F&I = 0 (không về 0,03 mặc định);
+  đổi Tháng tính thì Hệ số norm / F&I không lấy lại khai báo của tháng mới | trang chỉ điền mặc định một lần (`setdefault`) và "Dùng lại"
+  chép F&I = 0 mà báo giá FOB lưu | `pages/quote_page.py`: "Dùng lại" chỉ chép F&I của báo giá CIF, FOB thì để ô nhận mặc định tháng;
+  khi tháng tính đổi (ghi nhớ `defaults_for`), điền lại Hệ số norm và F&I theo khai báo tháng đó; sửa tay trong cùng tháng vẫn giữ | test
+  `test_quote_page_defaults.py` (mặc định theo tháng của form; báo giá FOB lưu F&I 0, CIF giữ F&I) | scripts/check.py ALL CHECKS PASSED,
+  doctor APP IS HEALTHY; chạy lại màn hình trên dữ liệu tạm tách biệt: Dùng lại FOB → CIF = 0,03; tháng 11 → 12: 110% / 0,03 → 115% /
+  0,05; sửa tay 0,07 cùng tháng giữ 0,07.
