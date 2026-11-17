@@ -6,6 +6,7 @@
 | Icon (Biểu tượng) | 🧵 |
 | Owner (Người phụ trách) | Phòng SO |
 | Status (Trạng thái) | Implemented |
+| Run mode (Chạy ở đâu) | Server |
 | Last updated | 2026-11-17 |
 
 ## 1. Goal (Mục tiêu)
