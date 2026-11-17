@@ -1,9 +1,12 @@
 """Đợt 2 (bổ sung 2026-11-10) tables xuan2894__yarn_costing__*: 4.22-4.28 (giá nguyên liệu, hàng sắp về, giá báo khách)."""
 
+from backend.features.yarn_costing.models.enums import MaterialMarket
 from backend.features.yarn_costing.models.material_price import (
+    DEFAULT_SUFFIX_RULES,
     ArrivalImport,
     ArrivalLot,
     ArrivalMapping,
+    CodeSuffixRule,
     MaterialPriceGroup,
     MonthInputs,
     MonthlyMaterialSetting,
@@ -23,6 +26,16 @@ class MaterialPriceGroupRepository(YarnSqlRepository[MaterialPriceGroup]):
 class StockItemSettingRepository(YarnSqlRepository[StockItemSetting]):
     def by_code(self) -> dict[str, StockItemSetting]:
         return {s.accounting_code: s for s in self.list_all()}
+
+
+class CodeSuffixRuleRepository(YarnSqlRepository[CodeSuffixRule]):
+    """4.32 (bổ sung 2026-11-17): the 4 starting rows are created while the table has never had any row."""
+
+    def _seed(self) -> list[CodeSuffixRule]:
+        return [CodeSuffixRule(suffix=s, market=m, note=n) for s, m, n in DEFAULT_SUFFIX_RULES]
+
+    def by_suffix(self) -> dict[str, MaterialMarket]:
+        return {r.suffix: r.market for r in self.list_all()}
 
 
 class StockMonthRepository(YarnSqlRepository[StockMonth]):

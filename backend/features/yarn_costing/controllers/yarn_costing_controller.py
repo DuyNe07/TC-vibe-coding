@@ -79,6 +79,7 @@ from backend.features.yarn_costing.dto.material_dto import (
     SaveMonthlySettingRequest,
     SavePriceGroupRequest,
     SaveStockItemSettingsRequest,
+    SaveSuffixRulesRequest,
     StockImportResponse,
     StockMonthListResponse,
     StockOutComparisonResponse,
@@ -231,6 +232,7 @@ from backend.features.yarn_costing.services.save_process_routes_service import S
 from backend.features.yarn_costing.services.save_recovery_rates_service import SaveRecoveryRatesService
 from backend.features.yarn_costing.services.save_stage_config_service import SaveStageConfigService
 from backend.features.yarn_costing.services.save_stock_item_settings_service import SaveStockItemSettingsService
+from backend.features.yarn_costing.services.save_suffix_rules_service import SaveSuffixRulesService
 from backend.features.yarn_costing.services.save_yarn_nsm_service import SaveYarnNsmService
 from backend.features.yarn_costing.services.set_accounting_code_service import SetAccountingCodeService
 from backend.features.yarn_costing.services.set_not_produced_service import SetNotProducedService
@@ -510,6 +512,10 @@ class YarnCostingController(BaseController):
     def save_stock_item_settings(self, request: SaveStockItemSettingsRequest) -> MaterialSaveResponse:
         """UC-57 Khai báo mã kho nguyên liệu."""
         return SaveStockItemSettingsService().handle(request)
+
+    def save_suffix_rules(self, request: SaveSuffixRulesRequest) -> MaterialSaveResponse:
+        """UC-72 Khai báo bảng đuôi mã → loại hàng (bổ sung 2026-11-17)."""
+        return SaveSuffixRulesService().handle(request)
 
     def get_monthly_setting(self, request: GetMonthlySettingRequest) -> MonthlySettingResponse:
         """UC-58 Khai báo tháng (bản đã lưu hoặc bản nháp)."""

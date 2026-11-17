@@ -45,6 +45,21 @@ class StockItemDTO(BaseDTO):
     market: MaterialMarket
     closing_qty: Decimal | None = None
     updated_by: str = ""
+    suffix: str = ""  # BR-116 (bổ sung 2026-11-17)
+    suffix_note: str = ""  # "Đuôi chưa có trong bảng"
+
+
+class SuffixRuleDTO(BaseDTO):
+    """4.32 (bổ sung 2026-11-17)."""
+
+    suffix: str = ""
+    market: MaterialMarket | None = None
+    note: str = ""
+    updated_by: str = ""
+
+
+class SaveSuffixRulesRequest(BaseRequestDTO):
+    rows: list[SuffixRuleDTO] = []
 
 
 class GetMaterialSetupRequest(BaseRequestDTO):
@@ -57,6 +72,8 @@ class MaterialSetupResponse(BaseResponseDTO):
     stock_items: list[StockItemDTO] = []
     undeclared_count: int = 0
     latest_period: str = ""
+    suffix_rules: list[SuffixRuleDTO] = []  # 4.32 (bổ sung 2026-11-17)
+    unknown_suffix_count: int = 0  # BR-116
 
 
 class SavePriceGroupRequest(BaseRequestDTO):

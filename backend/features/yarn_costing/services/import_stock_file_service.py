@@ -16,6 +16,7 @@ from backend.features.yarn_costing.models.enums import StockSection
 from backend.features.yarn_costing.models.master_checks import FileCheck
 from backend.features.yarn_costing.models.material_price import StockMonth
 from backend.features.yarn_costing.repositories.material_price_repository import (
+    CodeSuffixRuleRepository,
     StockItemSettingRepository,
     StockLineRepository,
     StockMonthRepository,
@@ -48,7 +49,9 @@ class ImportStockFileService(BaseService[ImportStockFileRequest, StockImportResp
         lines, rejected = business.read_stock_rows(parsed.rows, month.id, period)
         counts = {section: sum(1 for line in lines if line.section == section) for section in StockSection}
         settings_repo = StockItemSettingRepository()
-        settings, new_codes = business.merge_settings(lines, settings_repo.by_code())
+        settings, new_codes = business.merge_settings(
+            lines, settings_repo.by_code(), CodeSuffixRuleRepository().by_suffix()
+        )  # BR-116 (bổ sung 2026-11-17): gợi ý theo bảng đuôi mã
         months = StockMonthRepository()
         old = months.current(period)
         replace_note = (

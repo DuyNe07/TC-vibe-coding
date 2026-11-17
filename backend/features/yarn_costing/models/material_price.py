@@ -55,6 +55,24 @@ class StockItemSetting(BaseEntity):
     updated_by: str = ""
 
 
+class CodeSuffixRule(BaseEntity):
+    """4.32 Đuôi mã kho → Loại hàng (bổ sung 2026-11-17, BR-116): gợi ý Loại hàng cho mã nguyên liệu mới."""
+
+    suffix: str
+    market: MaterialMarket
+    note: str = ""
+    updated_by: str = ""
+
+
+# 4.32: rows created while the table has never had any row (BR-116)
+DEFAULT_SUFFIX_RULES: tuple[tuple[str, MaterialMarket, str], ...] = (
+    ("IDR", MaterialMarket.NOI_DIA, "Xơ đã đóng thuế"),
+    ("ID", MaterialMarket.XUAT_KHAU, "Xơ tạm nhập tái xuất"),
+    ("IR", MaterialMarket.XUAT_KHAU, ""),
+    ("I", MaterialMarket.CHUNG, ""),
+)
+
+
 class StockMonth(BaseEntity):
     """4.24 Tháng kho (one version in use per period - BR-87)."""
 

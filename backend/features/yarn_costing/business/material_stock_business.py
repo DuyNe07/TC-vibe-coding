@@ -6,6 +6,7 @@ from datetime import date, datetime
 from decimal import Decimal, InvalidOperation
 
 from backend.core.base import BaseBusiness
+from backend.features.yarn_costing.exceptions import YarnValidationError
 from backend.features.yarn_costing.models.enums import (
     FactoryCode,
     MaterialDecision,
@@ -14,8 +15,10 @@ from backend.features.yarn_costing.models.enums import (
     StockSection,
 )
 from backend.features.yarn_costing.models.material_price import (
+    DEFAULT_SUFFIX_RULES,
     ArrivalLot,
     ArrivalMapping,
+    CodeSuffixRule,
     StockItemSetting,
     StockLine,
 )
@@ -24,6 +27,13 @@ from backend.shared.utils.text import strip_accents
 CORE_LENGTH = 18  # BR-86 / BR-95: the part of an accounting code before its suffix
 PERIOD_PATTERN = re.compile(r"(\d{1,2})\s*[-/.]\s*(\d{1,2})\s*[-/.]\s*(\d{4})")
 VND_THRESHOLD = Decimal(100)  # BR-90: unit price above 100 = VND/kg
+SUFFIX_PATTERN = re.compile(r"^[A-Z0-9]{1,10}$")  # BR-116
+DEFAULT_RULES = {s: m for s, m, _ in DEFAULT_SUFFIX_RULES}
+MSG_SUFFIX_EMPTY = "Vui lòng nhập đuôi mã."
+MSG_SUFFIX_FORMAT = "Đuôi mã '{suffix}' chỉ gồm chữ và số, tối đa 10 ký tự."
+MSG_SUFFIX_DUP = "Đuôi mã '{suffix}' bị trùng."
+MSG_SUFFIX_MARKET = "Đuôi mã '{suffix}': vui lòng chọn loại hàng."
+MSG_SUFFIX_NOTE = "Ghi chú tối đa 200 ký tự."
 NUMBER_FIELDS = {
     "opening_qty": "SL_TON",
     "opening_value": "GT_TON",
@@ -103,14 +113,61 @@ class MaterialStockBusiness(BaseBusiness[StockLine]):
             return StockSection.SOI_THANH_PHAM
         return StockSection.PHU_LIEU
 
-    def market_of(self, code: str) -> MaterialMarket:
-        """BR-86 (sửa 2026-11-17): IDR = xơ đã đóng thuế → Nội địa; ID / IR = tạm nhập tái xuất → Xuất khẩu; còn lại → Chung."""
-        suffix = "".join(code.split()).upper()[CORE_LENGTH:]
-        if suffix == "IDR":
-            return MaterialMarket.NOI_DIA
-        if suffix in ("ID", "IR"):
-            return MaterialMarket.XUAT_KHAU
-        return MaterialMarket.CHUNG
+    def suffix_of(self, code: str) -> str:
+        """BR-86: the part of an accounting code after its first 18 characters (no spaces, upper case)."""
+        return "".join(code.split()).upper()[CORE_LENGTH:]
+
+    def market_of(self, code: str, rules: dict[str, MaterialMarket] | None = None) -> MaterialMarket:
+        """BR-86 / BR-116 (sửa 2026-11-17): the suffix must equal one row of the 4.32 table; empty or unknown → Chung.
+        ``rules`` = suffix → market of the table (None = the 4 starting rows)."""
+        table = DEFAULT_RULES if rules is None else rules
+        return table.get(self.suffix_of(code), MaterialMarket.CHUNG)
+
+    def is_unknown_suffix(self, code: str, rules: dict[str, MaterialMarket]) -> bool:
+        """BR-116: a non-empty suffix that is not in the table."""
+        suffix = self.suffix_of(code)
+        return bool(suffix) and suffix not in rules
+
+    def clean_suffix_rows(self, rows: Sequence[tuple[str, MaterialMarket | None, str]]) -> list[tuple[str, MaterialMarket, str]]:
+        """BR-116: (suffix, market, note) rows of the edited table → cleaned rows, or the first problem raised."""
+        seen: set[str] = set()
+        result: list[tuple[str, MaterialMarket, str]] = []
+        for raw, market, note in rows:
+            suffix = "".join((raw or "").split()).upper()
+            if not suffix:
+                raise YarnValidationError(MSG_SUFFIX_EMPTY)
+            if not SUFFIX_PATTERN.match(suffix):
+                raise YarnValidationError(MSG_SUFFIX_FORMAT.format(suffix=suffix))
+            if suffix in seen:
+                raise YarnValidationError(MSG_SUFFIX_DUP.format(suffix=suffix))
+            if market is None:
+                raise YarnValidationError(MSG_SUFFIX_MARKET.format(suffix=suffix))
+            clean_note = (note or "").strip()
+            if len(clean_note) > 200:
+                raise YarnValidationError(MSG_SUFFIX_NOTE)
+            seen.add(suffix)
+            result.append((suffix, market, clean_note))
+        return result
+
+    def plan_suffix_rules(
+        self, rows: Sequence[tuple[str, MaterialMarket, str]], current: Sequence[CodeSuffixRule], label: str
+    ) -> tuple[list[CodeSuffixRule], list[CodeSuffixRule], list[str]]:
+        """UC-72: (rows to save, rows to flag deleted, audit notes) turning the stored table into ``rows``."""
+        stored = {r.suffix: r for r in current}
+        save: list[CodeSuffixRule] = []
+        notes: list[str] = []
+        for suffix, market, note in rows:
+            old = stored.get(suffix)
+            if old is None:
+                save.append(CodeSuffixRule(suffix=suffix, market=market, note=note, updated_by=label))
+                notes.append(f"+ {suffix} → {market.value}")
+            elif (old.market, old.note) != (market, note):
+                save.append(old.model_copy(update={"market": market, "note": note, "updated_by": label}))
+                notes.append(f"{suffix}: {old.market.value} → {market.value}")
+        kept = {suffix for suffix, _, _ in rows}
+        removed = [r for r in current if r.suffix not in kept]
+        notes += [f"- {r.suffix}" for r in removed]
+        return save, removed, notes
 
     def read_stock_rows(
         self, rows: Sequence[tuple[int, dict[str, object]]], month_id: str, period: str
@@ -164,7 +221,10 @@ class MaterialStockBusiness(BaseBusiness[StockLine]):
 
     # ---- BR-87 ----
     def merge_settings(
-        self, lines: Sequence[StockLine], existing: dict[str, StockItemSetting]
+        self,
+        lines: Sequence[StockLine],
+        existing: dict[str, StockItemSetting],
+        rules: dict[str, MaterialMarket] | None = None,
     ) -> tuple[list[StockItemSetting], int]:
         """New material codes → "Chưa khai báo" with the suggested market; known codes keep their setting (name updated).
         Returns (settings to save, number of new codes)."""
@@ -181,7 +241,7 @@ class MaterialStockBusiness(BaseBusiness[StockLine]):
                         item_name=line.item_name,
                         ica_name=line.ica_name,
                         decision=MaterialDecision.CHUA_KHAI_BAO,
-                        market=self.market_of(line.accounting_code),
+                        market=self.market_of(line.accounting_code, rules),
                     )
                 )
                 new_count += 1

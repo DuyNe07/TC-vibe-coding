@@ -655,6 +655,17 @@ Xoá = cờ xoá.
 | reviewed | Có / Không | Yes | Phòng SO đã xem (nhóm Sales thêm: Không) | Không |
 Xoá = cờ xoá (không làm đổi tên đã có).
 
+### 4.32 Đuôi mã kho → Loại hàng (Code suffix rule) - bổ sung 2026-11-17
+Bảng Sales / Phòng SO tự khai báo để app gợi ý Loại hàng cho mã nguyên liệu mới (BR-86, BR-116). Khi bảng chưa từng có dòng nào (kể cả
+dòng đã xoá), lần đầu dùng app tự tạo 4 dòng khởi tạo: IDR → Nội địa (xơ đã đóng thuế), ID → Xuất khẩu (tạm nhập tái xuất), IR → Xuất
+khẩu, I → Chung - sửa / xoá được như dòng bình thường. Xoá = cờ xoá; đuôi đã xoá được coi là đuôi lạ.
+| Field | Type | Required | Description | Example |
+|---|---|---|---|---|
+| suffix | text 1-10 ký tự, chỉ chữ và số, lưu viết hoa, không trùng | Yes | Phần mã sau 18 ký tự đầu | IDR |
+| market | list of values: Nội địa / Xuất khẩu / Chung | Yes | Loại hàng gợi ý | Nội địa |
+| note | text ≤ 200 | No | Ghi chú | Xơ đã đóng thuế |
+| updated_by, updated_at | text, datetime | Yes | Người và lúc lưu | |
+
 ## 5. Input / output files (File nhập / xuất)
 
 ### 5.1 Quy định chung cho file tải lên (UC-33, UC-34)
@@ -1431,7 +1442,9 @@ thường - BR-70); lịch sử ghi event "Sửa NSM". Mã đã khoá: nút lưu
   khai báo mới ngay.
 - **Output:** "Đã lưu khai báo <n> mã kho."
 - **Errors:** "Mã <mã>: vui lòng chọn nhóm giá." ; BR-84.
-- **Rules applied:** BR-49, BR-84, BR-86
+- **Bổ sung 2026-11-17:** bảng mã kho thêm cột chỉ xem "Đuôi mã" (phần sau 18 ký tự) và cột "Ghi chú đuôi" = "Đuôi chưa có trong bảng" khi
+  đuôi khác trống và không có trong 4.32 (BR-116); phía trên bảng: "Có <n> mã kho có đuôi chưa có trong bảng đuôi mã." khi n > 0.
+- **Rules applied:** BR-49, BR-84, BR-86, BR-116
 
 ### UC-58: Khai báo tháng - hồi phế nguyên liệu, phương án bông, hệ số, F&I (đợt 2)
 - **Actor:** Sales, Phòng SO
@@ -1601,6 +1614,16 @@ thường - BR-70); lịch sử ghi event "Sửa NSM". Mã đã khoá: nút lưu
 - **Output:** "Đã chuẩn hoá <n> tên; loại <k> mã trùng tên (<t> mã kế toán chuyển sang mã giữ)."
 - **Rules applied:** BR-06, BR-72, BR-107, BR-108, BR-109
 
+### UC-72: Khai báo bảng đuôi mã → loại hàng (bổ sung 2026-11-17)
+- **Actor:** Sales, Phòng SO
+- **Trigger:** Screen 11, thẻ "Khai báo": khối "Đuôi mã → Loại hàng" đặt trên khối mã kho; bảng sửa trong ô (Đuôi mã, Loại hàng, Ghi
+  chú; thêm / xoá dòng được) điền sẵn 4.32 (hoặc 4 dòng khởi tạo); nút "Lưu bảng đuôi mã".
+- **Main flow:** 1. Kiểm tra BR-116. 2. Lưu: dòng mới thêm, dòng đổi cập nhật, dòng bị bỏ khỏi bảng đặt cờ xoá. 3. Ghi nhật ký (trước →
+  sau). 4. Chỉ ảnh hưởng gợi ý cho mã **mới** ở các lần lưu file kho sau; Loại hàng của mã đã có không đổi.
+- **Output:** "Đã lưu bảng đuôi mã (<n> dòng)."
+- **Errors:** BR-116; BR-84.
+- **Rules applied:** BR-49, BR-84, BR-86, BR-116
+
 ## 7. Business rules (Quy tắc nghiệp vụ)
 | ID | Rule | Error message shown to user (VI) |
 |---|---|---|
@@ -1689,7 +1712,7 @@ thường - BR-70); lịch sử ghi event "Sửa NSM". Mã đã khoá: nút lưu
 | BR-83 | Cảnh báo đối chiếu (bổ sung 2026-11-10), chỉ để hiển thị, không chặn: **Sản lượng nhỏ** khi Số lượng < mức Sản lượng nhỏ (mặc định 100 kg); **Lệch nhiều** khi |Chênh lệch %| > mức Lệch nhiều (mặc định 10%); một mã có thể có cả hai. Hai mức nhập trên màn hình (số > 0), không lưu; đổi mức thì ô số liệu, bảng, biểu đồ đổi theo | Mức cảnh báo phải là số lớn hơn 0. |
 | BR-84 | Quyền phần đợt 2 (bổ sung 2026-11-10): UC-55..UC-64 - **kể cả xem** - chỉ tài khoản có vai trò Sales hoặc Phòng SO (và quản trị viên); phía xử lý kiểm tra ở mọi thao tác, kể cả đọc dữ liệu. Tài khoản khác mở Screen 11-13 chỉ thấy thông báo | Chỉ Sales hoặc Phòng SO được xem và thao tác giá nguyên liệu, giá báo khách. |
 | BR-85 | Nhóm giá nguyên liệu (bổ sung 2026-11-10): Tên bắt buộc, ≤ 100 ký tự, không trùng nhóm khác chưa xoá (so không phân biệt hoa thường, gộp khoảng trắng) và khác "Cotton (phương án)"; Loại bắt buộc; Loại = Cotton theo xuất xứ thì Xuất xứ bắt buộc (USA / Brazil / Australia), Loại = Xơ thì Xuất xứ để trống; Ghi chú ≤ 500 | Vui lòng nhập tên nhóm. / Tên nhóm tối đa 100 ký tự. / Đã có nhóm giá '<tên>'. / Nhóm cotton phải chọn xuất xứ. / Ghi chú tối đa 500 ký tự. |
-| BR-86 | Đọc file kho (bổ sung 2026-11-10), theo 5.10: **Tháng** = tháng của ngày "Từ ngày dd-mm-yyyy" ở cột CF_APE_DATE (dòng đầu có giá trị); không đọc được → Sales chọn ở ô Tháng. **Phần:** ICA_NAME (bỏ dấu, viết hoa, bỏ khoảng trắng hai đầu) = "BONG" hoặc "XO" → Nguyên liệu; = "DO CTY SX" → Sợi thành phẩm; còn lại ("MUA NGOAI", "SOI HOAN KHO"...) → Phụ liệu. Ô số trống = 0; ô số không phải số → loại ("Cột <cột> không phải số."); mã trùng trong file → loại mọi dòng trùng ("Mã '<mã>' bị trùng trong file."). **Loại hàng gợi ý** cho mã nguyên liệu mới (sửa 2026-11-17: trước đây có chữ "D" → Nội địa, có "R" không có "D" → Xuất khẩu, nên ...ID bị gợi ý Nội địa): phần mã sau 18 ký tự đầu (viết hoa, bỏ khoảng trắng) = "IDR" → Nội địa (xơ đã đóng thuế); = "ID" hoặc "IR" → Xuất khẩu (xơ tạm nhập tái xuất); còn lại, kể cả "I" và trống → Chung (ví dụ ...IDR → Nội địa; ...ID, ...IR → Xuất khẩu; ...I, MN1000143812806001 → Chung). Chỉ áp dụng cho mã chưa có trong 4.23; mã đã khai báo giữ Loại hàng (BR-87) | (như cột Rule) |
+| BR-86 | Đọc file kho (bổ sung 2026-11-10), theo 5.10: **Tháng** = tháng của ngày "Từ ngày dd-mm-yyyy" ở cột CF_APE_DATE (dòng đầu có giá trị); không đọc được → Sales chọn ở ô Tháng. **Phần:** ICA_NAME (bỏ dấu, viết hoa, bỏ khoảng trắng hai đầu) = "BONG" hoặc "XO" → Nguyên liệu; = "DO CTY SX" → Sợi thành phẩm; còn lại ("MUA NGOAI", "SOI HOAN KHO"...) → Phụ liệu. Ô số trống = 0; ô số không phải số → loại ("Cột <cột> không phải số."); mã trùng trong file → loại mọi dòng trùng ("Mã '<mã>' bị trùng trong file."). **Loại hàng gợi ý** cho mã nguyên liệu mới (sửa 2026-11-17: trước đây có chữ "D" → Nội địa, có "R" không có "D" → Xuất khẩu, nên ...ID bị gợi ý Nội địa; sửa lần 2 2026-11-17: lấy theo bảng đuôi mã 4.32 - BR-116 - thay cho quy tắc cố định): phần mã sau 18 ký tự đầu (viết hoa, bỏ khoảng trắng) trùng đúng một đuôi của 4.32 → Loại hàng của dòng đó; trống hoặc không có trong bảng → Chung. Với 4 dòng khởi tạo: "IDR" → Nội địa (xơ đã đóng thuế); "ID" hoặc "IR" → Xuất khẩu (xơ tạm nhập tái xuất); "I" và trống → Chung (ví dụ ...IDR → Nội địa; ...ID, ...IR → Xuất khẩu; ...I, MN1000143812806001 → Chung). Chỉ áp dụng cho mã chưa có trong 4.23; mã đã khai báo giữ Loại hàng (BR-87) | (như cột Rule) |
 | BR-87 | Lưu tháng kho (bổ sung 2026-11-10): mỗi tháng chỉ một bản đang dùng; lưu một tháng đã có → bản cũ (4.24) và dòng của nó (4.24.1) đặt cờ xoá rồi lưu bản mới. Mỗi mã Nguyên liệu chưa có trong 4.23 được thêm với Cách dùng = "Chưa khai báo", Loại hàng theo BR-86; mã đã có chỉ cập nhật tên hàng, giữ khai báo. Không bao giờ xoá thật | - |
 | BR-88 | Khai báo tháng (bổ sung 2026-11-10): mở tháng M chưa có bản lưu → bản nháp chép mọi giá trị từ bản đã lưu gần nhất trước M (`copied_from`); chưa có bản nào → hệ số 110%, F&I 0,03, phương án trống, hồi phế trống (= 0). Lưu: hệ số > 0; F&I ≥ 0; hồi phế ≥ 0 và mỗi nhóm một dòng; phương án: mỗi xuất xứ một dòng, tỷ lệ > 0, tổng đúng 100% (khi có ít nhất một dòng). Lưu tháng M không đổi tháng khác | Hệ số phải lớn hơn 0. / F&I không được âm. / Hồi phế của nhóm '<nhóm>' không được âm. / Nhóm '<nhóm>' bị khai báo hồi phế hai lần. / Xuất xứ '<xuất xứ>' bị lặp trong phương án. / Tổng tỷ lệ phương án pha bông phải bằng 100% (hiện là <x>%). |
 | BR-89 | Tỷ giá tháng (bổ sung 2026-11-10): tỷ giá của tháng M = dòng tỷ giá (4.9) có `effective_date` lớn nhất ≤ ngày cuối tháng M (cùng ngày: dòng nhập sau cùng). Mọi đổi VND ↔ USD của phần đợt 2 trong tháng M dùng tỷ giá này (giá trị kho, hàng về ghi VND, norm, kết quả VND). BR-22 (tỷ giá đang dùng cho bảng giá) không đổi | Chưa có tỷ giá cho tháng <mm/yyyy>. Phòng SO thêm tỷ giá ở màn Dữ liệu nền. |
@@ -1718,6 +1741,7 @@ thường - BR-70); lịch sử ghi event "Sửa NSM". Mã đã khoá: nút lưu
 | BR-112 | Đọc tỷ lệ Supima từ tên (bổ sung 2026-11-13): tên (viết hoa) có "SUPIMA n%" / "PIMA n%" (kể cả trong ngoặc, ví dụ "CM (SUPIMA 30%)") → s = n%; có chữ SUPIMA / PIMA mà không có % → s = 100%; không có → 0. Sales sửa được trước khi tính | - |
 | BR-113 | Khai báo Supima trong khai báo tháng (bổ sung 2026-11-13): Nhóm giá Supima là một nhóm 4.22 (không được là "Cotton (phương án)"); giá coin ≥ 0; thuế nhà thầu ≥ 0; mặc định 0,552 và 5% cho tháng chưa có bản lưu nào trước đó | Giá Supima coin không được âm. / Thuế nhà thầu không được âm. |
 | BR-114 | Cách tính bình quân Tách / Gom (bổ sung 2026-11-17): **Tách** (mặc định) = BR-92 như cũ, theo loại hàng t đã chọn. **Gom** = cho nhóm g, **Tồn** = mọi dòng Nguyên liệu của tháng kho M−1 có mã khai báo "Tính theo nhóm" g, SL_CUOI > 0, bất kể Loại hàng (Nội địa, Xuất khẩu, Chung); **Hàng về** = mọi lô xưởng S4 có ngày về kho trong tháng M, cặp khai báo nhóm g, bất kể Loại hàng; mỗi mã / lô cộng **một lần**; Giá BQ, Giá tính, cách đổi tiền như BR-92. Cotton (phương án) khi Gom = Σ tỷ lệ × Giá BQ (Gom) của xuất xứ − hồi phế; Supima khi Gom = Giá BQ (Gom) của nhóm Supima − hồi phế (BR-111). Khi Gom, ô Nội địa / Xuất khẩu của báo giá vẫn bắt buộc và được lưu nhưng không dùng để lọc giá. Không có SL nào → câu BR-92 với loại hàng "Gom". BR-99 không đổi | Nhóm '<nhóm>' (Gom) chưa có giá tháng <mm/yyyy>: không có tồn và hàng về. |
+| BR-116 | Bảng đuôi mã (bổ sung 2026-11-17, 4.32): Đuôi mã bỏ khoảng trắng, viết hoa; bắt buộc; 1-10 ký tự chỉ gồm chữ A-Z và số; không trùng trong bảng; Loại hàng bắt buộc; ghi chú ≤ 200. So khớp: đuôi của mã (phần sau 18 ký tự, viết hoa, bỏ khoảng trắng) phải **bằng đúng** đuôi trong bảng (không phải "bắt đầu bằng"). **Đuôi lạ** = đuôi khác trống và không có trong bảng (dòng chưa xoá) → gợi ý Chung và được báo ở UC-57. Sửa bảng không đổi Loại hàng của mã đã có trong 4.23 | Vui lòng nhập đuôi mã. / Đuôi mã '<đuôi>' chỉ gồm chữ và số, tối đa 10 ký tự. / Đuôi mã '<đuôi>' bị trùng. / Đuôi mã '<đuôi>': vui lòng chọn loại hàng. / Ghi chú tối đa 200 ký tự. |
 | BR-115 | Giá tồn / Giá về của dòng "Cotton (phương án)" (bổ sung 2026-11-17): SL tồn, SL về = tổng của các nhóm cotton (như hiện nay); **Giá tồn** = Σ tỷ lệ phương án của xuất xứ o × Giá tồn của các nhóm cotton xuất xứ o (giá trị ÷ SL); **Giá về** tính tương tự với hàng về. Xuất xứ có tỷ lệ > 0 mà không có tồn (hoặc hàng về) → ô đó để trống (không hiện 0). Giá BQ, Hồi phế, Giá tính của dòng giữ nguyên BR-92 | - |
 
 ## 8. Screens (Màn hình)
@@ -1841,6 +1865,9 @@ thường - BR-70); lịch sử ghi event "Sửa NSM". Mã đã khoá: nút lưu
 - **Bổ sung 2026-11-17, Tách / Gom (chốt "ok"):** Screen 13 - ô chọn "Cách tính bình quân" (•) Tách / ( ) Gom ngay sau ô Nội địa /
   Xuất khẩu, mặc định Tách; kết quả ghi "Bình quân: Tách (<loại hàng>)" / "Bình quân: Gom"; bảng "Các lần đã tính" thêm cột "Cách tính
   bình quân". Screen 11 thẻ Giá bình quân - ô chọn cùng tên cạnh ô Tháng tính (mặc định Tách, không lưu). Không hỏi xác nhận thêm.
+- **Bổ sung 2026-11-17, bảng đuôi mã (chốt "ok"):** Screen 11 thẻ Khai báo - thứ tự: khối nhóm giá → khối "Đuôi mã → Loại hàng" (bảng sửa
+  trong ô Đuôi mã / Loại hàng / Ghi chú, thêm / xoá dòng, nút "Lưu bảng đuôi mã") → khối mã kho (thêm cột chỉ xem "Đuôi mã", "Ghi chú
+  đuôi"; cảnh báo vàng số mã có đuôi lạ). Không hỏi xác nhận khi lưu bảng.
 - **Ô số liệu:** Screen 1, 3, 6, 7, 10. **Biểu đồ:** Screen 7, Screen 10.
 - **Hộp thoại xác nhận** trước khi: Huỷ yêu cầu, Từ chối, Xoá nhóm tiêu hao, Xoá dòng CK/PP, "Lưu đóng gói" (nội dung theo BR-62), mọi nút "… và tính lại" (Screen
   5), "Lưu hệ số", "Lưu thay đổi" nhóm tiêu hao (có tính lại), "Lưu N dòng hợp lệ". Không hỏi lại khi: Gửi yêu cầu, Lưu sửa
@@ -1988,7 +2015,9 @@ không có vai trò phù hợp (BR-47, BR-48); phía xử lý vẫn kiểm tra l
 - **Buttons:** "Kiểm tra file", "Lưu tháng <mm/yyyy>" (hỏi xác nhận), "Thêm nhóm", "Lưu nhóm", "Xoá nhóm" (hỏi xác nhận), "Lưu khai
   báo mã kho", "Lưu khai báo tháng".
 - **After actions:** thông báo của UC; lưu file kho xong có mã mới → chuyển sang thẻ Khai báo với công tắc "Chỉ hiện mã chưa khai báo".
-- **Bổ sung 2026-11-17:** thẻ Giá bình quân có ô "Cách tính bình quân: Tách / Gom" (UC-59, BR-114).
+- **Bổ sung 2026-11-17:** thẻ Giá bình quân có ô "Cách tính bình quân: Tách / Gom" (UC-59, BR-114). Thẻ Khai báo: khối mới "Đuôi mã →
+  Loại hàng" (UC-72) trên khối mã kho, nút "Lưu bảng đuôi mã" (không hỏi xác nhận); khối mã kho thêm cột "Đuôi mã", "Ghi chú đuôi" và
+  cảnh báo đuôi lạ (UC-57).
 
 ### Screen 12: Nguyên liệu sắp về (đợt 2)
 - **Purpose:** theo dõi các lô nguyên liệu sẽ về nhà máy (nhập file theo dõi của Sales hoặc sửa tay) để tính giá bình quân. Chỉ
@@ -2390,7 +2419,24 @@ không có vai trò phù hợp (BR-47, BR-48); phía xử lý vẫn kiểm tra l
 - [ ] AC-159 (giữ nguyên): Không chọn gì (mặc định Tách) → bảng giá bình quân và mọi báo giá cho cùng kết quả như trước (AC-148, AC-152);
   mọi test cũ giữ xanh.
 
+- [ ] AC-160 (UC-72, BR-116): Chưa lưu bảng lần nào → khối "Đuôi mã → Loại hàng" hiện 4 dòng IDR Nội địa, ID Xuất khẩu, IR Xuất khẩu, I
+  Chung; thêm dòng "idx " Nội địa, lưu → "Đã lưu bảng đuôi mã (5 dòng)." và bảng có "IDX"; nhật ký ghi lần lưu.
+- [ ] AC-161 (BR-116): Lưu đuôi trống → "Vui lòng nhập đuôi mã."; "I-D" → "Đuôi mã 'I-D' chỉ gồm chữ và số, tối đa 10 ký tự."; hai dòng
+  "IR" → "Đuôi mã 'IR' bị trùng."; dòng không chọn loại hàng → "Đuôi mã '<đuôi>': vui lòng chọn loại hàng."; không lưu gì khi có lỗi.
+- [ ] AC-162 (BR-86, BR-116): Đổi IR → Nội địa và thêm IDX → Xuất khẩu, lưu; lưu file kho có mã mới ...IR, ...IDX, ...IDXR → gợi ý Nội địa,
+  Xuất khẩu, Chung (IDXR không khớp "bắt đầu bằng"); mã ...IR đã có từ trước giữ Loại hàng cũ.
+- [ ] AC-163 (UC-57, BR-116): Mã ...IDXR (đuôi lạ) ở bảng mã kho có cột Đuôi mã "IDXR", Ghi chú đuôi "Đuôi chưa có trong bảng" và cảnh báo
+  "Có 1 mã kho có đuôi chưa có trong bảng đuôi mã."; mã không đuôi không bị báo.
+- [ ] AC-164 (4.32): Bỏ dòng "I" khỏi bảng, lưu → dòng "I" được đánh dấu xoá (vẫn còn trong dữ liệu), mã đuôi I mới gợi ý Chung và bị báo
+  đuôi lạ.
+- [ ] AC-165 (giữ nguyên): Chưa sửa bảng (4 dòng khởi tạo) → gợi ý như AC-119 / AC-157; mọi test cũ giữ xanh.
+
 ## 10. Open questions (Câu hỏi mở)
+- Mở rộng 2026-11-17 (bảng đuôi mã): Sales / Phòng SO tự khai báo bảng "Đuôi mã → Loại hàng" ở thẻ Khai báo để app gợi ý Loại hàng cho mã
+  kho mới, thay cho quy tắc cố định; đuôi lạ gợi ý Chung và được báo (4.32, UC-57 sửa, UC-72, BR-86 sửa, BR-116, AC-160..AC-165). Kế
+  hoạch: `docs/plans/yarn_costing-extension-20261117-duoi-ma.md`.
+- Giả định (2026-11-17, bảng đuôi mã): so đuôi bằng đúng; bảng chỉ ảnh hưởng mã mới, không có nút áp dụng lại; quyền như khai báo mã kho
+  (Sales, Phòng SO).
 - Mở rộng 2026-11-17 (Tách / Gom): Sales chọn cách tính bình quân Tách (theo Nội địa / Xuất khẩu, như cũ) hoặc Gom (mọi mã kho và lô hàng
   về của nhóm cộng chung) cho từng lần tính và khi xem bảng giá bình quân; sửa gợi ý loại hàng theo đuôi mã kho; dòng "Cotton (phương án)"
   hiện Giá tồn / Giá về theo phương án (Thuật ngữ, 4.28 `avg_mode`, 5.12, UC-59 / UC-62 / UC-63 sửa, BR-86 sửa, BR-96 sửa, BR-114,
@@ -2692,3 +2738,7 @@ không có vai trò phù hợp (BR-47, BR-48); phía xử lý vẫn kiểm tra l
 | BR-114, BR-115, BR-86 (sửa) | `business/material_price_business.py` (`month_view` / `averages` / `plan_average` / `_cotton_plan` nhận `mode`; `_markets` Gom = mọi mã / lô vào cả hai loại hàng một lần; giá tồn / giá về theo phương án), `business/material_stock_business.py` (`market_of`: IDR → Nội địa, ID / IR → Xuất khẩu, còn lại → Chung) |
 | UC-59, UC-62, UC-63 (bổ sung 2026-11-17) | `services/get_material_averages_service.py` (Gom → một dòng mỗi nhóm), `services/calculate_quote_service.py` (`avg_mode`); DTO `dto/material_dto.py` (`GetMaterialAveragesRequest.mode`, `AverageRowDTO.mode / market_label`, `CalculateQuoteRequest.avg_mode`, `QuoteDTO.avg_mode`), `builders/material_dto_builders.py`, cột Excel `builders/material_file_builders.py`; giao diện `pages/material_price_page.py` (ô Cách tính bình quân ở thẻ Giá bình quân), `pages/quote_page.py` (ô Cách tính bình quân, dòng "Bình quân: ...", cột ở bảng các lần đã tính, Dùng lại) |
 | AC-153..AC-159 | `test_material_price.py` trong thư mục kiểm thử của chức năng (AC-159 = toàn bộ test cũ; AC-119 sửa theo BR-86 sửa) |
+| Bảng đuôi mã (2026-11-17) - dữ liệu | `models/material_price.py` (`CodeSuffixRule`, `DEFAULT_SUFFIX_RULES`), `repositories/material_price_repository.py` (`CodeSuffixRuleRepository`: 4 dòng khởi tạo khi bảng chưa từng có dòng, `by_suffix`); bảng mới, không cần chuyển dữ liệu |
+| UC-72, BR-116, BR-86 (sửa lần 2) | `business/material_stock_business.py` (`suffix_of`, `market_of(code, rules)`, `is_unknown_suffix`, `clean_suffix_rows`, `plan_suffix_rules`, `merge_settings(..., rules)`), `services/save_suffix_rules_service.py` (bỏ dòng = cờ xoá, nhật ký), `services/import_stock_file_service.py` (gợi ý theo bảng), `models/access.py` + `constants.py` (UC-72: Sales, Phòng SO) |
+| UC-57 (bổ sung 2026-11-17) | `services/get_material_setup_service.py` (`suffix_rules`, `StockItemDTO.suffix / suffix_note`, `unknown_suffix_count`), DTO `dto/material_dto.py` (`SuffixRuleDTO`, `SaveSuffixRulesRequest`), controller `save_suffix_rules`; giao diện `pages/material_price_page.py` (`_suffix_rules`, cột Đuôi mã / Ghi chú đuôi, cảnh báo đuôi lạ) |
+| AC-160..AC-165 | `test_material_price.py` trong thư mục kiểm thử của chức năng (AC-165 = gợi ý cũ giữ nguyên + toàn bộ test cũ) |

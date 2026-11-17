@@ -60,6 +60,7 @@ USE_CASE_PERMISSIONS: Final = {
     "UC-67": (_SO,),
     "UC-70": (_SO,),
     "UC-71": (_SO,),
+    "UC-72": (_SO, _SALES),  # bảng đuôi mã (bổ sung 2026-11-17)
     INITIAL_IMPORT_USE_CASE: (_SO,),
 }
 

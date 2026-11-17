@@ -26,9 +26,11 @@ from backend.features.yarn_costing.dto.material_dto import (
     SaveMonthlySettingRequest,
     SavePriceGroupRequest,
     SaveStockItemSettingsRequest,
+    SaveSuffixRulesRequest,
     StockImportResponse,
     StockItemRowDTO,
     StockOutRowDTO,
+    SuffixRuleDTO,
 )
 from frontend.core.base_page import BasePage
 from frontend.core.components import data_table, editable_table, empty_state, file_upload, panel, stat_row
@@ -85,6 +87,7 @@ class MaterialPricePage(BasePage):
         with tabs[2]:
             setup = feature.get_material_setup(GetMaterialSetupRequest())
             self._groups(feature, setup)
+            self._suffix_rules(feature, setup)
             self._stock_items(feature, setup)
         with tabs[3]:
             self._monthly(feature)
@@ -358,6 +361,44 @@ class MaterialPricePage(BasePage):
             explain(why)
 
     # ---- UC-57 ----
+    # ---- UC-72 (bổ sung 2026-11-17) ----
+    def _suffix_rules(self, feature: YarnCostingController, setup: MaterialSetupResponse) -> None:
+        disabled, why = action_state("UC-72")
+        with panel(
+            "Đuôi mã → Loại hàng",
+            icon="🔤",
+            description=(
+                "Đuôi mã = phần sau 18 ký tự đầu của mã kho. Mã mới khi lưu file kho được gợi ý loại hàng theo bảng này "
+                "(so đúng đuôi); đuôi chưa có trong bảng gợi ý Chung. Mã đã có không đổi."
+            ),
+        ):
+            edited = editable_table(
+                [{"Đuôi mã": r.suffix, "Loại hàng": r.market.value if r.market else None, "Ghi chú": r.note}
+                 for r in setup.suffix_rules],
+                key=self.key("suffix_rules"),
+                columns=["Đuôi mã", "Loại hàng", "Ghi chú"],
+                column_config={
+                    "Đuôi mã": st.column_config.TextColumn("Đuôi mã", max_chars=10),
+                    "Loại hàng": st.column_config.SelectboxColumn("Loại hàng", options=MARKETS),
+                    "Ghi chú": st.column_config.TextColumn("Ghi chú", max_chars=200),
+                },
+                allow_add_delete=True,
+            )  # fmt: skip
+            if st.button(
+                "Lưu bảng đuôi mã", type="primary", icon="💾", key=self.key("suffix_save"), disabled=disabled, help=why
+            ):
+                rows = [
+                    SuffixRuleDTO(
+                        suffix=str(r.get("Đuôi mã") or ""),
+                        market=MaterialMarket(r["Loại hàng"]) if r.get("Loại hàng") else None,
+                        note=str(r.get("Ghi chú") or ""),
+                    )
+                    for r in edited
+                    if any(r.get(c) for c in ("Đuôi mã", "Loại hàng", "Ghi chú"))  # dòng trống hoàn toàn: bỏ qua
+                ]
+                run_save(self.state, lambda: feature.save_suffix_rules(SaveSuffixRulesRequest(rows=rows)).message)
+            explain(why)
+
     def _stock_items(self, feature: YarnCostingController, setup: MaterialSetupResponse) -> None:
         disabled, why = action_state("UC-57")
         with panel(
@@ -366,6 +407,10 @@ class MaterialPricePage(BasePage):
             description="Gán từng mã kho vào nhóm giá hoặc chọn Không tính; loại hàng gợi ý theo đuôi mã.",
         ):
             stat_row([("Chưa khai báo", format_number(setup.undeclared_count))])
+            if setup.unknown_suffix_count:  # BR-116 (bổ sung 2026-11-17)
+                st.warning(
+                    f"Có {setup.unknown_suffix_count} mã kho có đuôi chưa có trong bảng đuôi mã.", icon="⚠️"
+                )
             only_new = st.toggle(
                 "Chỉ hiện mã chưa khai báo", value=setup.undeclared_count > 0, key=self.key("only_new")
             )
@@ -385,6 +430,8 @@ class MaterialPricePage(BasePage):
                         "Cách dùng": i.decision.value,
                         "Nhóm giá": names.get(i.price_group_id or ""),
                         "Loại hàng": i.market.value,
+                        "Đuôi mã": i.suffix,
+                        "Ghi chú đuôi": i.suffix_note,
                     }
                     for i in items
                 ],
@@ -397,7 +444,14 @@ class MaterialPricePage(BasePage):
                     "Nhóm giá": st.column_config.SelectboxColumn("Nhóm giá", options=list(ids)),
                     "Loại hàng": st.column_config.SelectboxColumn("Loại hàng", options=MARKETS, required=True),
                 },
-                disabled=("Mã kế toán", "Tên hàng", "Nhóm kế toán", f"Tồn cuối {month_text(setup.latest_period)} (kg)"),
+                disabled=(
+                    "Mã kế toán",
+                    "Tên hàng",
+                    "Nhóm kế toán",
+                    f"Tồn cuối {month_text(setup.latest_period)} (kg)",
+                    "Đuôi mã",
+                    "Ghi chú đuôi",
+                ),
             )
             if st.button(
                 "Lưu khai báo mã kho",

@@ -2,6 +2,7 @@
 
 Numbers come from the real files of Sales: GIÁ SỢI 4 THÁNG 10.xlsx, Giá nguyên liệu.xlsx, Ke hoach xo ve NM - 06.11.xlsx."""
 
+import re
 from datetime import date, datetime
 from decimal import Decimal
 from io import BytesIO
@@ -978,3 +979,99 @@ def test_ac159_default_is_tach_and_unchanged() -> None:
     default = CalculateQuoteService().handle(supima_request()).quote
     expected = D("0.5") * plan_net() / (1 - D("0.242")) + D("0.5") * PIMA_NET / (1 - D("0.217"))
     assert default.avg_mode == AverageMode.TACH and round(default.material_usd, 6) == round(expected, 6)
+
+
+# ---- Bảng đuôi mã (bổ sung 2026-11-17): 4.32, UC-72, BR-86 sửa, BR-116, AC-160..AC-165 ----
+def suffix_table() -> list[tuple[str, MaterialMarket | None, str]]:
+    return [(r.suffix, r.market, r.note) for r in GetMaterialSetupService().handle(GetMaterialSetupRequest()).suffix_rules]
+
+
+def save_suffixes(rows: list[tuple[str, MaterialMarket | None]]):
+    from backend.features.yarn_costing.dto.material_dto import SaveSuffixRulesRequest, SuffixRuleDTO
+    from backend.features.yarn_costing.services.save_suffix_rules_service import SaveSuffixRulesService
+
+    request = SaveSuffixRulesRequest(rows=[SuffixRuleDTO(suffix=s, market=m) for s, m in rows])
+    return SaveSuffixRulesService().handle(request)
+
+
+STARTING = [("I", MaterialMarket.CHUNG), ("ID", MaterialMarket.XUAT_KHAU), ("IDR", MaterialMarket.NOI_DIA), ("IR", MaterialMarket.XUAT_KHAU)]
+
+
+def new_code_rows(*codes: str) -> list[tuple]:
+    return [("Xơ ", code, f"PSF test {code}", "0", "0", "0", "0", "100", "2580000") for code in codes]
+
+
+def test_ac160_starting_rows_and_save() -> None:
+    from backend.features.yarn_costing.repositories.recalc_batch_repository import AuditLogRepository
+
+    assert [(s, m) for s, m, _ in suffix_table()] == STARTING
+    done = save_suffixes([*STARTING, ("idx ", MaterialMarket.NOI_DIA)])
+    assert done.message == "Đã lưu bảng đuôi mã (5 dòng)."
+    assert ("IDX", MaterialMarket.NOI_DIA) in [(s, m) for s, m, _ in suffix_table()]
+    assert any(a.action == "Khai báo bảng đuôi mã → loại hàng" for a in AuditLogRepository().list_all())
+
+
+@pytest.mark.parametrize(
+    ("rows", "message"),
+    [
+        ([("", MaterialMarket.NOI_DIA)], "Vui lòng nhập đuôi mã."),
+        ([("I-D", MaterialMarket.NOI_DIA)], "Đuôi mã 'I-D' chỉ gồm chữ và số, tối đa 10 ký tự."),
+        ([("ABCDEFGHIJK", MaterialMarket.NOI_DIA)], "Đuôi mã 'ABCDEFGHIJK' chỉ gồm chữ và số, tối đa 10 ký tự."),
+        ([("IR", MaterialMarket.NOI_DIA), ("ir", MaterialMarket.CHUNG)], "Đuôi mã 'IR' bị trùng."),
+        ([("IX", None)], "Đuôi mã 'IX': vui lòng chọn loại hàng."),
+    ],
+)
+def test_ac161_suffix_checks(rows, message) -> None:
+    with pytest.raises(AppError, match=re.escape(message)):
+        save_suffixes(rows)
+    assert [(s, m) for s, m, _ in suffix_table()] == STARTING  # không lưu gì khi có lỗi
+
+
+def test_ac162_new_codes_follow_the_table() -> None:
+    ImportStockFileService().handle(ImportStockFileRequest(file=stock_file(), commit=True))
+    assert StockItemSettingRepository().by_code()[INDO_X].market == MaterialMarket.XUAT_KHAU
+    rows = [(s, MaterialMarket.NOI_DIA if s == "IR" else m) for s, m in STARTING] + [("IDX", MaterialMarket.XUAT_KHAU)]
+    save_suffixes(rows)
+    new = new_code_rows("MN1001209999999001IR", "MN1001209999999002IDX", "MN1001209999999003IDXR")
+    ImportStockFileService().handle(ImportStockFileRequest(file=stock_file([*STOCK_ROWS, *new]), commit=True))
+    settings = StockItemSettingRepository().by_code()
+    assert settings["MN1001209999999001IR"].market == MaterialMarket.NOI_DIA
+    assert settings["MN1001209999999002IDX"].market == MaterialMarket.XUAT_KHAU
+    assert settings["MN1001209999999003IDXR"].market == MaterialMarket.CHUNG  # so đúng đuôi, không "bắt đầu bằng"
+    assert settings[INDO_X].market == MaterialMarket.XUAT_KHAU  # mã đã có giữ nguyên
+
+
+def test_ac163_unknown_suffix_reported() -> None:
+    new = new_code_rows("MN1001209999999003IDXR")
+    ImportStockFileService().handle(ImportStockFileRequest(file=stock_file([*STOCK_ROWS, *new]), commit=True))
+    setup = GetMaterialSetupService().handle(GetMaterialSetupRequest())
+    items = {i.accounting_code: i for i in setup.stock_items}
+    assert setup.unknown_suffix_count == 1
+    assert (items["MN1001209999999003IDXR"].suffix, items["MN1001209999999003IDXR"].suffix_note) == (
+        "IDXR",
+        "Đuôi chưa có trong bảng",
+    )
+    assert items["MN1000143812806001"].suffix == "" and items["MN1000143812806001"].suffix_note == ""
+    assert items[INDO_D].suffix_note == ""
+
+
+def test_ac164_removed_row_is_flagged_not_deleted() -> None:
+    from backend.features.yarn_costing.repositories.material_price_repository import CodeSuffixRuleRepository
+
+    save_suffixes([r for r in STARTING if r[0] != "I"])
+    repo = CodeSuffixRuleRepository()
+    assert "I" not in repo.by_suffix()
+    assert [r.suffix for r in repo.list_deleted()] == ["I"]  # vẫn còn trong dữ liệu, chỉ đánh dấu xoá
+    new = new_code_rows("MN1000143899999001I")
+    ImportStockFileService().handle(ImportStockFileRequest(file=stock_file([*STOCK_ROWS, *new]), commit=True))
+    assert StockItemSettingRepository().by_code()["MN1000143899999001I"].market == MaterialMarket.CHUNG
+    setup = GetMaterialSetupService().handle(GetMaterialSetupRequest())
+    assert next(i for i in setup.stock_items if i.accounting_code == "MN1000143899999001I").suffix_note
+
+
+def test_ac165_starting_table_keeps_old_suggestions() -> None:
+    ImportStockFileService().handle(ImportStockFileRequest(file=stock_file(), commit=True))
+    settings = StockItemSettingRepository().by_code()
+    assert settings[INDO_D].market == MaterialMarket.NOI_DIA and settings[INDO_X].market == MaterialMarket.XUAT_KHAU
+    assert settings["MN1001203811643001ID"].market == MaterialMarket.XUAT_KHAU
+    assert settings["MN1000143812806001"].market == MaterialMarket.CHUNG

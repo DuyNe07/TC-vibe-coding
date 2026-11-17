@@ -3,9 +3,16 @@
 from backend.core.base import BaseService
 from backend.features.yarn_costing.builders.material_dto_builders import group_dto, group_options
 from backend.features.yarn_costing.business.access_business import AccessBusiness
-from backend.features.yarn_costing.dto.material_dto import GetMaterialSetupRequest, MaterialSetupResponse, StockItemDTO
+from backend.features.yarn_costing.business.material_stock_business import MaterialStockBusiness
+from backend.features.yarn_costing.dto.material_dto import (
+    GetMaterialSetupRequest,
+    MaterialSetupResponse,
+    StockItemDTO,
+    SuffixRuleDTO,
+)
 from backend.features.yarn_costing.models.enums import MaterialDecision, StockSection
 from backend.features.yarn_costing.repositories.material_price_repository import (
+    CodeSuffixRuleRepository,
     MaterialPriceGroupRepository,
     StockItemSettingRepository,
     StockLineRepository,
@@ -13,6 +20,7 @@ from backend.features.yarn_costing.repositories.material_price_repository import
 )
 
 USE_CASE = "UC-57"
+UNKNOWN_SUFFIX = "Đuôi chưa có trong bảng"
 
 
 class GetMaterialSetupService(BaseService[GetMaterialSetupRequest, MaterialSetupResponse]):
@@ -28,6 +36,9 @@ class GetMaterialSetupService(BaseService[GetMaterialSetupRequest, MaterialSetup
                 for line in StockLineRepository().for_month(months[0].id)
                 if line.section == StockSection.NGUYEN_LIEU
             }
+        stock = MaterialStockBusiness()
+        rules = CodeSuffixRuleRepository().list_all()  # 4.32 (bổ sung 2026-11-17)
+        markets = {r.suffix: r.market for r in rules}
         counts: dict[str, int] = {}
         for s in settings:
             if s.decision == MaterialDecision.THEO_NHOM and s.price_group_id:
@@ -43,6 +54,8 @@ class GetMaterialSetupService(BaseService[GetMaterialSetupRequest, MaterialSetup
                     market=s.market,
                     closing_qty=closing.get(s.accounting_code),  # type: ignore[arg-type]
                     updated_by=s.updated_by,
+                    suffix=stock.suffix_of(s.accounting_code),
+                    suffix_note=UNKNOWN_SUFFIX if stock.is_unknown_suffix(s.accounting_code, markets) else "",
                 )
                 for s in settings
             ),
@@ -54,4 +67,9 @@ class GetMaterialSetupService(BaseService[GetMaterialSetupRequest, MaterialSetup
             stock_items=items,
             undeclared_count=sum(1 for s in settings if s.decision == MaterialDecision.CHUA_KHAI_BAO),
             latest_period=months[0].period if months else "",
+            suffix_rules=[
+                SuffixRuleDTO(suffix=r.suffix, market=r.market, note=r.note, updated_by=r.updated_by)
+                for r in sorted(rules, key=lambda r: r.suffix)
+            ],
+            unknown_suffix_count=sum(1 for i in items if i.suffix_note),
         )

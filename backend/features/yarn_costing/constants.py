@@ -160,6 +160,7 @@ USE_CASE_ACTIONS: Final = {
     "UC-69": "Đổi tên sợi bằng file",
     "UC-70": "Sửa nhóm sợi / từ khoá ghép tên",
     "UC-71": "Chuẩn hoá viết hoa tên sợi",
+    "UC-72": "Khai báo bảng đuôi mã → loại hàng",  # bổ sung 2026-11-17
 }
 
 # ---- Tolerances and limits -----------------------------------------------------------------------------------------
