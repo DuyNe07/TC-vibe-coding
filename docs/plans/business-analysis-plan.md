@@ -197,3 +197,146 @@ biểu tượng, người phụ trách như cũ). Không thêm chức năng mớ
 | S-03 | Mã kế toán chờ gán vào dòng Thường | BR-70, UC-21 bước 4, bảng trạng thái 4.12, mục 3 (Thuật ngữ), mục 10 |
 | S-04 | BR-32 / UC-23 / UC-24 | BR-32, UC-23, UC-24 |
 | S-05 | 96 nhóm tiêu hao "đang khoá" vì mã chờ | BR-24, BR-70, AC-88 |
+
+
+---
+
+# Kế hoạch phân tích nghiệp vụ: Năng suất xưởng may
+
+| Ngày | 2026-11-05 |
+|---|---|
+| Nguồn chính | [docs/business/_sources/nang-suat-xuong-may-discovery.md](../business/_sources/nang-suat-xuong-may-discovery.md) |
+| Trạng thái | Người dùng đã xác nhận tài liệu ngày 2026-11-05 |
+
+Người dùng đã xác nhận ghi chép tìm hiểu ngày 2026-11-05, kèm theo 3 điểm về đổi mã hàng ở S-16 và S-17. Bước này chỉ được sửa tài liệu nghiệp vụ và kế hoạch này, nên ghi chép gốc giữ nguyên và việc xác nhận được ghi tại đây.
+
+## 1. Chia chức năng
+
+**Một chức năng duy nhất**, vì mọi màn hình dùng chung một bộ dữ liệu.
+
+| Mục | Nội dung |
+|---|---|
+| Feature key | `sewing_productivity` |
+| Tên hiển thị | Năng suất xưởng may |
+| Nhóm Trang chủ | Sản xuất |
+| Biểu tượng | 🧵 |
+| Người phụ trách | Nhóm PI - SO |
+| Mục tiêu | Theo dõi và phân tích năng suất các xưởng may theo khoảng thời gian bất kỳ, thay cho báo cáo Excel làm tay |
+| Người dùng | Người cập nhật dữ liệu (tải file, sửa mục tiêu, danh mục, nhập đổi mã hàng tuần); Người xem (xem, lọc, tải báo cáo) |
+
+**Phạm vi tài liệu này là đợt 1.** Đợt 2 (phân tích khách hàng) và đợt 3 (dữ liệu 2025) làm sau bằng `docs/prompt/05-extend-feature.md`, đúng thứ tự người dùng đã đồng ý.
+
+### Nghiệp vụ dự kiến
+
+| Nhóm | Nghiệp vụ |
+|---|---|
+| Dữ liệu | Kiểm tra file tải lên; lưu dữ liệu từ file; xem lịch sử tải file |
+| Thiết lập | Xem và sửa mục tiêu, ngưỡng theo ngày hiệu lực; nhập đổi mã hàng theo tuần |
+| Danh mục | Xem và sửa nhóm sản phẩm, nhóm khách hàng, bảng số chuyền Fac 1; bổ sung tên sản phẩm cho style chưa tra được |
+| Báo cáo | Tổng quan xưởng; chi tiết chuyền; báo cáo ngày; báo cáo tháng; MO 8h theo chuyền; đổi mã hàng; biểu đồ |
+| Xuất file | Tải Excel cho từng báo cáo |
+
+### Màn hình dự kiến
+
+1. Tổng quan 4 xưởng (trang đầu) và biểu đồ
+2. Chi tiết theo chuyền
+3. Báo cáo ngày
+4. Báo cáo tháng
+5. MO 8h theo chuyền
+6. Đổi mã hàng
+7. Cập nhật dữ liệu
+8. Mục tiêu và ngưỡng
+9. Danh mục
+
+## 2. Bảng nguồn
+
+| ID | Nội dung | Nguồn |
+|---|---|---|
+| S-01 | Dữ liệu đầu vào là file Excel, mỗi ngày thêm khoảng 150 dòng; ngày cũ có thể bị sửa | Tin nhắn, `Data sewing 2026.xlsx` |
+| S-02 | Không tự đọc SharePoint hay máy cá nhân; người phụ trách tải file lên | Ghi chép mục 8 |
+| S-03 | Sheet `Production data`, `Target system`, `Worker` là dữ liệu đầu vào | `Data sewing 2026.xlsx` |
+| S-04 | Hiệu suất cách A cho báo cáo tuần, từ `Target system`, để trống trước 03/10/2026 | Tin nhắn, ghi chép mục 5 |
+| S-05 | Hiệu suất cách B cho KPI, lấy thẳng số trong file | Tin nhắn, ghi chép mục 5 |
+| S-06 | Mục tiêu theo xưởng do người phụ trách sửa, có ngày hiệu lực | Tin nhắn |
+| S-07 | Ngưỡng HCM 90% và MO $40; Vĩnh Long 85% và MO $30; áp cho cả hai hiệu suất | Tin nhắn |
+| S-08 | Công thức MO 8h của chuyền và của xưởng | Báo cáo tuần `Fac 1-detailed` |
+| S-09 | Tỷ lệ đúng sở trường tính từ `Target system` | Báo cáo tuần `Overall`, `Target system` |
+| S-10 | Báo cáo tuần: tổng quan và chi tiết chuyền theo ngày | `Sewing - Weekly Fac report` |
+| S-11 | Báo cáo ngày, bỏ Cutting | `Daily Report Sewing`, tin nhắn |
+| S-12 | Báo cáo tháng | `Report final` |
+| S-13 | MO 8h theo chuyền | `MO` |
+| S-14 | Biểu đồ: hiệu suất và MO theo ngày, thực tế so với mục tiêu, xếp hạng chuyền | Tin nhắn |
+| S-15 | Đổi mã hàng theo tuần do xưởng cung cấp, người phụ trách nhập tay | Tin nhắn |
+| S-16 | Số lần đổi KPI: bỏ phần sau dấu chấm cuối, lấy ngày đầu tiên trên chuyền, mỗi cặp SMV + CM chỉ tính một lần trong khoảng; KPI = số lần / số ngày làm việc / số chuyền của xưởng | Tin nhắn, `Data sewing 2026 - KPI CHANGEOVER.xlsx` |
+| S-17 | Số riêng "gồm cả lên lại", theo cặp SMV + CM; ví dụ ngày 1 lên, ngày 4 lên lại là tổng 2 lần; không thay số KPI | Tin nhắn |
+| S-18 | Bộ lọc thời gian, xưởng, chuyền, khách hàng, sản phẩm | Tin nhắn |
+| S-19 | Tên chuyền không phân biệt hoa thường; số chuyền Fac 1 trước 07/07/2026 quy về tên hiện nay | Tin nhắn, `Daily Report Sewing` |
+| S-20 | 7 nhóm sản phẩm; tên trống tra theo mã đơn, style, `Target system`; file gốc giữ nguyên | Tin nhắn, báo cáo tuần |
+| S-21 | Gộp khách hàng ELAND, MIHUB; màn hình danh mục do người phụ trách sửa | Tin nhắn |
+| S-22 | Mọi người đăng nhập để xem, chỉ người phụ trách sửa | Tin nhắn |
+| S-23 | Excel tải về: mỗi báo cáo một sheet, cột Đánh giá, không tô màu | Tin nhắn |
+| S-24 | Dấu màu cạnh con số theo ngưỡng | Tin nhắn |
+| S-25 | Đợt 2 và đợt 3 làm sau | Tin nhắn |
+
+## 3. Kết quả kiểm tra thêm trên dữ liệu
+
+- **Ngày làm việc:** số ngày có sản lượng khớp file KPI ở các tháng, trừ Fac 1 tháng 8 (25 so với 24).
+- **Số chuyền:** số chuyền có sản lượng là 14, 19, 15 cho Fac 2, 3, 5; Fac 1 từ 29 đến 33. Tháng 1, 2, 3, 4, 8, 9, 10 của Fac 1 đã khớp file KPI.
+- **Giờ làm của xưởng:** `Working Hours` lấy trung bình giờ của từng chuyền trong ngày.
+- **Mục tiêu báo cáo ngày:** Daily Target (SMV) của Fac 2 ngày 03/11 là 9.863, báo cáo lại ghi `=9863-869+702`. Target MO dùng số gõ tay như `=(16700/C16)*8/9.12`.
+- **Dòng trùng:** 51 dòng trùng ngày, xưởng, chuyền, mã đơn, màu; đa số khác sản lượng, chỉ 2 dòng giống hệt.
+- **Ngày mới nhất chưa đủ số:** ngày 04/11 có 45 dòng thiếu SMV, chưa có `Worker` và `Target system`.
+- **Cột bắt buộc:** không có dòng nào thiếu ngày, xưởng, chuyền, mã đơn, sản lượng, giá, số người, giờ làm.
+
+## 4. Câu hỏi vòng 1
+
+1. Xử lý file tải lên và dòng lỗi.
+2. Xử lý ngày mới nhất chưa đủ số.
+3. Khoảng thời gian trải qua 03/10/2026 với hiệu suất cách A.
+4. Bộ lọc khách hàng và sản phẩm ảnh hưởng đến chỉ số nào.
+5. Cách chọn tuần và cách nhập đổi mã hàng theo tuần.
+6. Mục tiêu và ngưỡng: áp cho hiệu suất nào, sửa thế nào.
+7. Nguồn mục tiêu trong báo cáo ngày.
+8. Tách chuyền cũ và mới của Fac 1, cột trái sở trường.
+9. Chỉ số của từng biểu đồ và xếp hạng chuyền.
+10. Danh mục ban đầu cho sản phẩm và khách hàng.
+11. Cách đếm số ngày làm việc và số chuyền.
+
+Người dùng trả lời "ok hết" ngày 2026-11-05: đồng ý toàn bộ đề xuất của 11 câu. Các câu trả lời đã nằm trong [tài liệu nghiệp vụ](../business/sewing_productivity.md).
+
+## 5. Bảng đối chiếu nguồn
+
+| S-xx | Nội dung | Covered by |
+|---|---|---|
+| S-01 | File Excel, ngày cũ có thể bị sửa | Mục 5.1, UC-02, BR-07, AC-08 |
+| S-02 | Tải file lên thay cho đọc SharePoint | Mục 10, UC-01, UC-02, Screen 7 |
+| S-03 | 3 sheet đầu vào | Mục 4.1–4.3, mục 5.1, BR-02, BR-03 |
+| S-04 | Hiệu suất A | BR-18, UC-04, AC-20, AC-23 |
+| S-05 | Hiệu suất B | Mục 4.1, BR-19, UC-04, AC-21 |
+| S-06 | Mục tiêu có ngày hiệu lực | Mục 4.4, BR-26, BR-27, BR-45, BR-46, UC-16, UC-17, AC-27 |
+| S-07 | Ngưỡng cảnh báo | Mục 4.4, BR-28, AC-29, AC-30 |
+| S-08 | Công thức MO 8h | BR-20 đến BR-23, BR-48, AC-25, AC-26 |
+| S-09 | Tỷ lệ đúng sở trường | BR-25, AC-22 |
+| S-10 | Báo cáo tuần | UC-04, UC-06, UC-11, Screen 1, Screen 2 |
+| S-11 | Báo cáo ngày, bỏ Cutting | UC-07, UC-12, BR-42, BR-43, Screen 3 |
+| S-12 | Báo cáo tháng | UC-08, UC-13, BR-48, Screen 4 |
+| S-13 | MO theo chuyền | UC-09, UC-14, BR-48, Screen 5 |
+| S-14 | Biểu đồ | UC-05, BR-44, Screen 1, AC-41 |
+| S-15 | Đổi mã hàng tuần nhập tay | Mục 4.5, UC-18, UC-19, UC-20, BR-38 đến BR-41, AC-31, AC-32, AC-47 |
+| S-16 | KPI đổi mã hàng | BR-12, BR-32 đến BR-35, BR-37, UC-10, UC-15, AC-33 |
+| S-17 | Số gồm cả lên lại | BR-36, UC-10, AC-34, AC-35, AC-36 |
+| S-18 | Bộ lọc | BR-29, BR-30, BR-31, UC-26, mục 8, AC-24 |
+| S-19 | Chuẩn hoá và quy đổi số chuyền | Mục 4.8, BR-10, BR-11, UC-24, AC-14, AC-15, AC-49 |
+| S-20 | Nhóm sản phẩm, tra tên trống | Mục 4.6, mục 4.9, BR-13, BR-14, UC-22, UC-25, AC-16, AC-17, AC-18 |
+| S-21 | Nhóm khách hàng, màn hình danh mục | Mục 4.7, BR-15, UC-21, UC-23, Screen 9, AC-19 |
+| S-22 | Quyền xem và sửa | Mục 2, BR-09, mục 8, AC-12 |
+| S-23 | Excel tải về | Mục 5.2, BR-49, UC-11 đến UC-15, AC-43, AC-44 |
+| S-24 | Dấu màu theo ngưỡng | BR-28, mục 8, AC-29 |
+| S-25 | Đợt 2 và đợt 3 làm sau | Mục 10 |
+
+## 6. Tự rà soát
+
+- Mọi BR đều nằm trong ít nhất một UC; mọi UC đều nằm trên một màn hình; mọi nút đều dẫn tới một UC.
+- Mọi cột của file đều có trường dữ liệu tương ứng; mọi trường đều được dùng trong UC, màn hình hoặc file.
+- Mọi UC đều có AC, kể cả luồng lỗi.
+- Số trong AC-20 đến AC-22, AC-25, AC-26, AC-33 và AC-34 đã được tính thử từ các file mẫu.
