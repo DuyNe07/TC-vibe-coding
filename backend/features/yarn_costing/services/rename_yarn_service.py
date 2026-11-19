@@ -3,10 +3,13 @@
 from backend.core.base import BaseService, utc_now
 from backend.features.yarn_costing.business.access_business import AccessBusiness
 from backend.features.yarn_costing.business.name_check_business import NameCheckBusiness
+from backend.features.yarn_costing.business.recalc_business import RecalcBusiness
 from backend.features.yarn_costing.dto.name_dto import RenameYarnRequest, RenameYarnResponse, UnknownWordDTO
 from backend.features.yarn_costing.exceptions import YarnNotFoundError
+from backend.features.yarn_costing.repositories.factory_data_loader import load_factory_data
 from backend.features.yarn_costing.repositories.loss_group_repository import LossGroupRepository
 from backend.features.yarn_costing.repositories.name_check_repository import NameWordRepository, PendingWordRepository
+from backend.features.yarn_costing.repositories.price_history_repository import PriceHistoryRepository
 from backend.features.yarn_costing.repositories.recalc_batch_repository import AuditLogRepository
 from backend.features.yarn_costing.repositories.yarn_repository import YarnRepository
 
@@ -30,6 +33,7 @@ class RenameYarnService(BaseService[RenameYarnRequest, RenameYarnResponse]):
         groups = groups_repo.list_all()
         standard, misspellings = NameWordRepository().lookups(business.word_uses(yarns))
         label = access.user_label(self.current_user)
+        now = utc_now()
         changed, changed_groups, old_key, new_key, check = business.plan_rename(
             base,
             family,
@@ -42,8 +46,9 @@ class RenameYarnService(BaseService[RenameYarnRequest, RenameYarnResponse]):
             standard,
             misspellings,
             label,
-            utc_now(),
+            now,
         )
+        joined = business.joins_existing_group(base, new_key, groups)
         response = RenameYarnResponse(
             old_name=base.yarn_name,
             new_name=check.name,
@@ -55,6 +60,15 @@ class RenameYarnService(BaseService[RenameYarnRequest, RenameYarnResponse]):
             return response
         repo.store(yarns, changed)
         groups_repo.save_many(changed_groups)
+        tail = ""
+        if joined:  # BR-105 (2026-11-19): price the waiting versions with the existing loss group
+            current = repo.list_all()
+            outcome = RecalcBusiness().recalculate_renamed(
+                current, load_factory_data(base.factory_code), {y.id for y in family}, now, changed_by=label
+            )
+            repo.store(current, outcome.yarns)
+            PriceHistoryRepository().add_many(outcome.history)
+            tail = business.joined_text(new_key, next((y for y in outcome.yarns if y.id == base.id), None))
         if check.unknown:
             PendingWordRepository().record(
                 [u.word for u in check.unknown], base.yarn_code, label, request.unknown_word_reason.strip()
@@ -69,5 +83,8 @@ class RenameYarnService(BaseService[RenameYarnRequest, RenameYarnResponse]):
             "Yarn %s renamed (%s versions, %s loss groups)", base.yarn_code, len(family), len(changed_groups)
         )
         return response.model_copy(
-            update={"saved": True, "message": f"Đã đổi tên {base.yarn_code}: '{base.yarn_name}' → '{check.name}'."}
+            update={
+                "saved": True,
+                "message": f"Đã đổi tên {base.yarn_code}: '{base.yarn_name}' → '{check.name}'" + (tail or "."),
+            }
         )

@@ -9,6 +9,7 @@ from decimal import Decimal, InvalidOperation
 
 from backend.core.base import BaseBusiness
 from backend.features.yarn_costing.business.blend_business import BlendBusiness
+from backend.features.yarn_costing.business.display_business import format_vnd
 from backend.features.yarn_costing.business.name_business import YarnNameBusiness, collapse_spaces
 from backend.features.yarn_costing.business.request_business import RequestBusiness
 from backend.features.yarn_costing.exceptions import YarnValidationError
@@ -38,6 +39,7 @@ HUNDRED = Decimal(100)
 WORD_SPLIT = re.compile(r"[^A-Z0-9]+")
 RATIO = re.compile(r"\(\s*(\d+(?:[.,]\d+)?(?:\s*/\s*\d+(?:[.,]\d+)?)+)\s*\)")
 INACTIVE = (YarnStatus.DA_HUY, YarnStatus.TU_CHOI)
+PRICED = (YarnStatus.DA_TINH_GIA, YarnStatus.CO_MA_KE_TOAN)
 NOT_COMPARED = (YarnStatus.DA_HUY, YarnStatus.TU_CHOI, YarnStatus.KHONG_SAN_XUAT)
 KEEP_RANK = {
     YarnStatus.CO_MA_KE_TOAN: 0,
@@ -376,16 +378,31 @@ class NameCheckBusiness(BaseBusiness[Yarn]):
         if changed:
             raise YarnValidationError(MSG_CHANGES.format(what=" / ".join(changed)))
 
+    def joins_existing_group(self, yarn: Yarn, new_key: str, groups: Sequence[LossGroup]) -> bool:
+        """BR-105 (2026-11-19): the new loss group already exists at the factory, so the yarn simply uses it."""
+        return new_key != yarn.loss_group_key and any(
+            g.factory_code == yarn.factory_code and g.group_key == new_key for g in groups
+        )
+
     def loss_group_change(
-        self, yarn: Yarn, new_key: str, yarns: Sequence[Yarn], groups: Sequence[LossGroup]
+        self,
+        yarn: Yarn,
+        new_key: str,
+        yarns: Sequence[Yarn],
+        groups: Sequence[LossGroup],
+        family: Sequence[Yarn] = (),
     ) -> LossGroup | None:
-        """BR-105: the loss group to rename (None = key unchanged). Raises when the change would alter the losses."""
+        """BR-105: the loss group to rename (None = no group renamed). Raises when the change would alter the losses."""
         old_key = yarn.loss_group_key
         if new_key == old_key:
             return None
         same_factory = [g for g in groups if g.factory_code == yarn.factory_code]
-        if any(g.group_key == new_key for g in same_factory):
-            raise YarnValidationError(MSG_GROUP_EXISTS.format(key=new_key))
+        if self.joins_existing_group(yarn, new_key, groups):
+            # sửa 2026-11-19: allowed when the old group is missing or no version has a price yet; old group kept
+            old_exists = any(g.group_key == old_key for g in same_factory)
+            if old_exists and any(y.status in PRICED for y in (family or [yarn])):
+                raise YarnValidationError(MSG_GROUP_EXISTS.format(key=new_key))
+            return None
         users = {
             y.base_code
             for y in yarns
@@ -436,6 +453,16 @@ class NameCheckBusiness(BaseBusiness[Yarn]):
                     )
         return changed_groups, changed_yarns
 
+    def joined_text(self, new_key: str, base: Yarn | None) -> str:
+        """UC-68 (2026-11-19): message tail when the yarn now uses an existing loss group."""
+        text = f"; sợi dùng nhóm tiêu hao '{new_key}' đã có"
+        if base is None:
+            return text + "."
+        regular = base.regular_line
+        if base.status != YarnStatus.CHUA_TINH_DUOC and regular is not None:
+            return text + f"; đã tính giá: {format_vnd(regular.total_vnd)} đ/kg."
+        return text + f"; vẫn chưa tính được: {'; '.join(base.status_reasons) or '-'}."
+
     def with_new_name(
         self, yarn: Yarn, new_name: str, new_key: str, user_label: str, reason: str, now: datetime
     ) -> Yarn:
@@ -481,7 +508,7 @@ class NameCheckBusiness(BaseBusiness[Yarn]):
         old_key = base.loss_group_key
         # a legacy key that does not come from the name (BR-04) is kept as it is
         new_key = parsed.loss_group_key if self.names.analyze(base.yarn_name).loss_group_key == old_key else old_key
-        group = self.loss_group_change(base, new_key, yarns, groups)
+        group = self.loss_group_change(base, new_key, yarns, groups, family)
         renamed = {
             y.id: self.with_new_name(
                 y, new, new_key if y.loss_group_key == old_key else y.loss_group_key, user_label, reason, now
