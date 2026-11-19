@@ -77,6 +77,20 @@ class RecalcBusiness(BaseBusiness[Yarn]):
             **ctx,
         )
 
+    def recalculate_renamed(
+        self, yarns: Sequence[Yarn], data: FactoryData, yarn_ids: set[str], now: datetime, **ctx: object
+    ) -> RecalcOutcome:
+        """BR-105 (2026-11-19): a renamed yarn now using an existing loss group → its 'Chưa tính được' versions."""
+        return self.recalculate(
+            yarns,
+            data,
+            PriceEvent.TINH_LAN_DAU,
+            now,
+            now.date(),
+            selector=lambda y: y.status == YarnStatus.CHUA_TINH_DUOC and y.id in yarn_ids,
+            **ctx,
+        )
+
     def not_priced(self, yarns: Sequence[Yarn], factory_code: FactoryCode) -> list[Yarn]:
         """BR-65: các bản NSM của xưởng đang 'Chưa tính được' (kể cả bản đã khoá)."""
         return [y for y in yarns if y.factory_code == factory_code and y.status == YarnStatus.CHUA_TINH_DUOC]

@@ -7,7 +7,7 @@
 | Owner (Người phụ trách) | Phòng SO |
 | Status (Trạng thái) | Implemented |
 | Run mode (Chạy ở đâu) | Server |
-| Last updated | 2026-11-17 |
+| Last updated | 2026-11-19 |
 
 ## 1. Goal (Mục tiêu)
 Hiện nay giá sợi của Xưởng Sợi 1 (S1) và Sợi 4 (S4) được tính trên hai file Excel có macro: Sales gửi yêu cầu qua
@@ -1583,8 +1583,10 @@ thường - BR-70); lịch sử ghi event "Sửa NSM". Mã đã khoá: nút lưu
 - **Trigger:** Screen 14, khối "Đổi tên sợi": chọn mã (danh sách chọn có tìm kiếm, hoặc chọn từ bảng UC-65), ô Tên mới (điền sẵn gợi ý), ô
   Lý do (bắt buộc), app hiện ngay kết quả kiểm tra BR-101 và nhóm tiêu hao cũ → mới; nút "Đổi tên".
 - **Main flow:** kiểm tra BR-105; lưu tên mới cho mã gốc và mọi bản ĐCNSM; thêm tên cũ vào `old_names`; đổi nhóm tiêu hao theo BR-105;
-  chữ lạ ghi vào chữ mới (BR-104); ghi nhật ký (tên cũ → mới, lý do). Không tính lại giá.
-- **Output:** "Đã đổi tên <mã>: '<cũ>' → '<mới>'."
+  chữ lạ ghi vào chữ mới (BR-104); ghi nhật ký (tên cũ → mới, lý do). Không tính lại giá (sửa 2026-11-19: trừ trường hợp sợi chưa có
+  giá chuyển sang nhóm tiêu hao đã có - BR-105 tính lại ngay các bản Chưa tính được).
+- **Output:** "Đã đổi tên <mã>: '<cũ>' → '<mới>'." (bổ sung 2026-11-19) Khi chuyển sang nhóm tiêu hao đã có: thêm "; sợi dùng nhóm tiêu hao
+  '<K'>' đã có; đã tính giá: <Tổng> đ/kg." hoặc "; sợi dùng nhóm tiêu hao '<K'>' đã có; vẫn chưa tính được: <lý do>."
 - **Errors:** BR-105, BR-101, BR-06.
 - **Rules applied:** BR-06, BR-101, BR-104, BR-105, BR-108, BR-109
 
@@ -1732,7 +1734,7 @@ thường - BR-70); lịch sử ghi event "Sửa NSM". Mã đã khoá: nút lưu
 | BR-102 | Ô ghép tên (bổ sung 2026-11-11): Sales chọn **Nhóm sợi** (4.31), nhập **Chi số** (số > 0, tối đa 2 chữ số thập phân), **Tỷ lệ** (số ô = Số xơ của nhóm, chỉ hiện khi Số xơ ≥ 2; mỗi ô số > 0, tổng 100), chọn **Từ khoá** (nhiều lựa chọn). Tên = `<Nhóm> <chi số>/1` + (` (a/b/...)` khi có tỷ lệ) + (` <từ khoá...>` theo Thứ tự tăng dần); `name_mode` = Ghép. Nút "Gõ tay" chuyển sang ô tên tự do (`name_mode` = Gõ tay), kiểm tra BR-101; khi gửi, nhóm sợi đọc từ tên (BR-02) chưa có trong danh sách → app tự thêm Nhóm sợi (Số xơ = số tỷ lệ đọc được, không có = 1; nguồn "Sales thêm - mới", Đã xem = Không) | Vui lòng chọn nhóm sợi. / Chi số phải lớn hơn 0. / Tổng tỷ lệ phải bằng 100 (hiện là <x>). |
 | BR-103 | Khởi tạo (bổ sung 2026-11-11), một lần khi bảng còn trống: **Từ điển** = mọi chữ (BR-100) xuất hiện trong ≥ 3 tên mã gốc (mọi trạng thái, cả hai xưởng) → Chữ chuẩn, nguồn Khởi tạo. **Nhóm sợi** = mọi `yarn_group` (BR-02) của mã gốc đang dùng, Số xơ = số phần tỷ lệ thường gặp nhất của nhóm (không có tỷ lệ = 1). **Từ khoá** = các chữ / cụm đứng sau chi số dùng ≥ 5 lần (MVS, SIRO, COMPACT, RE-PE, BCI, RECYCLE, FD, SUPIMA, SLUB, ...), Thứ tự theo vị trí xuất hiện trung bình trong tên. Phòng SO sửa lại sau. Từ điển: một chữ chỉ có một dòng; Cách viết sai phải trỏ tới Chữ chuẩn | Chữ '<chữ>' bị trùng. / Chữ '<chữ>' là cách viết sai, vui lòng chọn chữ đúng. / Chữ đúng '<chữ>' chưa có trong từ điển. |
 | BR-104 | Chữ mới chờ duyệt (bổ sung 2026-11-11): mỗi lần gửi / sửa yêu cầu hoặc đổi tên còn chữ lạ (BR-101) → mỗi chữ ghi / cộng vào 4.30 (mã, người, lý do, lúc), trạng thái Chờ duyệt. **Tự thêm:** khi một mã được tính giá lần đầu (UC-21 lưu giá, trạng thái → Đã tính giá), các chữ của tên nó đang Chờ duyệt thành Chữ chuẩn (nguồn Tự thêm khi tính giá), trạng thái Tự thêm. Phòng SO vẫn duyệt / xoá được (UC-66, UC-67) | - |
-| BR-105 | Đổi tên một sợi (bổ sung 2026-11-11): **Quyền** BR-109. Mã Đã huỷ / Từ chối không đổi được. Lý do bắt buộc ≤ 500. Tên mới qua BR-01, BR-101, viết hoa; giống tên hiện tại → "Tên mới giống tên hiện tại."; trùng mã gốc khác cùng xưởng → BR-06. **Không được đổi chi số, công nghệ (MVS / Ring), compact** (BR-02, BR-03) → "Đổi tên làm đổi <chi số / công nghệ / compact> - hãy tạo yêu cầu mới.". Áp cho mã gốc và mọi bản ĐCNSM; tên cũ thêm vào `old_names`. **Nhóm tiêu hao:** nhóm mới K' = BR-04(tên mới); K' = K cũ → không đổi; K' khác: nếu nhóm K chỉ dùng cho mã này (và bản ĐCNSM của nó) và K' chưa có ở xưởng → đổi tên nhóm K thành K' (cả chỗ nhóm sợi pha khác dùng K làm thành phần); nếu K' đã có → "Nhóm tiêu hao '<K'>' đã có; đổi tên sẽ làm đổi tiêu hao. Phòng SO xử lý nhóm tiêu hao trước."; nếu K còn dùng cho mã khác → "Nhóm tiêu hao '<K>' còn dùng cho <n> sợi khác. Hãy sửa chữ sai cho cả nhóm ở thẻ Chữ mới chờ duyệt / Từ điển.". Giá, mã tính giá, mã kế toán, NSM, thành phần không đổi; không tính lại giá; bản NSM khoá (BR-32) vẫn đổi được tên theo quyền BR-109 | Tên mới giống tên hiện tại. / Đổi tên làm đổi <...> - hãy tạo yêu cầu mới. / Nhóm tiêu hao '<K'>' đã có; ... / Nhóm tiêu hao '<K>' còn dùng cho <n> sợi khác. ... / Vui lòng nhập lý do. |
+| BR-105 | Đổi tên một sợi (bổ sung 2026-11-11): **Quyền** BR-109. Mã Đã huỷ / Từ chối không đổi được. Lý do bắt buộc ≤ 500. Tên mới qua BR-01, BR-101, viết hoa; giống tên hiện tại → "Tên mới giống tên hiện tại."; trùng mã gốc khác cùng xưởng → BR-06. **Không được đổi chi số, công nghệ (MVS / Ring), compact** (BR-02, BR-03) → "Đổi tên làm đổi <chi số / công nghệ / compact> - hãy tạo yêu cầu mới.". Áp cho mã gốc và mọi bản ĐCNSM; tên cũ thêm vào `old_names`. **Nhóm tiêu hao:** nhóm mới K' = BR-04(tên mới); K' = K cũ → không đổi; K' khác: nếu nhóm K chỉ dùng cho mã này (và bản ĐCNSM của nó) và K' chưa có ở xưởng → đổi tên nhóm K thành K' (cả chỗ nhóm sợi pha khác dùng K làm thành phần); nếu K' đã có → (sửa 2026-11-19: trước đây luôn từ chối) khi nhóm K **không có** ở xưởng hoặc mã gốc và mọi bản ĐCNSM đều **chưa có giá** (không bản nào Đã tính giá / Có mã kế toán): sợi chuyển sang dùng nhóm K' đã có, nhóm K giữ nguyên (không đổi tên, không xoá), rồi các bản "Chưa tính được" được tính lại ngay theo K' như BR-40 (đủ dữ liệu → "Đã tính giá", lịch sử giá event "Tính lần đầu"; thiếu → giữ "Chưa tính được", cập nhật lý do); ngược lại (sợi đã có giá) → "Nhóm tiêu hao '<K'>' đã có; đổi tên sẽ làm đổi tiêu hao. Phòng SO xử lý nhóm tiêu hao trước."; nếu K còn dùng cho mã khác → "Nhóm tiêu hao '<K>' còn dùng cho <n> sợi khác. Hãy sửa chữ sai cho cả nhóm ở thẻ Chữ mới chờ duyệt / Từ điển.". Giá, mã tính giá, mã kế toán, NSM, thành phần không đổi; không tính lại giá (trừ trường hợp K' đã có nêu trên); bản NSM khoá (BR-32) vẫn đổi được tên theo quyền BR-109 | Tên mới giống tên hiện tại. / Đổi tên làm đổi <...> - hãy tạo yêu cầu mới. / Nhóm tiêu hao '<K'>' đã có; ... / Nhóm tiêu hao '<K>' còn dùng cho <n> sợi khác. ... / Vui lòng nhập lý do. |
 | BR-106 | Sửa chữ sai trong mọi tên ("Sai, sửa thành", bổ sung 2026-11-11): chữ W → W' (đều viết hoa, so nguyên chữ) trong: tên mọi mã (mọi trạng thái, hai xưởng; tên cũ vào `old_names`, lý do "Sửa chính tả W → W'"), `loss_group_key` của mã, tên nhóm tiêu hao (`group_key`, `yarn_group_label`, `material`), thành phần nhóm sợi pha (`component_group_key`), `material_tech_key` và tên nguyên liệu của thành phần sợi (4.12.1). Kiểm tra trước, có lỗi thì không đổi gì: tên mới trùng mã khác cùng xưởng (BR-06) hoặc nhóm tiêu hao mới trùng nhóm đang có → liệt kê. Tiêu hao, giá không đổi; ghi nhật ký số tên / nhóm đã đổi | Không sửa được vì sẽ trùng: <danh sách>. |
 | BR-107 | Chuẩn hoá viết hoa (UC-71, bổ sung 2026-11-11): **Nhóm trùng** = các mã gốc cùng xưởng có tên viết hoa, gộp khoảng trắng giống nhau, trạng thái khác Đã huỷ, Từ chối, Không sản xuất. **Mã giữ** = mã đứng đầu khi sắp: trạng thái (Có mã kế toán, Đã tính giá, Chưa tính được, Chờ xưởng xem), nhiều mã kế toán hơn, nhiều bản ĐCNSM hơn, nhiều tên theo khách hơn, nhiều dòng giá hơn, số mã nhỏ hơn. **Mã loại**: Chờ xưởng xem → Từ chối; còn lại → Không sản xuất theo BR-72 nhưng được cả mã có mã kế toán; lý do "Trùng tên với <mã giữ>"; tên theo khách (4.20) chuyển sang mã giữ (bỏ cặp đã có); mã kế toán của mã loại thêm vào `merged_accounting_codes` của mã giữ. Sau đó mọi tên có chữ thường được viết hoa (tên cũ vào `old_names`, lý do "Chuẩn hoá viết hoa"). Chạy trong một lần, lỗi ở một mã thì không đổi gì | - |
 | BR-108 | Tên cũ và mã kế toán gộp (bổ sung 2026-11-11): ô tìm / chọn dòng giá (UC-27 tìm kiếm, UC-52, UC-62) tìm được theo `old_names` và `merged_accounting_codes`; gợi ý Trùng theo tên (BR-77 (b)) so cả tên cũ; ghép mã kế toán (BR-82, BR-95, BR-98, BR-99) coi `merged_accounting_codes` như mã kế toán của dòng Thường của mã giữ | - |
@@ -2431,8 +2433,23 @@ không có vai trò phù hợp (BR-47, BR-48); phía xử lý vẫn kiểm tra l
 - [ ] AC-164 (4.32): Bỏ dòng "I" khỏi bảng, lưu → dòng "I" được đánh dấu xoá (vẫn còn trong dữ liệu), mã đuôi I mới gợi ý Chung và bị báo
   đuôi lạ.
 - [ ] AC-165 (giữ nguyên): Chưa sửa bảng (4 dòng khởi tạo) → gợi ý như AC-119 / AC-157; mọi test cũ giữ xanh.
+- [x] AC-166 (BR-105, UC-68): Mã S1 "Cotton/Pinapple 30/1 (70/30)" Chưa tính được, nhóm "COTTON/PINAPPLE (70/30)" không có ở S1, nhóm
+  "COTTON/PINEAPPLE (70/30)" đã có, NSM đủ → đổi tên thành "COTTON/PINEAPPLE 30/1 (70/30)" thành công; mã dùng nhóm "COTTON/PINEAPPLE
+  (70/30)", trạng thái "Đã tính giá" với giá tính theo nhóm đó; câu báo có "sợi dùng nhóm tiêu hao 'COTTON/PINEAPPLE (70/30)' đã có; đã tính
+  giá"; không nhóm tiêu hao nào bị đổi tên hay xoá.
+- [x] AC-167 (BR-105, giữ nguyên): Mã đã có giá (Đã tính giá) đổi tên làm nhóm tiêu hao sang một nhóm khác đã có → vẫn câu "Nhóm tiêu hao
+  '<K'>' đã có; đổi tên sẽ làm đổi tiêu hao..."; tên, nhóm, giá không đổi.
+- [x] AC-168 (BR-105): Mã Chưa tính được có nhóm cũ K đang có ở xưởng (chỉ mã này dùng), K' đã có, NSM chưa đủ → đổi tên thành công, mã dùng
+  K', vẫn "Chưa tính được" với lý do mới, câu báo "vẫn chưa tính được: ..."; nhóm K còn nguyên.
+- [x] AC-169 (BR-105, giữ nguyên): K' chưa có ở xưởng → nhóm K đổi tên thành K' như trước; K' = K → không đổi nhóm; đổi tên bằng file (UC-69)
+  theo cùng quy tắc; mọi test cũ giữ xanh.
 
 ## 10. Open questions (Câu hỏi mở)
+- Mở rộng 2026-11-19 (đổi tên sang nhóm tiêu hao đã có): sợi chưa có giá, hoặc có nhóm tiêu hao theo tên cũ không tồn tại ở xưởng, được
+  đổi tên dù nhóm theo tên mới đã có; sợi dùng nhóm đó và được tính lại ngay (BR-105 sửa, UC-68 sửa, AC-166..AC-169). Kế hoạch:
+  `docs/plans/yarn_costing-extension-20261119-doi-ten-nhom-tieu-hao.md`.
+- Giả định (2026-11-19): "chưa có giá" = không bản nào (mã gốc, ĐCNSM) ở trạng thái Đã tính giá / Có mã kế toán; tính lại dùng cùng cách
+  BR-40 (event "Tính lần đầu"); nhóm tiêu hao theo tên cũ luôn được giữ.
 - Mở rộng 2026-11-17 (bảng đuôi mã): Sales / Phòng SO tự khai báo bảng "Đuôi mã → Loại hàng" ở thẻ Khai báo để app gợi ý Loại hàng cho mã
   kho mới, thay cho quy tắc cố định; đuôi lạ gợi ý Chung và được báo (4.32, UC-57 sửa, UC-72, BR-86 sửa, BR-116, AC-160..AC-165). Kế
   hoạch: `docs/plans/yarn_costing-extension-20261117-duoi-ma.md`.
@@ -2747,3 +2764,6 @@ không có vai trò phù hợp (BR-47, BR-48); phía xử lý vẫn kiểm tra l
 | UC-72, BR-116, BR-86 (sửa lần 2) | `business/material_stock_business.py` (`suffix_of`, `market_of(code, rules)`, `is_unknown_suffix`, `clean_suffix_rows`, `plan_suffix_rules`, `merge_settings(..., rules)`), `services/save_suffix_rules_service.py` (bỏ dòng = cờ xoá, nhật ký), `services/import_stock_file_service.py` (gợi ý theo bảng), `models/access.py` + `constants.py` (UC-72: Sales, Phòng SO) |
 | UC-57 (bổ sung 2026-11-17) | `services/get_material_setup_service.py` (`suffix_rules`, `StockItemDTO.suffix / suffix_note`, `unknown_suffix_count`), DTO `dto/material_dto.py` (`SuffixRuleDTO`, `SaveSuffixRulesRequest`), controller `save_suffix_rules`; giao diện `pages/material_price_page.py` (`_suffix_rules`, cột Đuôi mã / Ghi chú đuôi, cảnh báo đuôi lạ) |
 | AC-160..AC-165 | `test_material_price.py` trong thư mục kiểm thử của chức năng (AC-165 = gợi ý cũ giữ nguyên + toàn bộ test cũ) |
+| BR-105 (sửa 2026-11-19) | `business/name_check_business.py` (`PRICED`, `joins_existing_group`, `loss_group_change(..., family)`, `joined_text`), `business/recalc_business.py::recalculate_renamed` (bản Chưa tính được của sợi, event "Tính lần đầu") |
+| UC-68, UC-69 (sửa 2026-11-19) | `services/rename_yarn_service.py`, `services/import_rename_file_service.py` (tính lại sau khi lưu, câu báo thêm nhóm tiêu hao đã dùng + kết quả tính giá); không thêm bảng, không chuyển dữ liệu |
+| AC-166..AC-169 | `test_rename_existing_group.py` trong thư mục kiểm thử của chức năng (AC-169 + `test_yarn_name.py` AC-136..AC-138 cho các trường hợp cũ) |

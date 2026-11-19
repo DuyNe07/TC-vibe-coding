@@ -5,13 +5,17 @@ from backend.features.yarn_costing.builders.name_file_builders import RENAME_SHE
 from backend.features.yarn_costing.business.access_business import AccessBusiness
 from backend.features.yarn_costing.business.import_business import ImportBusiness
 from backend.features.yarn_costing.business.name_check_business import NameCheckBusiness, upper_name
+from backend.features.yarn_costing.business.recalc_business import RecalcBusiness
 from backend.features.yarn_costing.constants import ALLOWED_EXTENSIONS, MAX_UPLOAD_MB
 from backend.features.yarn_costing.dto.import_dto import RejectedRowDTO
 from backend.features.yarn_costing.dto.name_dto import ImportRenameFileRequest, RenameImportResponse, RenameRowDTO
 from backend.features.yarn_costing.exceptions import YarnValidationError
+from backend.features.yarn_costing.models.enums import FactoryCode
 from backend.features.yarn_costing.models.master_checks import FileCheck
+from backend.features.yarn_costing.repositories.factory_data_loader import load_factory_data
 from backend.features.yarn_costing.repositories.loss_group_repository import LossGroupRepository
 from backend.features.yarn_costing.repositories.name_check_repository import NameWordRepository, PendingWordRepository
+from backend.features.yarn_costing.repositories.price_history_repository import PriceHistoryRepository
 from backend.features.yarn_costing.repositories.recalc_batch_repository import AuditLogRepository
 from backend.features.yarn_costing.repositories.yarn_repository import YarnRepository
 
@@ -44,6 +48,9 @@ class ImportRenameFileService(BaseService[ImportRenameFileRequest, RenameImportR
         valid: list[RenameRowDTO] = []
         rejected: list[RejectedRowDTO] = []
         changed_yarns, changed_groups, pending = {}, {}, []
+        joined: dict[
+            FactoryCode, set[str]
+        ] = {}  # factory → yarn ids now using an existing loss group (BR-105, 2026-11-19)
         now = utc_now()
         for excel_row, cells in rows:
             factory = str(cells.get("factory") or "").strip().upper()
@@ -78,6 +85,8 @@ class ImportRenameFileService(BaseService[ImportRenameFileRequest, RenameImportR
             except YarnValidationError as exc:
                 rejected.append(RejectedRowDTO(sheet=RENAME_SHEET, excel_row=excel_row, key=code, reason=exc.message))
                 continue
+            if business.joins_existing_group(base, new_key, list(groups.values())):
+                joined.setdefault(base.factory_code, set()).update(y.id for y in family)
             for y in changed:  # later rows see the earlier renames of the same file
                 yarns[y.id] = changed_yarns[y.id] = y
             for g in group_changes:
@@ -106,6 +115,15 @@ class ImportRenameFileService(BaseService[ImportRenameFileRequest, RenameImportR
             raise YarnValidationError(MSG_NO_VALID)
         repo.save_many(list(changed_yarns.values()))
         groups_repo.save_many(list(changed_groups.values()))
+        priced = 0
+        for factory_code, ids in joined.items():
+            current = repo.list_all()
+            outcome = RecalcBusiness().recalculate_renamed(
+                current, load_factory_data(factory_code), ids, now, changed_by=label
+            )
+            repo.store(current, outcome.yarns)
+            PriceHistoryRepository().add_many(outcome.history)
+            priced += outcome.yarn_count - outcome.failed_yarn_count
         words = PendingWordRepository()
         for found, code, reason in pending:
             words.record(found, code, label, reason)
@@ -118,7 +136,8 @@ class ImportRenameFileService(BaseService[ImportRenameFileRequest, RenameImportR
             )
         )
         return RenameImportResponse(
-            message=f"Đã đổi tên {len(valid)} sợi, bị loại {len(rejected)} dòng.",
+            message=f"Đã đổi tên {len(valid)} sợi, bị loại {len(rejected)} dòng."
+            + (f" Đã tính giá {priced} mã dùng nhóm tiêu hao đã có." if priced else ""),
             committed=True,
             valid=valid,
             rejected_rows=rejected,
