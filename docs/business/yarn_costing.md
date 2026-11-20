@@ -7,7 +7,7 @@
 | Owner (Người phụ trách) | Phòng SO |
 | Status (Trạng thái) | Implemented |
 | Run mode (Chạy ở đâu) | Server |
-| Last updated | 2026-11-19 |
+| Last updated | 2026-11-20 |
 
 ## 1. Goal (Mục tiêu)
 Hiện nay giá sợi của Xưởng Sợi 1 (S1) và Sợi 4 (S4) được tính trên hai file Excel có macro: Sales gửi yêu cầu qua
@@ -289,7 +289,7 @@ Mỗi yêu cầu của Sales tạo một mã sợi (bản NSM gốc). Mỗi ĐCN
 | revision_no | integer ≥ 0 | Yes | 0 = bản gốc; n = ĐCNSM thứ n | 0 |
 | yarn_name | text ≤ 200 | Yes | Tên sợi | CVC 30/1 (60/40) MVS |
 | yarn_group | text (tính, BR-02) | - | Nhóm sợi, viết hoa | CVC |
-| count | decimal (tính, BR-02) | - | Chi số | 30 |
+| count | decimal (tính, BR-02) | - | Chi số; (bổ sung 2026-11-20) trống với mã Cúi CM (BR-120) | 30 |
 | loss_group_key | text (tính, BR-04) | - | Nhóm tiêu hao | CVC (60/40) MVS |
 | technology | Ring / MVS (tính, BR-03) | - | Công nghệ | MVS |
 | is_compact | yes-no (tính, BR-03) | - | Sợi compact | Không |
@@ -545,6 +545,7 @@ Một bản cho mỗi tháng tính (BR-88).
 | supima_group_id | tham chiếu 4.22 | No | (bổ sung 2026-11-13) Nhóm giá của bông Supima / Pima (BR-111) | Cotton Pima |
 | coin_usd | decimal ≥ 0 (mặc định 0,552) | Yes | (bổ sung 2026-11-13) Giá 1 kg Supima coin (USD/kg) | 0,552 |
 | coin_tax | decimal ≥ 0 (mặc định 0,05) | Yes | (bổ sung 2026-11-13) Thuế nhà thầu của Supima coin, hiện dạng % | 5% |
+| loss_pe, loss_other, loss_carded, loss_combed | decimal 0 ≤ x < 1 (mặc định 0,04; 0,08; 0,12; 0,24) | Yes | (bổ sung 2026-11-20) Tiêu hao mặc định khi tính giá báo khách theo loại xơ (BR-117): Xơ PE, Xơ khác, Cotton chải thô, Cotton chải kỹ; hiện dạng %; bản đã lưu trước 2026-11-20 = mặc định | 4%; 8%; 12%; 24% |
 | updated_by, updated_at | text, datetime | No | Người và lúc lưu | |
 
 ### 4.26 Lô nguyên liệu sắp về (Arrival lot) - đợt 2
@@ -614,6 +615,9 @@ Một bản cho mỗi tháng tính (BR-88).
 | supima_coin | Có / Không (mặc định Không) | Yes | (bổ sung 2026-11-13) Truyền điểm Supima coin trên TG (BR-111) | Không |
 | coin_fee_usd | decimal | No | (bổ sung 2026-11-13) Phí coin = coin_usd × (1 + coin_tax) khi supima_coin = Có | 0,5796 |
 | avg_mode | Tách / Gom (mặc định Tách) | Yes | (bổ sung 2026-11-17) Cách tính bình quân giá nguyên liệu của lần tính (BR-114); báo giá lưu trước 2026-11-17 = Tách | Gom |
+| sliver_cost | Có / Không (mặc định Không) | Yes | (bổ sung 2026-11-20) Tick "Cộng chi phí chế biến cúi CM" (BR-119); báo giá lưu trước 2026-11-20 = Không | Có |
+| sliver_code, sliver_vnd, sliver_usd | text, decimal, decimal | No | (bổ sung 2026-11-20) Mã Cúi CM đã dùng, giá chế biến cúi (VND/kg cúi) và chi phí cúi cộng vào norm (USD/kg sợi) khi sliver_cost = Có | S4-2125; 4.866; 0,1168 |
+| loss_version | integer (mặc định 1) | Yes | (bổ sung 2026-11-20) 1 = tiêu hao tính theo cách cũ (báo giá lưu trước 2026-11-20); 2 = tiêu hao theo loại xơ, Sales sửa được (BR-117) | 2 |
 
 #### 4.28.1 Thành phần của lần tính (Quote component)
 | Field | Type | Description | Example |
@@ -624,6 +628,8 @@ Một bản cho mỗi tháng tính (BR-88).
 | average_usd, recovery_usd, net_usd | decimal | Giá BQ, hồi phế, giá tính = BQ − hồi phế (USD/kg) | 1,9832; 0,18; 1,8032 |
 | cost_usd | decimal | Tỷ lệ × giá tính ÷ (1 − tiêu hao) (USD/kg sợi) | 1,2729 |
 | supima_ratio, normal_net, normal_loss, supima_net, supima_loss | decimal | (bổ sung 2026-11-13) Phần pha Supima của thành phần bông (BR-111): tỷ lệ Supima, giá tính và tiêu hao của bông thường, giá tính (đã cộng phí coin nếu có) và tiêu hao của Supima | 50%; 1,7983; 24,20%; 3,3267; 21,70% |
+| fiber_type | Xơ PE / Xơ khác / Cotton chải thô / Cotton chải kỹ / Cúi CM / trống | (bổ sung 2026-11-20) Loại xơ app xếp cho thành phần (BR-117); trống với báo giá lưu trước 2026-11-20 | Xơ PE |
+| default_loss | decimal | (bổ sung 2026-11-20) Tiêu hao app điền sẵn (BR-117, BR-118); `loss` là số Sales đã dùng (có thể đã sửa) | 4% |
 
 ### 4.29 Từ điển tên chuẩn (Name dictionary) - bổ sung 2026-11-11
 | Field | Type | Required | Description | Example |
@@ -1034,7 +1040,10 @@ Mọi UC làm thay đổi dữ liệu đều chạy bằng tài khoản đã đ�
 - **Bổ sung 2026-11-11 (sửa: trước đây chỉ gõ tay):** tên nhập bằng **ô ghép tên** (mặc định) hoặc **gõ tay** (BR-102); tên luôn lưu
   viết hoa; trước khi gửi kiểm tra BR-101 (chặn thiếu / thừa ngoặc, tỷ lệ ≠ 100; chữ lạ phải chọn gợi ý hoặc ghi lý do →
   `unknown_word_reason`); chữ lạ được ghi vào "Chữ mới chờ duyệt" (BR-104); nhóm sợi lạ khi gõ tay được thêm vào danh sách (BR-102).
-- **Rules applied:** BR-01, BR-02, BR-03, BR-04, BR-05, BR-06, BR-52, BR-60, BR-63, BR-76, BR-77, BR-78, BR-101, BR-102, BR-104
+- **Bổ sung 2026-11-20 (mã cúi):** ở xưởng S4, gõ tay tên **"Cúi CM"** hoặc **"Cúi chải thô cotton"** / "Cúi CD" được nhận dù không
+  có chi số (BR-120); ô Loại đóng gói không bắt buộc với các mã này. Xưởng S4 nhập NSM như mọi mã (Cúi CM: C1, SBD, CM, DCM; Cúi CD: C1),
+  app tính giá không có đóng gói.
+- **Rules applied:** BR-01, BR-02, BR-03, BR-04, BR-05, BR-06, BR-52, BR-60, BR-63, BR-76, BR-77, BR-78, BR-101, BR-102, BR-104, BR-120
 
 ### UC-16: Sửa yêu cầu
 - **Actor:** Sales
@@ -1458,7 +1467,10 @@ thường - BR-70); lịch sử ghi event "Sửa NSM". Mã đã khoá: nút lưu
 - **Errors:** BR-88; BR-84.
 - **Bổ sung 2026-11-13 (Supima):** thêm ô "Nhóm giá Supima" (danh sách nhóm 4.22), "Giá Supima coin (USD/kg)" (mặc định
   0,552), "Thuế nhà thầu coin (%)" (mặc định 5%); tháng mới chép từ tháng trước như các ô khác (BR-88, BR-113).
-- **Rules applied:** BR-49, BR-84, BR-88, BR-113
+- **Bổ sung 2026-11-20 (tiêu hao báo giá):** thêm khối "Tiêu hao mặc định khi tính giá báo khách" với 4 ô %: Xơ PE (mặc định 4%), Xơ
+  khác (8%), Cotton chải thô (12%), Cotton chải kỹ (24%); mỗi ô 0% đến dưới 100%; tháng mới chép từ tháng trước như các ô khác (BR-88,
+  BR-117). Sửa được: Phòng SO (như các ô khác của khai báo tháng).
+- **Rules applied:** BR-49, BR-84, BR-88, BR-113, BR-117
 
 ### UC-59: Xem bảng giá nguyên liệu bình quân tháng (đợt 2)
 - **Actor:** Sales, Phòng SO
@@ -1521,7 +1533,15 @@ thường - BR-70); lịch sử ghi event "Sửa NSM". Mã đã khoá: nút lưu
   Gom: Giá BQ, Giá tính của mọi thành phần (kể cả Cotton (phương án) và Supima) lấy theo BR-114, ô Nội địa / Xuất khẩu vẫn bắt buộc và
   được lưu nhưng không dùng để lọc giá. Kết quả ghi "Bình quân: Tách (<Nội địa / Xuất khẩu>)" hoặc "Bình quân: Gom". Lưu kèm
   `avg_mode`; "Dùng lại để tính mới" điền lại cả ô này.
-- **Rules applied:** BR-23, BR-49, BR-84, BR-89, BR-92, BR-93, BR-94, BR-95, BR-96, BR-97, BR-98, BR-110, BR-111, BR-112, BR-114
+- **Bổ sung 2026-11-20 (tiêu hao theo loại xơ, cúi CM):** bảng thành phần thêm cột **Loại xơ** (chỉ xem, BR-117) và cột **Tiêu hao %**
+  nay **sửa được**, điền sẵn theo BR-117 / BR-118 (sửa 2026-11-20: trước đây tiêu hao chỉ xem, lấy từ tiêu hao lũy kế của sợi). Khi sợi có
+  thành phần Cúi CM / Cúi CD (sợi S1 nhận cúi từ S4) hiện ô tick **"Cộng chi phí chế biến cúi CM"** / **"... cúi CD"** (mặc định không
+  tick, BR-119); tick thì bảng giá có dòng "Chi phí chế biến cúi CM (<mã>)" (hoặc cúi CD) và dòng Norm = norm của mã + chi phí cúi. Lưu
+  kèm loại xơ, tiêu hao mặc định, tiêu hao đã dùng, ô tick. "Dùng lại để tính mới": báo giá lưu từ 2026-11-20 điền lại tiêu hao đã dùng và
+  ô tick; báo giá lưu trước đó điền tiêu hao mặc định mới (BR-117), ô tick không tick. Danh sách chọn sợi gồm dòng giá Thường đã có giá của
+  **S4 và S1** (sửa 2026-11-20: trước đây chỉ S4 - cần để báo giá sợi S1 có cúi), trừ mã cúi (BR-120).
+- **Rules applied:** BR-23, BR-49, BR-84, BR-89, BR-92, BR-93, BR-94, BR-95, BR-96, BR-97, BR-98, BR-110, BR-111, BR-112, BR-114,
+  BR-117, BR-118, BR-119, BR-120
 
 ### UC-63: Xem, xuất, xoá các lần tính giá báo khách (đợt 2)
 - **Actor:** Sales, Phòng SO
@@ -1723,7 +1743,7 @@ thường - BR-70); lịch sử ghi event "Sửa NSM". Mã đã khoá: nút lưu
 | BR-91 | Lưu hàng sắp về (bổ sung 2026-11-10): lưu file → mọi lô đang có (kể cả lô nhập / sửa tay) đặt cờ xoá rồi lưu các lô của file (file là gốc). Nhóm giá của lô = khai báo 4.27 của cặp (Nhà cung cấp, Mô tả) sau khi viết hoa, bỏ dấu, gộp khoảng trắng; cặp chưa có → thêm với "Chưa khai báo". Lô thuộc cặp "Chưa khai báo" / "Không tính" không vào giá bình quân | - |
 | BR-92 | Giá nguyên liệu bình quân tháng M (bổ sung 2026-11-10), cho nhóm g và loại hàng t (Nội địa / Xuất khẩu): **Tồn** = dòng Nguyên liệu của tháng kho M−1 có mã khai báo "Tính theo nhóm" g và Loại hàng t hoặc Chung, SL_CUOI > 0: SL = SL_CUOI, giá trị USD = GT_CUOI ÷ tỷ giá M. **Hàng về** = lô xưởng S4 có ngày về kho trong tháng M, cặp khai báo nhóm g, Loại hàng t hoặc Chung: SL = quantity, giá USD/kg = Giá nhập kho, trống thì Unit price (VND thì ÷ tỷ giá M). **Giá BQ** = Σ giá trị ÷ Σ SL; **Giá tính** = Giá BQ − hồi phế của g tháng M. Không có SL nào → nhóm không có giá. **Cotton (phương án)** = Σ (tỷ lệ phương án của xuất xứ o × Giá BQ của tồn + hàng về mọi nhóm cotton xuất xứ o) − hồi phế của "Cotton (phương án)"; phương án trống hoặc một xuất xứ không có giá → không có giá. Thiếu tháng kho M−1 → không tính được | Nhóm '<nhóm>' (<loại hàng>) chưa có giá tháng <mm/yyyy>: không có tồn và hàng về. / Chưa khai báo phương án pha bông tháng <mm/yyyy>. / Chưa có file kho tháng <mm/yyyy> (tháng trước tháng tính). Vui lòng tải ở thẻ File kho. |
 | BR-93 | Gợi ý nhóm giá cho thành phần (bổ sung 2026-11-10): nhóm đã chọn ở lần tính báo giá gần nhất (chưa xoá) có cùng tên nguyên liệu (viết hoa, gộp khoảng trắng); chưa có thì: tên nguyên liệu bắt đầu bằng "CM", "CD" hoặc chứa "COTTON" → "Cotton (phương án)"; còn lại để trống, Sales chọn | - |
-| BR-94 | Giá nguyên liệu của 1 kg sợi (bổ sung 2026-11-10): **Tiêu hao sản xuất** của thành phần i = tiêu hao lũy kế (BR-19) của lượt chải thô của thành phần (theo chi tiết tính giá đã lưu của bản NSM); thành phần "Không chải thô" = tiêu hao lũy kế lớn nhất trong các công đoạn của sợi. **Giá NL** = Σ tỷ lệ_i × Giá tính_i (BR-92, theo loại hàng đã chọn) ÷ (1 − tiêu hao_i) (USD/kg); (sửa 2026-11-13) thành phần bông dùng phương án riêng (BR-110) và pha Supima (BR-111) | - |
+| BR-94 | Giá nguyên liệu của 1 kg sợi (bổ sung 2026-11-10): **Tiêu hao sản xuất** của thành phần i = tiêu hao lũy kế (BR-19) của lượt chải thô của thành phần (theo chi tiết tính giá đã lưu của bản NSM); thành phần "Không chải thô" = tiêu hao lũy kế lớn nhất trong các công đoạn của sợi. **Giá NL** = Σ tỷ lệ_i × Giá tính_i (BR-92, theo loại hàng đã chọn) ÷ (1 − tiêu hao_i) (USD/kg); (sửa 2026-11-13) thành phần bông dùng phương án riêng (BR-110) và pha Supima (BR-111). (sửa 2026-11-20: tiêu hao sản xuất nay điền sẵn theo loại xơ - BR-117, BR-118 - và Sales sửa được; cách tính trên chỉ còn dùng cho báo giá đã lưu trước 2026-11-20 và cho phần Supima của BR-111; công thức Giá NL giữ nguyên ÷ (1 − tiêu hao)) | - |
 | BR-95 | Giá báo khách (bổ sung 2026-11-10), tháng M, tỷ giá M (BR-89): **Norm** = Tổng VND/kg của dòng Thường (hoặc dòng Thí nghiệm cùng bản NSM khi chọn Thí nghiệm) tại lúc tính ÷ tỷ giá M; **Giá vốn mới** = Giá NL (BR-94) + Norm × hệ số. **Sợi tồn** = dòng Sợi thành phẩm của tháng kho M−1 có 18 ký tự đầu của mã bằng 18 ký tự đầu của mã kế toán đã chọn và SL_CUOI > 0: SL tồn = Σ SL_CUOI, giá tồn = Σ GT_CUOI ÷ tỷ giá M ÷ SL tồn. **Giá vốn BQ** = (SL tồn × giá tồn + SL đơn × Giá vốn mới) ÷ (SL tồn + SL đơn); không có mã kế toán hoặc không có sợi tồn → = Giá vốn mới. **FOB** = Giá vốn BQ ÷ (1 − GP% − Commission%); **CIF** = FOB + F&I. GP = FOB × GP%, Commission = FOB × Commission%. Kết quả VND = USD × tỷ giá M. Giữ đủ số lẻ khi tính (BR-21), hiển thị theo BR-23 | - |
 | BR-96 | Kiểm tra trước khi tính báo giá (bổ sung 2026-11-10): Sợi bắt buộc và dòng Thường đã có giá (trạng thái Đã tính giá / Có mã kế toán); chọn Thí nghiệm thì dòng Thí nghiệm phải có giá; Tháng, Loại hàng bắt buộc; SL đơn > 0; hệ số > 0; GP ≥ 0; Commission ≥ 0; GP + Commission < 100%; CIF thì F&I ≥ 0; mọi thành phần có nhóm giá và nhóm có giá tháng M (BR-92; khi Gom theo BR-114, bổ sung 2026-11-17); mã kế toán ≤ 50 ký tự; khách hàng ≤ 100; ghi chú ≤ 500 | Vui lòng chọn sợi. / Sợi <mã> chưa có giá. / Số lượng đơn hàng phải lớn hơn 0. / Hệ số phải lớn hơn 0. / GP và Commission không được âm. / Tổng GP và Commission phải nhỏ hơn 100%. / F&I không được âm. / Thành phần '<nguyên liệu>' chưa chọn nhóm giá. / (câu BR-92) |
 | BR-97 | Lưu lần tính báo giá (bổ sung 2026-11-10): số báo giá = `BG-<năm của ngày lưu>-<số thứ tự 4 chữ số trong năm>` (lớn nhất đã có, kể cả đã xoá, + 1); lưu mọi số đầu vào, tỷ giá, giá từng thành phần và kết quả; số đã lưu không tính lại khi dữ liệu nền, khai báo hay file kho đổi. Không sửa lần đã lưu (dùng lại để tính lần mới); xoá = cờ xoá, chỉ người tính hoặc Phòng SO (quản trị viên) | Chỉ người tính hoặc Phòng SO được xoá báo giá này. |
@@ -1746,6 +1766,10 @@ thường - BR-70); lịch sử ghi event "Sửa NSM". Mã đã khoá: nút lưu
 | BR-114 | Cách tính bình quân Tách / Gom (bổ sung 2026-11-17): **Tách** (mặc định) = BR-92 như cũ, theo loại hàng t đã chọn. **Gom** = cho nhóm g, **Tồn** = mọi dòng Nguyên liệu của tháng kho M−1 có mã khai báo "Tính theo nhóm" g, SL_CUOI > 0, bất kể Loại hàng (Nội địa, Xuất khẩu, Chung); **Hàng về** = mọi lô xưởng S4 có ngày về kho trong tháng M, cặp khai báo nhóm g, bất kể Loại hàng; mỗi mã / lô cộng **một lần**; Giá BQ, Giá tính, cách đổi tiền như BR-92. Cotton (phương án) khi Gom = Σ tỷ lệ × Giá BQ (Gom) của xuất xứ − hồi phế; Supima khi Gom = Giá BQ (Gom) của nhóm Supima − hồi phế (BR-111). Khi Gom, ô Nội địa / Xuất khẩu của báo giá vẫn bắt buộc và được lưu nhưng không dùng để lọc giá. Không có SL nào → câu BR-92 với loại hàng "Gom". BR-99 không đổi | Nhóm '<nhóm>' (Gom) chưa có giá tháng <mm/yyyy>: không có tồn và hàng về. |
 | BR-116 | Bảng đuôi mã (bổ sung 2026-11-17, 4.32): Đuôi mã bỏ khoảng trắng, viết hoa; bắt buộc; 1-10 ký tự chỉ gồm chữ A-Z và số; không trùng trong bảng; Loại hàng bắt buộc; ghi chú ≤ 200. So khớp: đuôi của mã (phần sau 18 ký tự, viết hoa, bỏ khoảng trắng) phải **bằng đúng** đuôi trong bảng (không phải "bắt đầu bằng"). **Đuôi lạ** = đuôi khác trống và không có trong bảng (dòng chưa xoá) → gợi ý Chung và được báo ở UC-57. Sửa bảng không đổi Loại hàng của mã đã có trong 4.23 | Vui lòng nhập đuôi mã. / Đuôi mã '<đuôi>' chỉ gồm chữ và số, tối đa 10 ký tự. / Đuôi mã '<đuôi>' bị trùng. / Đuôi mã '<đuôi>': vui lòng chọn loại hàng. / Ghi chú tối đa 200 ký tự. |
 | BR-115 | Giá tồn / Giá về của dòng "Cotton (phương án)" (bổ sung 2026-11-17): SL tồn, SL về = tổng của các nhóm cotton (như hiện nay); **Giá tồn** = Σ tỷ lệ phương án của xuất xứ o × Giá tồn của các nhóm cotton xuất xứ o (giá trị ÷ SL); **Giá về** tính tương tự với hàng về. Xuất xứ có tỷ lệ > 0 mà không có tồn (hoặc hàng về) → ô đó để trống (không hiện 0). Giá BQ, Hồi phế, Giá tính của dòng giữ nguyên BR-92 | - |
+| BR-117 | Tiêu hao theo loại xơ khi tính giá báo khách (bổ sung 2026-11-20). **Loại xơ** của thành phần, xét tên nguyên liệu (viết hoa, gộp khoảng trắng) theo thứ tự, gặp điều kiện đầu tiên thì dừng: (1) sợi xưởng S1, thành phần "Không chải thô", tên chứa "COTTON" hoặc có từ đầu tiên là "CM" / "CD" → **Cúi CD** khi nhóm sợi của sợi (BR-02, tách theo "/" và khoảng trắng) có phần bằng "CD" hoặc kết thúc bằng "CD" (CD, CVCD, TCD...) hoặc tên sợi chứa "CARDED", ngược lại **Cúi CM** (BR-118); (2) từ đầu tiên của tên là "CM" hoặc "COCM", hoặc tên bắt đầu bằng "SỢI CM" → **Cotton chải kỹ**; (3) từ đầu tiên là "CD", hoặc tên bắt đầu bằng "SỢI CD" (vì vậy "CDP" là Xơ khác) → **Cotton chải thô**; (3b) tên chứa "COTTON" (tên chung) → **Cotton chải kỹ** khi sợi có NSM ở công đoạn chải kỹ CM > 0, ngược lại **Cotton chải thô** (sửa 2026-11-20 khi thử: sợi pha S4 ghi "cotton" nhưng có chải kỹ); (4) tên bắt đầu bằng "PE", không chứa "RECYCLE" và không có từ "RE" (từ = phần chữ tách bởi khoảng trắng, ngoặc, "-", ",", "/") → **Xơ PE**; (5) còn lại (PE Recycle / Re-PE, Viscose, Rayon, Modal, Tencel, Lyocell, Wool, Linen, Acrylic, Nylon, sợi filament DTY / FDY / SDY / Spandex...) → **Xơ khác**. **Tiêu hao điền sẵn** = ô của loại xơ trong khai báo tháng M (4.25: Xơ PE 4%, Xơ khác 8%, Cotton chải thô 12%, Cotton chải kỹ 24% khi chưa khai báo); Cúi CM / Cúi CD theo BR-118. Sales sửa được tiêu hao từng thành phần trước khi tính, 0 ≤ tiêu hao < 100%. Giá NL theo BR-94 (÷ (1 − tiêu hao)). Thành phần bông pha Supima (BR-111): tiêu hao bông thường = tiêu hao của thành phần (điền sẵn, sửa được); tiêu hao phần Supima giữ cách cũ (BR-111; s = 100%: tiêu hao BR-94 cách cũ) | Tiêu hao của <nguyên liệu> phải từ 0% đến dưới 100%. / Tiêu hao mặc định phải từ 0% đến dưới 100%. |
+| BR-118 | Tiêu hao cộng dồn của cúi (bổ sung 2026-11-20): tiêu hao điền sẵn của thành phần Cúi CM (Cúi CD) = tổng tiêu hao các công đoạn của nhóm tiêu hao "CÚI CM" ("CÚI CHẢI THÔ COTTON") xưởng S4 (hiện Cúi CM: C1 7,5% + CM 14,5% = 22%; Cúi CD: C1 7,5%) + tổng tiêu hao các công đoạn không phải chải thô của nhóm tiêu hao của sợi ở S1 (từ công đoạn ghép trở đi). Sales sửa được như BR-117 | Chưa có nhóm tiêu hao '<CÚI CM / CÚI CHẢI THÔ COTTON>' ở xưởng S4. |
+| BR-119 | Chi phí chế biến cúi (bổ sung 2026-11-20): ô tick "Cộng chi phí chế biến cúi CM" (sợi có thành phần Cúi CM) hoặc "Cộng chi phí chế biến cúi CD" (sợi có thành phần Cúi CD) chỉ hiện khi sợi có thành phần cúi, mặc định không tick. Tick → **mã cúi** = bản NSM mới nhất (ĐCNSM lớn nhất) đã có giá (Đã tính giá / Có mã kế toán) của mã gốc xưởng S4 tên "CÚI CM" (Cúi CM) hoặc "CÚI CHẢI THÔ COTTON" / "CÚI CD" (Cúi CD); **chi phí cúi** (USD/kg sợi) = Σ tỷ lệ các thành phần cúi × tổng tiền dòng Thường của mã cúi (VND/kg) ÷ tỷ giá của lần tính; chi phí cúi cộng vào Norm (dòng Norm = norm của sợi + chi phí cúi) rồi mới nhân Hệ số norm (BR-95). Không tick → như trước | Chưa có giá mã <Cúi CM / Cúi CD> ở xưởng S4. Vui lòng nhờ xưởng S4 nhập NSM cho mã <Cúi CM / Cúi CD>. |
+| BR-120 | Mã cúi ở S4 (bổ sung 2026-11-20): ở xưởng S4, tên "CÚI CM", "CÚI CHẢI THÔ COTTON" hoặc "CÚI CD" (không phân biệt hoa thường, gộp khoảng trắng) được nhận dù không có chi số (ngoại lệ BR-01, BR-02): nhóm sợi và nhóm tiêu hao = "CÚI CM" (Cúi CM) hoặc "CÚI CHẢI THÔ COTTON" (hai tên còn lại), chi số trống, Ring, không compact. Không cần loại đóng gói và không tính công đoạn F (ngoại lệ BR-12, BR-18): giá = tổng chi phí các công đoạn có NSM (Cúi CM: C1, SBD, CM, DCM - chỉ đến ghép; Cúi CD: C1). Các so sánh theo chi số (gợi ý / tự điền NSM, BR-39, BR-71) bỏ qua mã cúi; mã cúi không có trong danh sách chọn sợi của Tính giá báo khách. Tên khác không có chi số, hoặc tên cúi ở xưởng S1, vẫn báo câu của BR-01 | (câu BR-01) |
 
 ## 8. Screens (Màn hình)
 
@@ -1871,6 +1895,12 @@ thường - BR-70); lịch sử ghi event "Sửa NSM". Mã đã khoá: nút lưu
 - **Bổ sung 2026-11-17, bảng đuôi mã (chốt "ok"):** Screen 11 thẻ Khai báo - thứ tự: khối nhóm giá → khối "Đuôi mã → Loại hàng" (bảng sửa
   trong ô Đuôi mã / Loại hàng / Ghi chú, thêm / xoá dòng, nút "Lưu bảng đuôi mã") → khối mã kho (thêm cột chỉ xem "Đuôi mã", "Ghi chú
   đuôi"; cảnh báo vàng số mã có đuôi lạ). Không hỏi xác nhận khi lưu bảng.
+- **Bổ sung 2026-11-20, tiêu hao theo loại xơ (chốt 1a, 2a, 3a):** Screen 13 - bảng thành phần thứ tự cột: Nguyên liệu | Tỷ lệ | Loại xơ
+  (chỉ xem) | Tiêu hao % (sửa trong ô) | Nhóm giá (danh sách chọn) | Giá tính; dưới bảng ô tick "Cộng chi phí chế biến cúi CM" (hoặc "cúi
+  CD"), chỉ hiện khi sợi có thành phần cúi. Kết quả: bảng thành phần thêm cột "Loại xơ" và "Tiêu hao mặc định" cạnh "Tiêu hao"; bảng giá
+  thêm dòng "Chi phí chế biến cúi CM (<mã>)" / "cúi CD" khi có tick (dòng Norm đã gồm phần cúi). Excel các lần đã tính thêm cột "Cúi (Có /
+  Không)". Screen 11 thẻ Khai báo tháng - khối "Tiêu hao mặc định khi tính giá báo khách" (4 ô %: Xơ PE, Xơ khác, Cotton chải thô, Cotton
+  chải kỹ trên một hàng) ngay dưới các ô Hệ số norm / F&I, lưu chung nút "Lưu khai báo tháng". Không hỏi xác nhận thêm.
 - **Ô số liệu:** Screen 1, 3, 6, 7, 10. **Biểu đồ:** Screen 7, Screen 10.
 - **Hộp thoại xác nhận** trước khi: Huỷ yêu cầu, Từ chối, Xoá nhóm tiêu hao, Xoá dòng CK/PP, "Lưu đóng gói" (nội dung theo BR-62), mọi nút "… và tính lại" (Screen
   5), "Lưu hệ số", "Lưu thay đổi" nhóm tiêu hao (có tính lại), "Lưu N dòng hợp lệ". Không hỏi lại khi: Gửi yêu cầu, Lưu sửa
@@ -2038,6 +2068,9 @@ không có vai trò phù hợp (BR-47, BR-48); phía xử lý vẫn kiểm tra l
 - **Bổ sung 2026-11-13:** khối "Pha bông" (UC-62) chỉ hiện với sợi có thành phần bông; ô tick Supima coin chỉ hiện khi Tỷ lệ
   Supima > 0.
 - **Bổ sung 2026-11-17:** ô "Cách tính bình quân: Tách / Gom" (UC-62, BR-114); cột "Cách tính bình quân" ở bảng các lần đã tính (UC-63).
+- **Bổ sung 2026-11-20:** bảng thành phần có cột "Loại xơ" (chỉ xem) và cột "Tiêu hao %" sửa được (BR-117, BR-118); ô tick "Cộng chi phí
+  chế biến cúi CM" dưới bảng thành phần, chỉ hiện khi sợi có thành phần Cúi CM (BR-119). Screen 11 thẻ "Khai báo tháng": khối 4 ô tiêu hao
+  mặc định (UC-58).
 
 ### Screen 14: Kiểm tra tên sợi (bổ sung 2026-11-11)
 - **Purpose:** rà và sửa tên sợi sai, quản lý từ điển tên chuẩn, nhóm sợi / từ khoá của ô ghép tên, chuẩn hoá viết hoa. Sales, Phòng SO
@@ -2444,7 +2477,41 @@ không có vai trò phù hợp (BR-47, BR-48); phía xử lý vẫn kiểm tra l
 - [x] AC-169 (BR-105, giữ nguyên): K' chưa có ở xưởng → nhóm K đổi tên thành K' như trước; K' = K → không đổi nhóm; đổi tên bằng file (UC-69)
   theo cùng quy tắc; mọi test cũ giữ xanh.
 
+#### Mở rộng 2026-11-20 - tiêu hao theo loại xơ, cúi CM
+- [x] AC-170 (BR-117, BR-94, UC-62): Sợi S4 thành phần "PE Compact - Ring" 100%, nhóm giá Poly nguyên sinh – Indorama (Giá BQ 1,1982, hồi
+  phế 0,07, giá tính 1,1282) → Loại xơ "Xơ PE", Tiêu hao điền sẵn 4%, Chi phí NL/kg sợi = 1,1282 ÷ 0,96 = 1,1752; Sales sửa tiêu hao thành
+  4,6% → 1,1826; nhập 100% → "Tiêu hao của PE Compact - Ring phải từ 0% đến dưới 100%."
+- [x] AC-171 (BR-117): Loại xơ: "PE NORMAL - MVS" → Xơ PE; "PE RECYCLE - RING", "PE (GDI RE-PE) MVS - MVS", "PE (RE 1.5D) MVS - MVS",
+  "VISCOSE - RING", "SPANDEX 40D - MVS" → Xơ khác (8%); "CD - RING" → Cotton chải thô (12%); "CM - RING", "CM SIRO - RING" → Cotton chải
+  kỹ (24%); "cotton - Ring" của sợi có NSM CM > 0 → Cotton chải kỹ, của sợi không chạy CM → Cotton chải thô.
+- [x] AC-172 (UC-58, BR-117, BR-88): Phòng SO lưu khai báo tháng 12/2026 với Cotton chải kỹ 22% → báo giá tháng 12 điền 22%, tháng 11 vẫn
+  24%; tháng 01/2027 chưa có bản → chép 22% từ tháng 12; nhập 100% → "Tiêu hao mặc định phải từ 0% đến dưới 100%."
+- [x] AC-173 (BR-118): Sợi S1 "Cotton" Không chải thô 60% + PE 40%, nhóm "CÚI CM" S4 có C1 7,5%, CM 14,5%, nhóm tiêu hao của sợi ở S1 có
+  tổng tiêu hao các công đoạn không phải chải thô 3% → thành phần Cotton: Loại xơ "Cúi CM", tiêu hao 25%; PE: Xơ PE 4%. Không có nhóm
+  "CÚI CM" ở S4 → "Chưa có nhóm tiêu hao 'CÚI CM' ở xưởng S4." Sợi S1 "CVCD 24/1 (60/40) MVS" có "Cotton" Không chải thô → Loại xơ "Cúi
+  CD", tiêu hao = 7,5% (nhóm "CÚI CHẢI THÔ COTTON" S4) + tiêu hao S1; "COTTON/WOOL 16/1 (85/15)" → Cúi CM.
+- [x] AC-174 (BR-119): Sợi AC-173: ô tick hiện, mặc định không tick → bảng giá như trước, không có dòng cúi. Tick, mã Cúi CM có giá
+  4.866 đ/kg, tỷ giá 25.000 → chi phí cúi = 0,6 × 4.866 ÷ 25.000 = 0,1168 USD/kg; Norm = norm của sợi + 0,1168, rồi nhân Hệ số norm; lưu →
+  báo giá ghi Có, mã Cúi CM, 4.866, 0,1168. Chưa có mã Cúi CM có giá → "Chưa có giá mã Cúi CM ở xưởng S4. Vui lòng nhờ xưởng S4 nhập NSM
+  cho mã Cúi CM." Sợi S4 (không có cúi) → ô tick không hiện. Sợi CVCD (Cúi CD): ô tick "Cộng chi phí chế biến cúi CD" dùng mã "CÚI CHẢI THÔ
+  COTTON" ở S4.
+- [x] AC-175 (BR-120, UC-15): Sales gõ tay "Cúi CM" ở S4, không chọn loại đóng gói → gửi được, nhóm tiêu hao "CÚI CM", chi số trống; xưởng
+  nhập NSM C1 65, SBD 180, CM 50, DCM 83 → "Đã tính giá", không có chi phí đóng gói; "Cúi chải thô cotton" ở S4 → nhóm "CÚI CHẢI THÔ
+  COTTON", NSM C1 65 → "Đã tính giá"; "Cúi CM" ở S1 hoặc "Cúi PE" ở S4 → câu BR-01; mã cúi không có trong danh sách chọn sợi của Tính giá
+  báo khách.
+- [x] AC-176 (BR-97, BR-111, giữ nguyên): Báo giá lưu trước 2026-11-20 mở lại → mọi số không đổi; "Dùng lại để tính mới" của nó → tiêu hao
+  điền theo BR-117, không tick cúi; báo giá lưu sau 2026-11-20 "Dùng lại" → điền lại tiêu hao đã sửa và ô tick. Sợi pha Supima 50%: tiêu
+  hao phần Supima vẫn lấy nhóm "CM (SUPIMA 100%)" như cũ, phần bông thường dùng tiêu hao của thành phần. Mọi test cũ giữ xanh.
+
 ## 10. Open questions (Câu hỏi mở)
+- Mở rộng 2026-11-20 (tiêu hao báo giá theo loại xơ, cúi CM): tiêu hao ở Tính giá báo khách điền sẵn theo loại xơ (khai báo tháng),
+  Sales sửa được, lưu theo báo giá; cúi CM ở S1 cộng dồn tiêu hao; ô tick cộng chi phí chế biến cúi CM; mã Cúi CM ở S4 được tạo không cần
+  chi số / đóng gói (4.12, 4.25, 4.28, 4.28.1, UC-15 / UC-58 / UC-62 bổ sung, BR-94 sửa, BR-117..BR-120, AC-170..AC-176). Kế hoạch:
+  `docs/plans/yarn_costing-extension-20261120-tieu-hao-bao-gia.md`.
+- Giả định (triển khai, 2026-11-20): danh sách chọn sợi của Tính giá báo khách thêm sợi S1 (để dùng được phần cúi); báo giá gọi
+  không kèm tiêu hao (cách cũ) vẫn tính như trước để các số đã kiểm tra giữ nguyên.
+- Giả định (2026-11-20): chi phí cúi cộng vào Norm trước khi nhân Hệ số norm; tiêu hao S1 của cúi = tổng tiêu hao các công đoạn không phải
+  chải thô của nhóm tiêu hao của sợi; mã Cúi CM lấy bản NSM mới nhất đã có giá; tiêu hao Supima giữ cách cũ.
 - Mở rộng 2026-11-19 (đổi tên sang nhóm tiêu hao đã có): sợi chưa có giá, hoặc có nhóm tiêu hao theo tên cũ không tồn tại ở xưởng, được
   đổi tên dù nhóm theo tên mới đã có; sợi dùng nhóm đó và được tính lại ngay (BR-105 sửa, UC-68 sửa, AC-166..AC-169). Kế hoạch:
   `docs/plans/yarn_costing-extension-20261119-doi-ten-nhom-tieu-hao.md`.
@@ -2767,3 +2834,8 @@ không có vai trò phù hợp (BR-47, BR-48); phía xử lý vẫn kiểm tra l
 | BR-105 (sửa 2026-11-19) | `business/name_check_business.py` (`PRICED`, `joins_existing_group`, `loss_group_change(..., family)`, `joined_text`), `business/recalc_business.py::recalculate_renamed` (bản Chưa tính được của sợi, event "Tính lần đầu") |
 | UC-68, UC-69 (sửa 2026-11-19) | `services/rename_yarn_service.py`, `services/import_rename_file_service.py` (tính lại sau khi lưu, câu báo thêm nhóm tiêu hao đã dùng + kết quả tính giá); không thêm bảng, không chuyển dữ liệu |
 | AC-166..AC-169 | `test_rename_existing_group.py` trong thư mục kiểm thử của chức năng (AC-169 + `test_yarn_name.py` AC-136..AC-138 cho các trường hợp cũ) |
+| 4.25, 4.28, 4.28.1 (bổ sung 2026-11-20) | `models/material_price.py` (`MonthlyMaterialSetting.loss_*`, `Quote.sliver_*` / `loss_version`, `QuoteComponent.fiber_type` / `default_loss`), `models/enums.py` (`FiberType`) - trường mới có mặc định, bản cũ đọc được không cần đổi dữ liệu |
+| BR-117, BR-118, BR-119 | `business/quote_business.py` (`fiber_type`, `carded_sliver`, `sliver_loss`, `default_losses`, `sliver_type`, `ensure_losses`, `sliver_yarn`, `sliver_cost`, `material_components(losses=...)`, `calculate`); BR-117 khai báo tháng: `business/material_price_business.py` (`draft`, `ensure_setting_valid`) |
+| BR-120 | `business/name_business.py` (`sliver_group`, `analyze(name, factory)`), `business/costing_business.py` (`is_sliver`, `check_match`, `calculate`), `business/pricing_business.py` (`packaging_valid`); `constants.py` (`SLIVER_*`) |
+| UC-15 / UC-16 / UC-40, UC-58, UC-62 (bổ sung 2026-11-20) | `services/create_yarn_request_service.py`, `update_yarn_request_service.py`, `analyze_yarn_name_service.py`; `get_monthly_setting_service.py`, `save_monthly_setting_service.py`; `get_quote_form_service.py`, `calculate_quote_service.py`; DTO `dto/material_dto.py`; Excel 3 cột cúi `builders/material_file_builders.py`; giao diện `pages/quote_page.py` (cột Loại xơ, Tiêu hao % sửa được, ô tick cúi, dòng chi phí cúi, sợi S1 trong danh sách), `pages/material_price_page.py` (4 ô tiêu hao mặc định) |
+| AC-170..AC-176 | `test_quote_fiber_loss.py` trong thư mục kiểm thử của chức năng (+ toàn bộ test cũ của báo giá giữ xanh) |

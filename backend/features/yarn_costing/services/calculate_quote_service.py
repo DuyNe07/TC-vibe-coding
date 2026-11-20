@@ -1,4 +1,4 @@
-"""UC-62 Tính giá báo khách và lưu (đợt 2; BR-89, BR-92..BR-97)."""
+"""UC-62 Tính giá báo khách và lưu (đợt 2; BR-89, BR-92..BR-97; bổ sung 2026-11-20: BR-117..BR-119)."""
 
 import re
 from decimal import Decimal
@@ -10,9 +10,11 @@ from backend.features.yarn_costing.business.material_price_business import Mater
 from backend.features.yarn_costing.business.material_stock_business import MaterialStockBusiness
 from backend.features.yarn_costing.business.quote_business import (
     MSG_NO_SUPIMA_GROUP,
+    SLIVER_TYPES,
     SUPIMA_LOSS_GROUP,
     QuoteBusiness,
 )
+from backend.features.yarn_costing.constants import QUOTE_LOSS_VERSION
 from backend.features.yarn_costing.dto.material_dto import CalculateQuoteRequest, QuoteResponse
 from backend.features.yarn_costing.exceptions import YarnValidationError
 from backend.features.yarn_costing.models.enums import Incoterm
@@ -69,6 +71,9 @@ class CalculateQuoteService(BaseService[CalculateQuoteRequest, QuoteResponse]):
         )
         if yarn is None or line is None:  # already refused by BR-96 (keeps the types narrow)
             raise YarnValidationError(MSG_PERIOD)
+        losses = None if request.losses is None else {k: Decimal(v) for k, v in request.losses.items()}
+        if losses is not None:  # BR-117 (bổ sung 2026-11-20)
+            business.ensure_losses(losses)
         inputs = load_month_inputs(request.period)
         prices = MaterialPriceBusiness()
         rate, monthly, averages, problem = prices.month_view(
@@ -95,12 +100,24 @@ class CalculateQuoteService(BaseService[CalculateQuoteRequest, QuoteResponse]):
             business.ensure_supima_ratio(request.supima_percent)
             if request.supima_percent > 0:
                 supima, coin_fee = self._supima(yarn, request, monthly, averages, inputs.groups, business)
+        fibers = self._fibers(yarn, monthly, business) if losses is not None else []
         priced, missing = business.material_components(
-            yarn, request.groups, averages, request.market, cotton=cotton, supima=supima
+            yarn, request.groups, averages, request.market, cotton=cotton, supima=supima, losses=losses, fibers=fibers
         )
         if missing:
             raise YarnValidationError(missing[0])
         stock_qty, stock_cost = business.yarn_stock(accounting_code, inputs.stock_lines, rate)
+        sliver_kind = business.sliver_type(yarn)
+        sliver: dict[str, object] = {}
+        if request.sliver_cost and sliver_kind in SLIVER_TYPES and sliver_kind is not None:  # BR-119
+            sliver_yarn = business.sliver_yarn(YarnRepository().list_all(), sliver_kind)
+            sliver_vnd = sliver_yarn.regular_line.total_vnd if sliver_yarn.regular_line else Decimal(0)
+            sliver = {
+                "sliver_cost": True,
+                "sliver_code": sliver_yarn.yarn_code,
+                "sliver_vnd": sliver_vnd,
+                "sliver_usd": business.sliver_cost(yarn, sliver_kind, sliver_vnd, rate),
+            }
         label = access.user_label(self.current_user)
         base = Quote(
             quote_no="",
@@ -127,6 +144,8 @@ class CalculateQuoteService(BaseService[CalculateQuoteRequest, QuoteResponse]):
             supima_coin=bool(supima is not None and request.supima_coin),
             coin_fee_usd=coin_fee,
             avg_mode=request.avg_mode,
+            loss_version=QUOTE_LOSS_VERSION if losses is not None else 1,
+            **sliver,  # type: ignore[arg-type]
         )
         quote = business.calculate(base, priced, line.total_vnd, stock_qty, stock_cost)
         if not request.commit:
@@ -151,6 +170,10 @@ class CalculateQuoteService(BaseService[CalculateQuoteRequest, QuoteResponse]):
             saved=True,
             quote=quote_dto(quote),
         )
+
+    def _fibers(self, yarn: Yarn, monthly: MonthlyMaterialSetting, business: QuoteBusiness) -> list:
+        """BR-117 / BR-118: (loại xơ, tiêu hao điền sẵn) lưu kèm từng thành phần."""
+        return business.default_losses(yarn, monthly, LossGroupRepository().list_all())
 
     def _supima(
         self,

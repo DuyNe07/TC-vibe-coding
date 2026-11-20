@@ -9,6 +9,7 @@ from backend.features.yarn_costing.models.enums import (
     AverageMode,
     CottonOrigin,
     FactoryCode,
+    FiberType,
     Incoterm,
     MaterialDecision,
     MaterialMarket,
@@ -165,6 +166,10 @@ class MonthlySettingResponse(BaseResponseDTO):
     supima_group_id: str = ""  # BR-113 (bổ sung 2026-11-13)
     coin_usd: Decimal = Decimal("0.552")
     coin_tax: Decimal = Decimal("0.05")
+    loss_pe: Decimal = Decimal("0.04")  # BR-117 (bổ sung 2026-11-20): tiêu hao mặc định theo loại xơ
+    loss_other: Decimal = Decimal("0.08")
+    loss_carded: Decimal = Decimal("0.12")
+    loss_combed: Decimal = Decimal("0.24")
 
 
 class SaveMonthlySettingRequest(BaseRequestDTO):
@@ -177,6 +182,10 @@ class SaveMonthlySettingRequest(BaseRequestDTO):
     supima_group_id: str = ""  # BR-113 (bổ sung 2026-11-13)
     coin_usd: Decimal = Decimal("0.552")
     coin_tax: Decimal = Decimal("0.05")
+    loss_pe: Decimal = Decimal("0.04")  # BR-117 (bổ sung 2026-11-20): tiêu hao mặc định theo loại xơ
+    loss_other: Decimal = Decimal("0.08")
+    loss_carded: Decimal = Decimal("0.12")
+    loss_combed: Decimal = Decimal("0.24")
 
 
 # ---- UC-59 ----
@@ -346,8 +355,10 @@ class AccountingSuggestionDTO(BaseDTO):
 class QuoteFormComponentDTO(BaseDTO):
     material_label: str
     ratio: Decimal
-    loss: Decimal
+    loss: Decimal  # tiêu hao cách cũ (BR-94)
     suggested_group_id: str = ""
+    fiber_type: FiberType | None = None  # BR-117 (bổ sung 2026-11-20)
+    default_loss: Decimal = ZERO  # BR-117 / BR-118: tiêu hao điền sẵn (Sales sửa được)
 
 
 class GetQuoteFormRequest(BaseRequestDTO):
@@ -367,6 +378,8 @@ class QuoteFormResponse(BaseResponseDTO):
     has_trial_line: bool = False
     supima_percent: Decimal = ZERO  # BR-112 (bổ sung 2026-11-13): đọc từ tên
     cotton_plan: list[CottonShareDTO] = []  # BR-110: phương án khai báo tháng (mặc định của lần tính)
+    sliver_type: FiberType | None = None  # BR-119 (bổ sung 2026-11-20): Cúi CM / Cúi CD - ô tick chỉ hiện khi có
+    loss_problem: str = ""  # BR-118: câu báo khi chưa điền sẵn được tiêu hao của cúi
 
 
 class QuoteComponentDTO(BaseDTO):
@@ -384,6 +397,8 @@ class QuoteComponentDTO(BaseDTO):
     normal_loss: Decimal = ZERO
     supima_net: Decimal = ZERO
     supima_loss: Decimal = ZERO
+    fiber_type: FiberType | None = None  # BR-117 (bổ sung 2026-11-20)
+    default_loss: Decimal = ZERO
 
 
 class QuoteDTO(BaseDTO):
@@ -421,6 +436,11 @@ class QuoteDTO(BaseDTO):
     supima_coin: bool = False
     coin_fee_usd: Decimal = ZERO
     avg_mode: AverageMode = AverageMode.TACH  # BR-114 (bổ sung 2026-11-17)
+    sliver_cost: bool = False  # BR-119 (bổ sung 2026-11-20)
+    sliver_code: str = ""
+    sliver_vnd: Decimal = ZERO
+    sliver_usd: Decimal = ZERO
+    loss_version: int = 1  # 1 = cách cũ (báo giá lưu trước 2026-11-20), 2 = BR-117
 
 
 class CalculateQuoteRequest(BaseRequestDTO):
@@ -443,6 +463,8 @@ class CalculateQuoteRequest(BaseRequestDTO):
     supima_percent: Decimal = ZERO  # BR-111 (fraction)
     supima_coin: bool = False
     avg_mode: AverageMode = AverageMode.TACH  # BR-114 (bổ sung 2026-11-17)
+    losses: dict[str, Decimal] | None = None  # BR-117 (bổ sung 2026-11-20): nguyên liệu → tiêu hao; None = cách cũ
+    sliver_cost: bool = False  # BR-119: "Cộng chi phí chế biến cúi"
 
 
 class QuoteResponse(BaseResponseDTO):

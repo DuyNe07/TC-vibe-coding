@@ -1,5 +1,6 @@
 """Đợt 2 (bổ sung 2026-11-10): BR-93 gợi ý nhóm giá, BR-94 giá nguyên liệu / kg sợi, BR-95 giá báo khách, BR-96 kiểm tra,
-BR-97 số báo giá, BR-98 gợi ý mã kế toán."""
+BR-97 số báo giá, BR-98 gợi ý mã kế toán; (bổ sung 2026-11-20) BR-117 tiêu hao theo loại xơ, BR-118 tiêu hao cộng dồn của
+cúi, BR-119 chi phí chế biến cúi."""
 
 import re
 from collections.abc import Sequence
@@ -8,8 +9,11 @@ from decimal import Decimal
 
 from backend.core.base import BaseBusiness
 from backend.features.yarn_costing.business.blend_business import BlendBusiness
+from backend.features.yarn_costing.constants import CARDING_STAGES, SLIVER_CD_GROUP, SLIVER_CM_GROUP, SLIVER_FACTORY
 from backend.features.yarn_costing.exceptions import YarnValidationError
 from backend.features.yarn_costing.models.enums import (
+    FactoryCode,
+    FiberType,
     Incoterm,
     LineType,
     MaterialMarket,
@@ -22,6 +26,7 @@ from backend.features.yarn_costing.models.material_price import (
     COTTON_PLAN_ID,
     CottonShare,
     GroupAverage,
+    MonthlyMaterialSetting,
     Quote,
     QuoteComponent,
     StockLine,
@@ -58,10 +63,21 @@ SUPIMA_LOSS_GROUP = "CM (SUPIMA 100%)"
 NORMAL_LOSS_GROUP = "CM"
 NORMAL_COMPACT_LOSS_GROUP = "CM COMPACT"
 TOLERANCE = Decimal("0.00001")
+# ---- BR-117..BR-119 (bổ sung 2026-11-20) ----
+MSG_LOSS = "Tiêu hao của {material} phải từ 0% đến dưới 100%."
+MSG_NO_SLIVER = "Chưa có giá mã {kind} ở xưởng S4. Vui lòng nhờ xưởng S4 nhập NSM cho mã {kind}."
+WORD_SPLIT = re.compile(r"[\s()\-,/]+")
+SLIVER_TYPES = (FiberType.CUI_CM, FiberType.CUI_CD)
+SLIVER_GROUP_OF = {FiberType.CUI_CM: SLIVER_CM_GROUP, FiberType.CUI_CD: SLIVER_CD_GROUP}
 
 
 def label_key(text: str) -> str:
     return " ".join(text.upper().split())
+
+
+def words_of(text: str) -> list[str]:
+    """BR-117: các từ của tên (tách bởi khoảng trắng, ngoặc, "-", ",", "/")."""
+    return [w for w in WORD_SPLIT.split(text.upper()) if w]
 
 
 class QuoteBusiness(BaseBusiness[Quote]):
@@ -89,6 +105,94 @@ class QuoteBusiness(BaseBusiness[Quote]):
                 ):
                     return detail.cumulative_loss
         return max((d.cumulative_loss for d in yarn.stage_details), default=ZERO)
+
+    # ---- BR-117 / BR-118 / BR-119 (bổ sung 2026-11-20) ----
+    def carded_sliver(self, yarn: Yarn) -> bool:
+        """BR-117 (1): sợi S1 dùng cúi chải thô khi nhóm sợi có phần "CD" / kết thúc bằng "CD" hoặc tên có "CARDED"."""
+        parts = words_of(yarn.yarn_group or yarn.yarn_name)
+        return any(p.endswith("CD") for p in parts) or "CARDED" in yarn.yarn_name.upper()
+
+    def fiber_type(self, yarn: Yarn, component: YarnComponent) -> FiberType:
+        """BR-117: loại xơ của thành phần theo tên nguyên liệu (điều kiện đầu tiên khớp)."""
+        key = label_key(component.material_label)
+        words = words_of(key)
+        first = words[0] if words else ""
+        second = words[1] if len(words) > 1 else ""
+        is_sliver = "COTTON" in key or first in ("CM", "CD")
+        if yarn.factory_code == FactoryCode.S1 and not component.carding_stage and is_sliver:
+            return FiberType.CUI_CD if self.carded_sliver(yarn) else FiberType.CUI_CM
+        if first in ("CM", "COCM") or (first == "SỢI" and second == "CM"):
+            return FiberType.COTTON_CHAI_KY
+        if first == "CD" or (first == "SỢI" and second == "CD"):
+            return FiberType.COTTON_CHAI_THO
+        if "COTTON" in key:  # tên chung "cotton": sợi có chạy chải kỹ (NSM CM > 0) là bông chải kỹ (sửa 2026-11-20)
+            return FiberType.COTTON_CHAI_KY if yarn.nsm.get("CM", ZERO) > 0 else FiberType.COTTON_CHAI_THO
+        if key.startswith("PE") and "RECYCLE" not in key and "RE" not in words:
+            return FiberType.XO_PE
+        return FiberType.XO_KHAC
+
+    def sliver_loss(self, yarn: Yarn, kind: FiberType, groups: Sequence[LossGroup]) -> Decimal:
+        """BR-118: tổng tiêu hao nhóm cúi ở S4 + tổng tiêu hao các công đoạn không phải chải thô của nhóm của sợi (S1)."""
+        sliver = self.group_loss(groups, SLIVER_GROUP_OF[kind], SLIVER_FACTORY)
+        factory = yarn.factory_code.value
+        own = next((g for g in groups if g.factory_code.value == factory and g.group_key == yarn.loss_group_key), None)
+        carding = CARDING_STAGES.get(factory, ())
+        tail = sum((v for k, v in own.losses.items() if k not in carding), ZERO) if own is not None else ZERO
+        return sliver + tail
+
+    def default_losses(
+        self, yarn: Yarn, monthly: MonthlyMaterialSetting, groups: Sequence[LossGroup]
+    ) -> list[tuple[FiberType, Decimal]]:
+        """BR-117 / BR-118: (loại xơ, tiêu hao điền sẵn) of every component of the yarn, in component order."""
+        by_type = {
+            FiberType.XO_PE: monthly.loss_pe,
+            FiberType.XO_KHAC: monthly.loss_other,
+            FiberType.COTTON_CHAI_THO: monthly.loss_carded,
+            FiberType.COTTON_CHAI_KY: monthly.loss_combed,
+        }
+        result: list[tuple[FiberType, Decimal]] = []
+        cache: dict[FiberType, Decimal] = {}
+        for component in yarn.components:
+            kind = self.fiber_type(yarn, component)
+            if kind in SLIVER_TYPES:
+                if kind not in cache:
+                    cache[kind] = self.sliver_loss(yarn, kind, groups)
+                result.append((kind, cache[kind]))
+            else:
+                result.append((kind, by_type[kind]))
+        return result
+
+    def sliver_type(self, yarn: Yarn) -> FiberType | None:
+        """BR-119: loại cúi của sợi (ô tick chỉ hiện khi có), None = sợi không có thành phần cúi."""
+        kinds = [self.fiber_type(yarn, c) for c in yarn.components]
+        return next((k for k in kinds if k in SLIVER_TYPES), None)
+
+    def ensure_losses(self, losses: dict[str, Decimal]) -> None:
+        """BR-117: 0 ≤ tiêu hao < 100% cho từng thành phần."""
+        for material, loss in losses.items():
+            if loss < 0 or loss >= ONE:
+                raise YarnValidationError(MSG_LOSS.format(material=material))
+
+    def sliver_yarn(self, yarns: Sequence[Yarn], kind: FiberType) -> Yarn:
+        """BR-119: bản NSM mới nhất đã có giá (dòng Thường > 0) của mã cúi ở S4."""
+        key = SLIVER_GROUP_OF[kind]
+        found = [
+            y
+            for y in yarns
+            if y.factory_code.value == SLIVER_FACTORY
+            and y.loss_group_key == key
+            and y.status in PRICED
+            and y.regular_line is not None
+            and y.regular_line.total_vnd > 0
+        ]
+        if not found:
+            raise YarnValidationError(MSG_NO_SLIVER.format(kind=kind.value))
+        return max(found, key=lambda y: (y.revision_no, y.last_calculated_at or y.created_at))
+
+    def sliver_cost(self, yarn: Yarn, kind: FiberType, sliver_vnd: Decimal, rate: Decimal) -> Decimal:
+        """BR-119: Σ tỷ lệ các thành phần cúi × giá dòng Thường của mã cúi (VND/kg) ÷ tỷ giá (USD/kg sợi)."""
+        ratio = sum((c.ratio for c in yarn.components if self.fiber_type(yarn, c) == kind), ZERO)
+        return ratio * sliver_vnd / rate
 
     # ---- BR-96 ----
     def ensure_valid(
@@ -176,14 +280,20 @@ class QuoteBusiness(BaseBusiness[Quote]):
         market: MaterialMarket,
         cotton: GroupAverage | None = None,
         supima: SupimaMix | None = None,
+        losses: dict[str, Decimal] | None = None,
+        fibers: Sequence[tuple[FiberType, Decimal]] = (),
     ) -> tuple[list[QuoteComponent], list[str]]:
         """Components with their group price (BR-92) → (components, groups without price notes).
-        ``cotton`` = Cotton (phương án) of the quote's own plan (BR-110); ``supima`` = the Supima mix (BR-111)."""
+        ``cotton`` = Cotton (phương án) of the quote's own plan (BR-110); ``supima`` = the Supima mix (BR-111).
+        ``losses`` (BR-117, bổ sung 2026-11-20) = tiêu hao Sales dùng theo tên nguyên liệu; None = cách cũ (BR-94);
+        ``fibers`` = (loại xơ, tiêu hao điền sẵn) theo thứ tự thành phần."""
         components: list[QuoteComponent] = []
         missing: list[str] = []
-        for component in yarn.components:
+        for index, component in enumerate(yarn.components):
             group_id = chosen.get(component.material_label, "")
-            loss = self.component_loss(yarn, component)
+            old_loss = self.component_loss(yarn, component)
+            loss = old_loss if losses is None else losses.get(component.material_label, old_loss)
+            fiber, default = fibers[index] if index < len(fibers) else (None, ZERO)
             found = next((a for a in averages if a.group_id == group_id and a.market == market), None)
             if group_id == COTTON_PLAN_ID and cotton is not None:
                 found = cotton
@@ -198,6 +308,8 @@ class QuoteBusiness(BaseBusiness[Quote]):
                         loss=loss,
                         price_group_id=group_id,
                         price_group=found.group_name if found else "",
+                        fiber_type=fiber,
+                        default_loss=default,
                     )
                 )
                 continue
@@ -206,14 +318,15 @@ class QuoteBusiness(BaseBusiness[Quote]):
             if group_id == COTTON_PLAN_ID and supima is not None and supima.ratio > 0:
                 s = supima.ratio
                 supima_price = supima.net + supima.coin_fee
-                if s >= ONE:  # 100% Supima: the yarn's own loss group is already the Supima one
-                    cost = component.ratio * supima_price / (ONE - loss)
-                    mix = {"supima_loss": loss}
-                else:
+                if s >= ONE:  # 100% Supima: the yarn's own loss group is already the Supima one (BR-117: cách cũ)
+                    cost = component.ratio * supima_price / (ONE - old_loss)
+                    mix = {"supima_loss": old_loss}
+                else:  # BR-117: bông thường dùng tiêu hao của thành phần; phần Supima giữ cách cũ
+                    normal_loss = supima.normal_loss if losses is None else loss
                     cost = component.ratio * (
-                        (ONE - s) * found.net / (ONE - supima.normal_loss) + s * supima_price / (ONE - supima.loss)
+                        (ONE - s) * found.net / (ONE - normal_loss) + s * supima_price / (ONE - supima.loss)
                     )
-                    mix = {"supima_loss": supima.loss, "normal_loss": supima.normal_loss, "normal_net": found.net}
+                    mix = {"supima_loss": supima.loss, "normal_loss": normal_loss, "normal_net": found.net}
                 mix |= {"supima_ratio": s, "supima_net": supima_price}
             components.append(
                 QuoteComponent(
@@ -226,6 +339,8 @@ class QuoteBusiness(BaseBusiness[Quote]):
                     recovery_usd=found.recovery,
                     net_usd=found.net,
                     cost_usd=cost,
+                    fiber_type=fiber,
+                    default_loss=default,
                     **mix,
                 )
             )
@@ -260,7 +375,7 @@ class QuoteBusiness(BaseBusiness[Quote]):
     ) -> Quote:
         """BR-95 on the inputs already set in ``base`` (rate, factor, GP, commission, incoterm, F&I, order qty)."""
         material = sum((c.cost_usd for c in components), ZERO)
-        norm = norm_vnd / base.exchange_rate * base.norm_factor
+        norm = (norm_vnd / base.exchange_rate + base.sliver_usd) * base.norm_factor  # BR-119: cộng chi phí cúi
         new_cost = material + norm
         if stock_cost is not None and stock_qty > 0:
             average = (stock_qty * stock_cost + base.order_qty * new_cost) / (stock_qty + base.order_qty)

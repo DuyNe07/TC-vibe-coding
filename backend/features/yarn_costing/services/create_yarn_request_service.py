@@ -42,7 +42,7 @@ class CreateYarnRequestService(BaseService[CreateYarnRequestRequest, YarnRespons
         factory = request.factory_code
         self.access.ensure_allowed(self.current_user, "UC-15", factory.value)
         name = upper_name(request.yarn_name)  # BR-101 (bổ sung 2026-11-11): tên lưu viết hoa
-        parsed = self.names.analyze(name)
+        parsed = self.names.analyze(name, factory.value)  # BR-120: mã cúi ở S4
         self.names.ensure_valid(parsed)
         yarns = self.repository.list_all()
         checks = NameCheckBusiness()
@@ -52,7 +52,9 @@ class CreateYarnRequestService(BaseService[CreateYarnRequestRequest, YarnRespons
         version = RateVersionRepository().current(factory.value)
         packaging = {p.code: p for p in PackagingTypeRepository().for_factory(factory.value)}
         chosen = packaging.get(request.packaging_code.strip())
-        self.master.require(chosen is not None and self.master.is_selectable(chosen, version), PACKAGING_MESSAGE)
+        sliver = bool(self.names.sliver_group(name, factory.value))  # BR-120: mã cúi không cần loại đóng gói
+        if not (sliver and chosen is None):
+            self.master.require(chosen is not None and self.master.is_selectable(chosen, version), PACKAGING_MESSAGE)
         customer = collapse_spaces(request.customer_name)
         reason = (request.duplicate_reason or "").strip()
         self.master.require(len(customer) <= CUSTOMER_MAX and len(reason) <= REASON_MAX, MSG_LENGTH)
@@ -68,7 +70,7 @@ class CreateYarnRequestService(BaseService[CreateYarnRequestRequest, YarnRespons
             loss_group_key=parsed.loss_group_key,
             technology=self.names.technology(name),
             is_compact=parsed.is_compact,
-            packaging_code=chosen.code,  # type: ignore[union-attr]
+            packaging_code=chosen.code if chosen is not None else None,
             status=YarnStatus.CHO_XUONG_XEM,
             origin=YarnOrigin.YEU_CAU_SALES,
             requested_by=label,
@@ -102,5 +104,5 @@ class CreateYarnRequestService(BaseService[CreateYarnRequestRequest, YarnRespons
         self.logger.info("Yarn request %s created for %s (%s)", code, factory, name)
         return YarnResponse(
             message=f"Đã gửi yêu cầu {code} - {name} cho {FACTORY_NAMES[factory.value]}.",
-            yarn=yarn_dto(yarn, packaging_name=chosen.name),  # type: ignore[union-attr]
+            yarn=yarn_dto(yarn, packaging_name=chosen.name if chosen is not None else ""),
         )

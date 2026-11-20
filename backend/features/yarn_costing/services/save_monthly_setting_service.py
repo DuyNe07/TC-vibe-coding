@@ -39,7 +39,14 @@ class SaveMonthlySettingService(BaseService[SaveMonthlySettingRequest, MaterialS
             if r.group_id in names
         ]
         MaterialPriceBusiness().ensure_setting_valid(
-            request.norm_factor, request.default_fi, plan, recoveries, names, request.coin_usd, request.coin_tax
+            request.norm_factor,
+            request.default_fi,
+            plan,
+            recoveries,
+            names,
+            request.coin_usd,
+            request.coin_tax,
+            (request.loss_pe, request.loss_other, request.loss_carded, request.loss_combed),  # BR-117
         )
         supima_group = (
             request.supima_group_id
@@ -61,6 +68,10 @@ class SaveMonthlySettingService(BaseService[SaveMonthlySettingRequest, MaterialS
             "supima_group_id": supima_group,  # BR-113 (bổ sung 2026-11-13)
             "coin_usd": request.coin_usd,
             "coin_tax": request.coin_tax,
+            "loss_pe": request.loss_pe,  # BR-117 (bổ sung 2026-11-20)
+            "loss_other": request.loss_other,
+            "loss_carded": request.loss_carded,
+            "loss_combed": request.loss_combed,
         }
         if current is None:
             repo.add(
@@ -75,7 +86,9 @@ class SaveMonthlySettingService(BaseService[SaveMonthlySettingRequest, MaterialS
                 self.current_user,
                 USE_CASE,
                 f"Khai báo tháng {request.period}",
-                f"Hệ số {request.norm_factor}; F&I {request.default_fi}; phương án {plan_text}; hồi phế {recovery_text}",
+                f"Hệ số {request.norm_factor}; F&I {request.default_fi}; phương án {plan_text}; hồi phế {recovery_text}; "
+                f"tiêu hao PE {request.loss_pe}, khác {request.loss_other}, chải thô {request.loss_carded}, "
+                f"chải kỹ {request.loss_combed}",
             )
         )
         return MaterialSaveResponse(message=f"Đã lưu khai báo tháng {month_text(request.period)}.", saved_count=1)

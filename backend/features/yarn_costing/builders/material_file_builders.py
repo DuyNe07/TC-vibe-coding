@@ -201,6 +201,9 @@ class QuoteExportFileBuilder(BaseBuilder[FileDownloadDTO]):
                     "Phương án bông": " + ".join(
                         f"{s.origin.value} {pct(s.percent)}%" for s in q.cotton_plan if s.percent > 0
                     ),  # bỏ xuất xứ 0% (sửa 2026-11-17)
+                    "Cúi (Có / Không)": "Có" if q.sliver_cost else "Không",  # BR-119 (bổ sung 2026-11-20)
+                    "Mã cúi": q.sliver_code,
+                    "Chi phí cúi (USD/kg)": rnd(q.sliver_usd, USD_DECIMALS) if q.sliver_cost else None,
                     "Ghi chú": q.note,
                 }
             )

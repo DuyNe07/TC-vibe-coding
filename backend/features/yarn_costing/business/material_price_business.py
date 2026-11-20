@@ -66,6 +66,7 @@ MSG_NO_STOCK = "Chưa có file kho tháng {month} (tháng trước tháng tính)
 MSG_LEVEL = "Mức cảnh báo phải là số lớn hơn 0."
 MSG_COIN = "Giá Supima coin không được âm."
 MSG_COIN_TAX = "Thuế nhà thầu không được âm."
+MSG_DEFAULT_LOSS = "Tiêu hao mặc định phải từ 0% đến dưới 100%."  # BR-117 (bổ sung 2026-11-20)
 NOTE_NO_AVG = "chưa có giá BQ tháng {month}"
 NOTE_UNDECLARED = "chưa khai báo nhóm"
 NOTE_NO_QUOTE = "chưa tính giá báo khách"
@@ -135,6 +136,10 @@ class MaterialPriceBusiness(BaseBusiness[MaterialPriceGroup]):
             supima_group_id=previous.supima_group_id,
             coin_usd=previous.coin_usd,
             coin_tax=previous.coin_tax,
+            loss_pe=previous.loss_pe,  # BR-117 (bổ sung 2026-11-20)
+            loss_other=previous.loss_other,
+            loss_carded=previous.loss_carded,
+            loss_combed=previous.loss_combed,
         )
 
     def latest_before(self, period: str, settings: Sequence[MonthlyMaterialSetting]) -> MonthlyMaterialSetting | None:
@@ -150,7 +155,10 @@ class MaterialPriceBusiness(BaseBusiness[MaterialPriceGroup]):
         group_names: dict[str, str],
         coin_usd: Decimal = Decimal("0.552"),
         coin_tax: Decimal = Decimal("0.05"),
+        default_losses: Sequence[Decimal] = (),
     ) -> None:
+        if any(loss < 0 or loss >= ONE for loss in default_losses):  # BR-117 (bổ sung 2026-11-20)
+            raise YarnValidationError(MSG_DEFAULT_LOSS)
         if coin_usd < 0:  # BR-113
             raise YarnValidationError(MSG_COIN)
         if coin_tax < 0:

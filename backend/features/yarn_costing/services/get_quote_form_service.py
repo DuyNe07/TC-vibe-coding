@@ -1,5 +1,6 @@
-"""UC-62 (đợt 2): dữ liệu điền sẵn của khối Tính giá - thành phần + tiêu hao (BR-94), nhóm gợi ý (BR-93), mã kế toán
-gợi ý (BR-98), hệ số và F&I mặc định của tháng (BR-88)."""
+"""UC-62 (đợt 2): dữ liệu điền sẵn của khối Tính giá - thành phần + tiêu hao (BR-94; bổ sung 2026-11-20: loại xơ và tiêu
+hao điền sẵn BR-117 / BR-118, loại cúi BR-119), nhóm gợi ý (BR-93), mã kế toán gợi ý (BR-98), hệ số và F&I mặc định của
+tháng (BR-88)."""
 
 from backend.core.base import BaseService
 from backend.features.yarn_costing.builders.material_dto_builders import group_options
@@ -13,8 +14,9 @@ from backend.features.yarn_costing.dto.material_dto import (
     QuoteFormComponentDTO,
     QuoteFormResponse,
 )
-from backend.features.yarn_costing.exceptions import YarnNotFoundError
+from backend.features.yarn_costing.exceptions import YarnNotFoundError, YarnValidationError
 from backend.features.yarn_costing.models.enums import LineType
+from backend.features.yarn_costing.repositories.loss_group_repository import LossGroupRepository
 from backend.features.yarn_costing.repositories.material_price_repository import (
     MaterialPriceGroupRepository,
     MonthlyMaterialSettingRepository,
@@ -44,6 +46,12 @@ class GetQuoteFormService(BaseService[GetQuoteFormRequest, QuoteFormResponse]):
         suggestions = business.accounting_suggestions(yarn, family, stock_lines)
         line = yarn.line(request.line_code)
         monthly = MaterialPriceBusiness().setting_of(request.period, MonthlyMaterialSettingRepository().list_all())
+        loss_problem = ""
+        try:  # BR-117 / BR-118 (bổ sung 2026-11-20)
+            defaults = business.default_losses(yarn, monthly, LossGroupRepository().list_all())
+        except YarnValidationError as exc:  # nhóm cúi ở S4 chưa có: vẫn mở được form, báo câu BR-118
+            loss_problem = exc.message
+            defaults = [(business.fiber_type(yarn, c), business.component_loss(yarn, c)) for c in yarn.components]
         return QuoteFormResponse(
             line_code=request.line_code,
             yarn_name=yarn.yarn_name,
@@ -53,8 +61,10 @@ class GetQuoteFormService(BaseService[GetQuoteFormRequest, QuoteFormResponse]):
                     ratio=c.ratio,
                     loss=business.component_loss(yarn, c),
                     suggested_group_id=business.suggest_group(c.material_label, quotes),
+                    fiber_type=fiber,
+                    default_loss=default,
                 )
-                for c in yarn.components
+                for c, (fiber, default) in zip(yarn.components, defaults, strict=True)
             ],
             accounting_suggestions=[AccountingSuggestionDTO(code=c, name=n, stock_qty=q) for c, n, q in suggestions],
             default_accounting_code=(line.accounting_code or "") if line else "",
@@ -64,4 +74,6 @@ class GetQuoteFormService(BaseService[GetQuoteFormRequest, QuoteFormResponse]):
             has_trial_line=any(x.line_type == LineType.THI_NGHIEM and x.total_vnd > 0 for x in yarn.lines),
             supima_percent=business.supima_from_name(yarn.yarn_name),  # BR-112 (bổ sung 2026-11-13)
             cotton_plan=[CottonShareDTO(origin=s.origin, percent=s.percent) for s in monthly.cotton_plan],
+            sliver_type=business.sliver_type(yarn),  # BR-119
+            loss_problem=loss_problem,
         )

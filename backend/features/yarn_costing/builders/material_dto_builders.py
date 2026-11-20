@@ -110,6 +110,11 @@ def quote_dto(quote: Quote) -> QuoteDTO:
         supima_coin=quote.supima_coin,
         coin_fee_usd=quote.coin_fee_usd,
         avg_mode=quote.avg_mode,
+        sliver_cost=quote.sliver_cost,  # BR-119 (bổ sung 2026-11-20)
+        sliver_code=quote.sliver_code,
+        sliver_vnd=quote.sliver_vnd,
+        sliver_usd=quote.sliver_usd,
+        loss_version=quote.loss_version,
     )
 
 

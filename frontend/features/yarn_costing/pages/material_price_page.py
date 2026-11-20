@@ -523,6 +523,28 @@ class MaterialPricePage(BasePage):
         plan_note = c3.text_input(
             "Ghi chú phương án", value=data.cotton_plan_note, max_chars=200, key=self.key(f"m_note.{period}")
         )
+        # BR-117 (bổ sung 2026-11-20): tiêu hao mặc định khi tính giá báo khách theo loại xơ
+        st.markdown("**Tiêu hao mặc định khi tính giá báo khách** (%, từ 0 đến dưới 100)")
+        loss_cols = st.columns(4)
+        loss_inputs = {}
+        for col, (field, label) in zip(
+            loss_cols,
+            (
+                ("loss_pe", "Xơ PE"),
+                ("loss_other", "Xơ khác"),
+                ("loss_carded", "Cotton chải thô"),
+                ("loss_combed", "Cotton chải kỹ"),
+            ),
+            strict=True,
+        ):
+            loss_inputs[field] = col.number_input(
+                f"{label} (%)",
+                min_value=0.0,
+                max_value=99.99,
+                value=float(getattr(data, field) * HUNDRED),
+                step=0.5,
+                key=self.key(f"m_{field}.{period}"),
+            )
         # BR-113 (bổ sung 2026-11-13): bông Supima pha trong phương án
         supima_options = [g for g in data.group_options if g.id != "cotton-plan"]
         s1, s2, s3 = st.columns(3)
@@ -595,6 +617,7 @@ class MaterialPricePage(BasePage):
                 supima_group_id=supima_group or "",
                 coin_usd=dec(coin),
                 coin_tax=dec(coin_tax) / HUNDRED,
+                **{field: dec(value) / HUNDRED for field, value in loss_inputs.items()},  # BR-117
             )
             run_save(self.state, lambda: feature.save_monthly_setting(request).message)
         explain(why)

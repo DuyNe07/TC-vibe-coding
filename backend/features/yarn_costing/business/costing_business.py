@@ -6,7 +6,7 @@ from datetime import date
 from decimal import Decimal
 
 from backend.core.base import BaseBusiness
-from backend.features.yarn_costing.constants import EQUIVALENT_CARDING
+from backend.features.yarn_costing.constants import EQUIVALENT_CARDING, SLIVER_FACTORY, SLIVER_GROUPS
 from backend.features.yarn_costing.models.costing import CostResult, FactoryData
 from backend.features.yarn_costing.models.enums import RateCodeSource, RecoveryType, SecondaryMethod, Technology
 from backend.features.yarn_costing.models.exchange_rate import ExchangeRate
@@ -115,6 +115,11 @@ class CostingBusiness(BaseBusiness[Yarn]):
         """BR-58 (+ BR-64): tiêu hao của lượt chải thô (None = chưa xác định được)."""
         return self.pass_loss_with_source(yarn, component, stage, data)[0]
 
+    # ---- BR-120 (bổ sung 2026-11-20) -----------------------------------------------------------------------------
+    def is_sliver(self, yarn: Yarn) -> bool:
+        """BR-120: mã cúi ở S4 (nhóm tiêu hao "CÚI CM" / "CÚI CHẢI THÔ COTTON") - không loại đóng gói, không tính F."""
+        return yarn.factory_code.value == SLIVER_FACTORY and yarn.loss_group_key in SLIVER_GROUPS
+
     # ---- BR-15 / BR-16 -------------------------------------------------------------------------------------------
     def rate_code_for(self, stage: Stage, yarn: Yarn) -> str | None:
         if stage.rate_code_source == RateCodeSource.LOAI_DONG_GOI or stage.is_packaging:
@@ -208,6 +213,8 @@ class CostingBusiness(BaseBusiness[Yarn]):
                 f"Nguyên liệu {m} có tiêu hao chải thô nhưng chưa có dòng thành phần trong sợi."
                 for m in self.missing_materials(yarn, group, data)
             ]
+        if self.is_sliver(yarn):  # BR-120: mã cúi không có đóng gói
+            return reasons
         if not yarn.packaging_code or yarn.packaging_code not in data.packaging:
             reasons.append("Chưa có loại đóng gói.")
         elif yarn.packaging_code not in data.rates:
@@ -305,6 +312,8 @@ class CostingBusiness(BaseBusiness[Yarn]):
         details: list[StageCostDetail] = []
         for stage in sorted(data.stages, key=lambda s: s.sequence):
             if stage.is_packaging:
+                if self.is_sliver(yarn):  # BR-120: không tính công đoạn F
+                    continue
                 packaging = data.packaging[yarn.packaging_code or ""]
                 minutes = self.packaging_minutes(packaging)
                 if minutes > 0:

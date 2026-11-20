@@ -192,3 +192,14 @@ class NameIssueKind(StrEnum):
     KHONG_DOC = "Chưa đọc được thành phần"
     CHU_THUONG = "Chữ thường"
     TRUNG = "Trùng tên"
+
+
+class FiberType(StrEnum):
+    """BR-117 (bổ sung 2026-11-20): loại xơ của thành phần khi tính giá báo khách."""
+
+    XO_PE = "Xơ PE"
+    XO_KHAC = "Xơ khác"
+    COTTON_CHAI_THO = "Cotton chải thô"
+    COTTON_CHAI_KY = "Cotton chải kỹ"
+    CUI_CM = "Cúi CM"
+    CUI_CD = "Cúi CD"

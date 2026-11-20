@@ -4,6 +4,7 @@ from collections.abc import Sequence
 from decimal import Decimal, InvalidOperation
 
 from backend.core.base import BaseBusiness, BaseBusinessRule
+from backend.features.yarn_costing.constants import SLIVER_FACTORY, SLIVER_NAMES
 from backend.features.yarn_costing.models.costing import ParsedYarnName
 from backend.features.yarn_costing.models.enums import Technology
 
@@ -75,9 +76,19 @@ class YarnNameBusiness(BaseBusiness[ParsedYarnName]):
         text = name.replace(token + " ", " ") if (token + " ") in name else name.replace(token, "")
         return collapse_spaces(text).upper()
 
-    def analyze(self, name: str) -> ParsedYarnName:
-        """BR-01..BR-04 applied to one name."""
+    def sliver_group(self, name: str, factory: str = "") -> str:
+        """BR-120 (bổ sung 2026-11-20): tên mã cúi ở S4 ("CÚI CM", "CÚI CHẢI THÔ COTTON", "CÚI CD") → nhóm sợi / nhóm
+        tiêu hao của nó; "" = không phải mã cúi (xưởng khác hoặc tên khác)."""
+        if factory != SLIVER_FACTORY:
+            return ""
+        return SLIVER_NAMES.get(collapse_spaces(name).upper(), "")
+
+    def analyze(self, name: str, factory: str = "") -> ParsedYarnName:
+        """BR-01..BR-04 applied to one name; ``factory`` = S4 also accepts the sliver names without a count (BR-120)."""
         name = collapse_spaces(name)
+        sliver = self.sliver_group(name, factory)
+        if sliver:
+            return ParsedYarnName(valid=True, yarn_group=sliver, loss_group_key=sliver)
         count_text = self.count_text(name) if name else ""
         count = self.parse_count(count_text) if count_text else None
         valid = bool(name) and len(name) <= MAX_NAME_LENGTH and COUNT_MARK in name.upper() and count is not None
