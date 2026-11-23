@@ -275,3 +275,12 @@ MSG_COMP_UNMATCHED: Final = (
     "Không ghép được thành phần '{material}' ({line}) của mã với thành phần của nhóm tiêu hao '{group}'. "
     "Vui lòng chọn lại nguyên liệu ở màn Nhập NSM."
 )
+
+# ---- BR-117..BR-120 (bổ sung 2026-11-20): tiêu hao báo giá theo loại xơ, mã cúi ở S4 ---------------------------------
+SLIVER_FACTORY: Final = "S4"
+SLIVER_CM_GROUP: Final = "CÚI CM"
+SLIVER_CD_GROUP: Final = "CÚI CHẢI THÔ COTTON"
+# accepted sliver names (upper case, single spaces) → their yarn group / loss group (BR-120)
+SLIVER_NAMES: Final = {"CÚI CM": SLIVER_CM_GROUP, "CÚI CHẢI THÔ COTTON": SLIVER_CD_GROUP, "CÚI CD": SLIVER_CD_GROUP}
+SLIVER_GROUPS: Final = (SLIVER_CM_GROUP, SLIVER_CD_GROUP)
+QUOTE_LOSS_VERSION: Final = 2  # 1 = old way (quotes saved before 2026-11-20), 2 = BR-117

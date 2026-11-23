@@ -44,4 +44,8 @@ class GetMonthlySettingService(BaseService[GetMonthlySettingRequest, MonthlySett
             supima_group_id=setting.supima_group_id if setting.supima_group_id in names else "",
             coin_usd=setting.coin_usd,
             coin_tax=setting.coin_tax,
+            loss_pe=setting.loss_pe,  # BR-117 (bổ sung 2026-11-20)
+            loss_other=setting.loss_other,
+            loss_carded=setting.loss_carded,
+            loss_combed=setting.loss_combed,
         )

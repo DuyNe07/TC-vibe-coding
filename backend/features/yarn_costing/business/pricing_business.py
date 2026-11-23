@@ -30,7 +30,9 @@ class PricingBusiness(BaseBusiness[Yarn]):
         self.costing = CostingBusiness()
 
     def packaging_valid(self, yarn: Yarn, data: FactoryData) -> bool:
-        """BR-12: loại đóng gói có ở xưởng, đang hoạt động và có định mức."""
+        """BR-12: loại đóng gói có ở xưởng, đang hoạt động và có định mức; mã cúi (BR-120) không cần."""
+        if self.costing.is_sliver(yarn):
+            return True
         packaging = data.packaging.get(yarn.packaging_code or "")
         return packaging is not None and packaging.active and packaging.code in data.rates
 

@@ -12,6 +12,7 @@ from backend.features.yarn_costing.models.enums import (
     AverageMode,
     CottonOrigin,
     FactoryCode,
+    FiberType,
     Incoterm,
     MaterialDecision,
     MaterialMarket,
@@ -130,6 +131,11 @@ class MonthlyMaterialSetting(BaseEntity):
     supima_group_id: str = ""
     coin_usd: Decimal = Decimal("0.552")
     coin_tax: Decimal = Decimal("0.05")
+    # BR-117 (bổ sung 2026-11-20): tiêu hao mặc định khi tính giá báo khách theo loại xơ (bản cũ đọc ra = mặc định)
+    loss_pe: Decimal = Decimal("0.04")
+    loss_other: Decimal = Decimal("0.08")
+    loss_carded: Decimal = Decimal("0.12")
+    loss_combed: Decimal = Decimal("0.24")
 
     def recovery_of(self, group_id: str) -> Decimal:
         return next((r.usd_per_kg for r in self.recoveries if r.group_id == group_id), ZERO)
@@ -202,6 +208,9 @@ class QuoteComponent(BaseValueObject):
     normal_loss: Decimal = ZERO
     supima_net: Decimal = ZERO
     supima_loss: Decimal = ZERO
+    # BR-117 (bổ sung 2026-11-20): loại xơ và tiêu hao điền sẵn (trống / 0 với báo giá lưu trước đó)
+    fiber_type: FiberType | None = None
+    default_loss: Decimal = ZERO
 
 
 class Quote(BaseEntity):
@@ -243,6 +252,12 @@ class Quote(BaseEntity):
     coin_fee_usd: Decimal = ZERO
     # BR-114 (bổ sung 2026-11-17): báo giá lưu trước đó đọc ra là Tách
     avg_mode: AverageMode = AverageMode.TACH
+    # BR-117 / BR-119 (bổ sung 2026-11-20): báo giá lưu trước đó đọc ra là loss_version 1, không cộng cúi
+    sliver_cost: bool = False
+    sliver_code: str = ""
+    sliver_vnd: Decimal = ZERO
+    sliver_usd: Decimal = ZERO
+    loss_version: int = 1
 
 
 # ---- values computed on the fly (not stored) ----

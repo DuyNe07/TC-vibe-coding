@@ -36,7 +36,7 @@ class UpdateYarnRequestService(BaseService[UpdateYarnRequestRequest, YarnRespons
         self.access.ensure_allowed(self.current_user, "UC-16", yarn.factory_code.value)
         self.requests.ensure_pending(yarn)
         name = upper_name(request.yarn_name)  # BR-101 (bổ sung 2026-11-11)
-        parsed = self.names.analyze(name)
+        parsed = self.names.analyze(name, yarn.factory_code.value)  # BR-120: mã cúi ở S4
         self.names.ensure_valid(parsed)
         checks = NameCheckBusiness()
         standard, misspellings = NameWordRepository().lookups(checks.word_uses(yarns))
@@ -45,10 +45,12 @@ class UpdateYarnRequestService(BaseService[UpdateYarnRequestRequest, YarnRespons
         version = RateVersionRepository().current(yarn.factory_code.value)
         packaging = {p.code: p for p in PackagingTypeRepository().for_factory(yarn.factory_code.value)}
         chosen = packaging.get(request.packaging_code.strip())
-        self.master.require(
-            chosen is not None and self.master.is_selectable(chosen, version),
-            "Vui lòng chọn loại đóng gói đang dùng của xưởng.",
-        )
+        sliver = bool(self.names.sliver_group(name, yarn.factory_code.value))  # BR-120: không cần loại đóng gói
+        if not (sliver and chosen is None):
+            self.master.require(
+                chosen is not None and self.master.is_selectable(chosen, version),
+                "Vui lòng chọn loại đóng gói đang dùng của xưởng.",
+            )
         updated = yarn.model_copy(
             update={
                 "yarn_name": name,
@@ -57,7 +59,7 @@ class UpdateYarnRequestService(BaseService[UpdateYarnRequestRequest, YarnRespons
                 "loss_group_key": parsed.loss_group_key,
                 "technology": self.names.technology(name),
                 "is_compact": parsed.is_compact,
-                "packaging_code": chosen.code,  # type: ignore[union-attr]
+                "packaging_code": chosen.code if chosen is not None else None,
                 "customer_name": yarn.customer_name
                 if request.customer_name is None
                 else collapse_spaces(request.customer_name),
@@ -81,5 +83,6 @@ class UpdateYarnRequestService(BaseService[UpdateYarnRequestRequest, YarnRespons
         AuditLogRepository().add(self.access.audit_entry(self.current_user, "UC-16", yarn.yarn_code, detail))
         self.logger.info("Yarn request %s updated", yarn.yarn_code)
         return YarnResponse(
-            message=f"Đã cập nhật yêu cầu {yarn.yarn_code}.", yarn=yarn_dto(updated, packaging_name=chosen.name)
-        )  # type: ignore[union-attr]
+            message=f"Đã cập nhật yêu cầu {yarn.yarn_code}.",
+            yarn=yarn_dto(updated, packaging_name=chosen.name if chosen is not None else ""),
+        )

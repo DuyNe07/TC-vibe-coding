@@ -15,6 +15,7 @@ from backend.features.yarn_costing.dto.material_dto import (
     CottonShareDTO,
     DeleteQuoteRequest,
     ExportQuotesRequest,
+    FiberType,
     GetQuoteFormRequest,
     Incoterm,
     ListQuotesRequest,
@@ -35,7 +36,15 @@ from frontend.features.yarn_costing.components.columns import (
     usd_col,
 )
 from frontend.features.yarn_costing.components.dialogs import confirm_dialog
-from frontend.features.yarn_costing.components.display import local_dt, pct, plain, usd, usd_cell, vnd_cell
+from frontend.features.yarn_costing.components.display import (
+    local_dt,
+    pct,
+    pct_exact,
+    plain,
+    usd,
+    usd_cell,
+    vnd_cell,
+)
 from frontend.features.yarn_costing.components.flash import show_flash
 from frontend.features.yarn_costing.components.material_ui import (
     current_period,
@@ -54,7 +63,12 @@ FI_TOKEN = "fi_token"
 PENDING_REUSE = "pending_reuse"  # báo giá chờ "Dùng lại": áp vào các ô ở đầu lần chạy sau, trước khi ô được vẽ  # tăng mỗi lần "Dùng lại" để ô F&I nhận số mới
 PRICED = (YarnStatus.DA_TINH_GIA, YarnStatus.CO_MA_KE_TOAN)
 HUNDRED = Decimal(100)
-COMPONENT_COLUMNS = ["Nguyên liệu", "Tỷ lệ %", "Tiêu hao %", "Nhóm giá"]
+COMPONENT_COLUMNS = ["Nguyên liệu", "Tỷ lệ %", "Loại xơ", "Tiêu hao %", "Nhóm giá"]  # bổ sung 2026-11-20: Loại xơ
+LOSS_TOKEN = "loss_token"  # tăng mỗi lần "Dùng lại" để bảng thành phần nhận tiêu hao của báo giá
+REUSED_LOSSES = "reused_losses"  # (mã dòng, {nguyên liệu: tiêu hao}) của báo giá vừa "Dùng lại" (BR-117)
+SLIVER_FACTORIES = ("S4", "S1")  # sửa 2026-11-20: sợi S1 cũng tính giá báo khách (để dùng cúi CM / cúi CD)
+SLIVER_GROUPS = ("CÚI CM", "CÚI CHẢI THÔ COTTON")  # BR-120: mã cúi không có trong danh sách chọn sợi
+SLIVER_TYPES = (FiberType.CUI_CM, FiberType.CUI_CD)
 COTTON_PLAN_ID = "cotton-plan"  # nhóm cố định "Cotton (phương án)" (BR-92)
 ORIGINS = [CottonOrigin.USA, CottonOrigin.BRAZIL, CottonOrigin.AUSTRALIA]
 
@@ -96,7 +110,11 @@ class QuotePage(BasePage):
         lines = [
             r
             for r in feature.list_price_lines(ListPriceLinesRequest()).items
-            if str(r.factory_code) == "S4" and r.line_type == LineType.THUONG and r.status in PRICED and r.total_vnd > 0
+            if str(r.factory_code) in SLIVER_FACTORIES
+            and r.yarn_group not in SLIVER_GROUPS
+            and r.line_type == LineType.THUONG
+            and r.status in PRICED
+            and r.total_vnd > 0
         ]
         labels = {
             r.line_code: f"{r.line_code} - {r.yarn_name}"
@@ -111,7 +129,7 @@ class QuotePage(BasePage):
             st.session_state.setdefault(self.key("period"), current_period())  # no index=: "Dùng lại" sets the month
             period = c1.selectbox("Tháng tính", month_options(), format_func=month_text, key=self.key("period"))
             line_code = c2.selectbox(
-                "Sợi (dòng giá Thường của S4)",
+                "Sợi (dòng giá Thường của S4 / S1)",
                 list(labels),
                 index=None,
                 placeholder="Gõ mã, tên sợi, tên theo khách hoặc mã kế toán",
@@ -167,26 +185,44 @@ class QuotePage(BasePage):
             order_qty = c3.number_input("SL đơn hàng (kg)", min_value=0.0, step=100.0, key=self.key("qty"))
             names = {g.id: g.name for g in form.group_options}
             ids_by_name = {g.name: g.id for g in form.group_options}
-            st.markdown("**Thành phần** - chọn nhóm giá nguyên liệu cho từng thành phần")
+            st.markdown(
+                "**Thành phần** - chọn nhóm giá nguyên liệu cho từng thành phần; tiêu hao điền sẵn theo loại xơ, sửa được"
+            )
+            if form.loss_problem:  # BR-118: chưa có nhóm tiêu hao của cúi ở S4
+                st.warning(form.loss_problem)
+            reused = st.session_state.get(self.key(REUSED_LOSSES))
+            reused_losses = reused[1] if reused and reused[0] == line_code else {}
+            token = st.session_state.get(self.key(LOSS_TOKEN), 0)
             edited = editable_table(
                 [
                     {
                         "Nguyên liệu": c.material_label,
                         "Tỷ lệ %": pct(c.ratio),
-                        "Tiêu hao %": pct(c.loss),
+                        "Loại xơ": c.fiber_type.value if c.fiber_type else "",
+                        "Tiêu hao %": pct_exact(reused_losses.get(c.material_label, c.default_loss)),
                         "Nhóm giá": names.get(c.suggested_group_id),
                     }
                     for c in form.components
                 ],
-                key=self.key(f"components.{line_code}"),
+                key=self.key(f"components.{line_code}.{period}.{token}"),
                 columns=COMPONENT_COLUMNS,
                 column_config={
                     "Tỷ lệ %": percent("Tỷ lệ %"),
-                    "Tiêu hao %": percent("Tiêu hao %"),
+                    "Tiêu hao %": st.column_config.NumberColumn(
+                        "Tiêu hao %", min_value=0.0, max_value=99.99, step=0.01, format="%.2f%%", required=True
+                    ),
                     "Nhóm giá": st.column_config.SelectboxColumn("Nhóm giá", options=list(ids_by_name), required=True),
                 },
-                disabled=("Nguyên liệu", "Tỷ lệ %", "Tiêu hao %"),
+                disabled=("Nguyên liệu", "Tỷ lệ %", "Loại xơ"),
             )
+            sliver = False
+            if form.sliver_type in SLIVER_TYPES and form.sliver_type is not None:  # BR-119 (bổ sung 2026-11-20)
+                sliver_name = form.sliver_type.value
+                sliver = st.checkbox(
+                    f"Cộng chi phí chế biến {sliver_name[0].lower()}{sliver_name[1:]}",
+                    key=self.key(f"sliver.{line_code}"),
+                    help=f"Cộng giá chế biến của mã {sliver_name} ở xưởng S4 × tỷ lệ cotton trong sợi vào Norm (rồi nhân hệ số).",
+                )
             plan, supima, coin = self._cotton_block(form, line_code, edited, ids_by_name)
             c1, c2, c3, c4 = st.columns(4)
             factor = c1.number_input("Hệ số norm (%)", min_value=0.0, step=1.0, key=self.key("factor"))
@@ -215,6 +251,8 @@ class QuotePage(BasePage):
                 supima_percent=supima,
                 supima_coin=coin,
                 avg_mode=avg_mode,
+                losses={row["Nguyên liệu"]: dec(row.get("Tiêu hao %")) / HUNDRED for row in edited},  # BR-117
+                sliver_cost=sliver,  # BR-119
             )
             b1, b2, _ = st.columns([1, 1, 3])
             if b1.button("Tính thử", icon="🧮", key=self.key("try"), disabled=disabled, help=why):
@@ -336,7 +374,9 @@ class QuotePage(BasePage):
                 {
                     "Nguyên liệu": c.material_label,
                     "Tỷ lệ %": pct(c.ratio),
+                    "Loại xơ": c.fiber_type.value if c.fiber_type else "",  # BR-117 (bổ sung 2026-11-20)
                     "Tiêu hao %": pct(c.loss),
+                    "Tiêu hao mặc định %": pct(c.default_loss) if c.fiber_type else None,
                     "Nhóm giá": c.price_group,
                     "Giá BQ": usd(c.average_usd),
                     "Hồi phế": usd(c.recovery_usd),
@@ -349,6 +389,7 @@ class QuotePage(BasePage):
             column_config={
                 "Tỷ lệ %": percent("Tỷ lệ %"),
                 "Tiêu hao %": percent("Tiêu hao %"),
+                "Tiêu hao mặc định %": percent("Tiêu hao mặc định %"),
                 **{k: usd_col(k) for k in ("Giá BQ", "Hồi phế", "Giá tính", "Chi phí NL/kg sợi")},
             },
             key=self.key(f"components_out.{scope}"),
@@ -371,6 +412,7 @@ class QuotePage(BasePage):
             ("Giá nguyên liệu", q.material_usd),
             *([("Phí Supima coin (cộng vào giá Supima)", q.coin_fee_usd)] if q.supima_coin else []),
             (f"Norm (dòng {q.line_code}, {format_number(float(q.norm_vnd), 0)} đ/kg)", q.norm_vnd / rate),
+            *([(self._sliver_label(q), q.sliver_usd)] if q.sliver_cost else []),  # BR-119 (bổ sung 2026-11-20)
             (f"Norm × hệ số {format_number(float(q.norm_factor * HUNDRED), 2)}%", q.norm_usd),
             ("Giá vốn sợi sản xuất mới", q.new_cost_usd),
             (stock, q.stock_cost_usd),
@@ -485,6 +527,13 @@ class QuotePage(BasePage):
             explain(why)
 
     @staticmethod
+    def _sliver_label(q: QuoteDTO) -> str:
+        """BR-119: "Chi phí chế biến cúi CM (<mã>)" - kind read from the sliver component of the quote."""
+        kind = next((c.fiber_type for c in q.components if c.fiber_type in SLIVER_TYPES), FiberType.CUI_CM)
+        name = kind.value if kind else FiberType.CUI_CM.value
+        return f"Chi phí chế biến {name[0].lower()}{name[1:]} ({q.sliver_code}, {format_number(float(q.sliver_vnd), 0)} đ/kg)"
+
+    @staticmethod
     def _mix_text(c: Any) -> str:
         """BR-111: how the cotton component is mixed ("" when it is not)."""
         if not c.supima_ratio:
@@ -527,4 +576,12 @@ class QuotePage(BasePage):
                 state[self.key(f"plan.{q.line_code}.{origin.value}")] = shares.get(origin, 0.0)
         state[self.key(f"supima.{q.line_code}")] = float(q.supima_percent * HUNDRED)
         state[self.key(f"coin.{q.line_code}")] = q.supima_coin
+        # BR-117 / BR-119 (bổ sung 2026-11-20): báo giá lưu từ 2026-11-20 điền lại tiêu hao đã dùng và ô tick cúi;
+        # báo giá cũ → tiêu hao điền sẵn mới, không tick
+        new_way = q.loss_version >= 2
+        state[self.key(REUSED_LOSSES)] = (
+            (q.line_code, {c.material_label: c.loss for c in q.components}) if new_way else None
+        )
+        state[self.key(LOSS_TOKEN)] = state.get(self.key(LOSS_TOKEN), 0) + 1
+        state[self.key(f"sliver.{q.line_code}")] = bool(new_way and q.sliver_cost)
         self.state.pop(RESULT_KEY)

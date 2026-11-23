@@ -16,7 +16,7 @@ class AnalyzeYarnNameService(BaseService[AnalyzeYarnNameRequest, YarnNameAnalysi
 
     def execute(self, request: AnalyzeYarnNameRequest) -> YarnNameAnalysisResponse:
         name = collapse_spaces(request.yarn_name)
-        parsed = self.names.analyze(name)
+        parsed = self.names.analyze(name, request.factory_code.value)  # BR-120: mã cúi ở S4
         if not parsed.valid:
             return YarnNameAnalysisResponse(valid=False, message=YarnNameRule.message if name else "")
         exists = any(
