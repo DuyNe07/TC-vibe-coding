@@ -6,7 +6,8 @@
 | Icon (Biểu tượng) | 🧵 |
 | Owner (Người phụ trách) | Sales Woven (team FS) |
 | Status (Trạng thái) | Implemented |
-| Last updated | 2026-11-20 |
+| Run mode (Chạy ở đâu) | Server |
+| Last updated | 2026-11-25 |
 
 > Phạm vi tài liệu này: **đợt 1** của ứng dụng "Tính giá vải dệt" (dữ liệu gốc + costsheet sales HCM / TCDN + duyệt +
 > danh sách tổng hợp + in nhãn). Đợt 2 (báo giá ngành Nhuộm TCDN), đợt 3 (NGC), đợt 4 (ngành xác nhận chi phí theo OC)
