@@ -25,7 +25,8 @@ Hỏi lại (dialog) trước Gửi duyệt, Duyệt, Trả lại, Chốt đơn,
 `.venv/Scripts/python.exe -X utf8 scripts/new_feature.py woven_costing --title "Tính giá vải dệt" --developer Xuan2894
 --prefix xuan2894 --description "..." --icon "🧵" --group "Kinh doanh Woven" --owner "Sales Woven (team FS)"`
 
-Bảng dữ liệu: `xuan2894__woven_costing__<name>`; URL `/xuan2894-woven-costing`.
+Bảng dữ liệu: `xuan2894__woven_costing__<name>`; URL `/soteam-woven-costing` (đổi 2026-11-25 từ `/xuan2894-woven-costing`
+theo yêu cầu người dùng, giống app tính giá sợi `/soteam-yarn-costing`; bảng dữ liệu không đổi).
 
 ## 3. Reference material (absolute paths, read-only)
 - Excel HCM: `D:/Vibe Coding/Woven-fabric/Format/Tinh Gia Det - HCM (Official) 2026 07 01.xlsm` (sheet CostSheet, DM *,

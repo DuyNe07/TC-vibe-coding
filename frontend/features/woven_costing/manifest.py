@@ -17,7 +17,7 @@ FEATURE = FeatureManifest(
     description="Sales Woven lập, lưu, duyệt costsheet vải dệt trên một ứng dụng dùng chung dữ liệu gốc do SO cập nhật, thay cho các file Excel tính giá.",
     icon="🧵",
     group="Kinh doanh Woven",
-    owner="Sales Woven (team FS)",
+    owner="Phòng SO",
     pages=(
         # nhóm Sales
         CostsheetListPage,
