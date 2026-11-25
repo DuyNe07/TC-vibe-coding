@@ -4,7 +4,7 @@
 |---|---|
 | Home group (Nhóm trên Trang chủ) | Kinh doanh Woven |
 | Icon (Biểu tượng) | 🧵 |
-| Owner (Người phụ trách) | Sales Woven (team FS) |
+| Owner (Người phụ trách) | Phòng SO (sửa 2026-11-25: trước đây ghi Sales Woven (team FS)) |
 | Status (Trạng thái) | Implemented |
 | Run mode (Chạy ở đâu) | Server |
 | Last updated | 2026-11-25 |
