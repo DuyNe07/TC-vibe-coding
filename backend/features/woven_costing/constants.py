@@ -198,6 +198,7 @@ TCDN_COLORS: Final = ("White", "Light", "Medium", "Dark", "Special")
 # ---- Limits of the costsheet lines (4.12-4.17) ----------------------------------------------------------------------
 MAX_YARN_LINES: Final = 9
 MAX_TWIST_LINES: Final = 9
+MAX_CONE_LINES: Final = 18  # 4.14a (2026-11-26): at most 2 x the 9 Ngang Se lines
 MAX_HCM_STAGES: Final = 7
 MAX_HCM_FEATURES: Final = 6
 MAX_HCM_SPECIAL_COSTS: Final = 2

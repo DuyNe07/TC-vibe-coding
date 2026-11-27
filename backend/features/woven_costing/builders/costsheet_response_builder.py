@@ -104,7 +104,13 @@ def input_dto(sheet: Costsheet) -> CostsheetInputDTO:
         twist_lines_live=sheet.twist_lines_live,
         twist_suggestions=[t.model_dump() for t in sheet.twist_suggestions],
         twist_suggestion_skips=sheet.twist_suggestion_skips,
-        weaving=sheet.weaving.model_dump(),
+        # 4.14a (2026-11-26): the cone table, converted from the old cone 1 / cone 2 cells for costsheets stored before
+        weaving=sheet.weaving.model_dump()
+        | {
+            "cone_lines": [row.model_dump() for row in sheet.cone_rows],
+            "cone_lines_converted": True,
+            "cone_lines_live": sheet.cone_live,
+        },
         hcm_dyeing=hcm,
         tcdn_dyeing=tcdn,
         price=sheet.price.model_dump(),

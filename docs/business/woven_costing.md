@@ -7,7 +7,7 @@
 | Owner (Người phụ trách) | Phòng SO (sửa 2026-11-25: trước đây ghi Sales Woven (team FS)) |
 | Status (Trạng thái) | Implemented |
 | Run mode (Chạy ở đâu) | Server |
-| Last updated | 2026-11-25 |
+| Last updated | 2026-11-27 |
 
 > Phạm vi tài liệu này: **đợt 1** của ứng dụng "Tính giá vải dệt" (dữ liệu gốc + costsheet sales HCM / TCDN + duyệt +
 > danh sách tổng hợp + in nhãn). Đợt 2 (báo giá ngành Nhuộm TCDN), đợt 3 (NGC), đợt 4 (ngành xác nhận chi phí theo OC)
@@ -472,20 +472,35 @@ Tối đa 9 dòng Se dọc + 9 dòng Se ngang (Excel dòng 51-68).
 | twist | integer | Yes | Độ săn T/M, app gợi ý sẵn (BR-86), sales gõ lại 50-3.000 (BR-82) (sửa 2026-11-23) | 400 |
 | quantity_kg | decimal | Yes | > 0, SL yêu cầu (kg); app gợi ý sẵn (BR-86) | 14.02 |
 
-Chi số cone 1, 2 (4.14) cũng gõ tự do theo BR-81, không hiển thị chi số chuyển đổi (sửa 2026-11-23).
+Chi số cone 1, 2 (4.14) cũng gõ tự do theo BR-81, không hiển thị chi số chuyển đổi (sửa 2026-11-23). (sửa
+2026-11-26: chi số cone nay nằm trong bảng cone 4.14a, vẫn gõ tự do theo BR-81.)
 
 ### 4.14 Ngành Dệt – lựa chọn và gia công (Costsheet weaving input)
 | Field | Type | Required | Description | Example |
 |---|---|---|---|---|
 | size_material | list (4.5.4 nguyên liệu hồ) | Có khi có Hồ | Nguyên liệu hồ | DTY |
 | warping_band | list: Có / Không | Có khi không có nguyên liệu hồ | Mắc phân băng | Không |
-| cone_count_1, cone_count_2 | text (chi số) | No | Chi số sợi cone 1, 2; cone 1 điền sẵn theo BR-87 (sửa 2026-11-23) | 150D |
-| cone_qty_1, cone_qty_2 | decimal kg | No | Số lượng cone; cone 1 điền sẵn theo BR-87, hiện ngay trong ô (sửa 2026-11-23: trước đây để trống = tổng Se ngang nhưng không hiện số) | 930 |
+| cone_count_1, cone_count_2 | text (chi số) | No | (bỏ từ 2026-11-26, thay bằng bảng cone 4.14a; số đã lưu được chuyển thành dòng cone) Chi số sợi cone 1, 2; cone 1 điền sẵn theo BR-87 (sửa 2026-11-23) | 150D |
+| cone_qty_1, cone_qty_2 | decimal kg | No | (bỏ từ 2026-11-26, thay bằng bảng cone 4.14a) Số lượng cone; cone 1 điền sẵn theo BR-87, hiện ngay trong ô (sửa 2026-11-23: trước đây để trống = tổng Se ngang nhưng không hiện số) | 930 |
 | twist_outsourcing_price | decimal đ/kg | No | Gia công Se | 0 |
 | twist_outsourcing_qty | decimal kg | No | SL gia công Se | 0 |
 | size_outsourcing_price | decimal đ/m | No | Gia công Hồ | 0 |
 | weaving_outsourcing_price | decimal đ/m | No | Gia công Dệt | 0 |
 | other_outsourcing_price | decimal đ/m | No | Chi phí gia công khác | 0 |
+
+### 4.14a Dòng cone (Costsheet cone line) (thêm 2026-11-26)
+Mỗi dòng là 1 cone (1 lần đánh ống sợi ngang). Không giới hạn số dòng (tối đa 18, bằng số dòng Se ngang × 2).
+
+| Field | Type | Required | Validation | Description | Example |
+|---|---|---|---|---|---|
+| count | text (chi số) | Có khi SL > 0 | Dạng theo BR-81 | Chi số cone; app gợi ý sẵn (BR-100), sales gõ lại tự do | 150D + 30D |
+| quantity_kg | decimal kg | Yes | ≥ 0 | SL cone; app gợi ý sẵn = tổng SL các dòng Se ngang gộp vào cone (BR-100) | 76.51 |
+| members | text | No (chỉ xem) | | Các dòng Se ngang gộp vào cone, app ghi khi gợi ý; dòng sales thêm thì trống | 150D (400 T/M) + 30D (400 T/M) |
+| suggested | yes-no | Yes | | Dòng do app gợi ý (Yes) hay sales đã sửa / tự thêm (No) | Yes |
+
+Costsheet lưu trước 2026-11-26: cone 1 / cone 2 có số (chi số hoặc SL) thành 1 dòng cone mỗi cone, giữ nguyên chi số và
+SL; dòng có ô còn là gợi ý BR-87 thì suggested = Yes, còn lại = No. Cone trống không tạo dòng.
+Danh sách các dòng gợi ý sales đã xóa được nhớ để không tạo lại (giống dòng Se, BR-86).
 
 ### 4.15 Nhuộm HCM – lựa chọn (Costsheet HCM dyeing input)
 | Field | Type | Required | Description | Example |
@@ -852,10 +867,11 @@ Thông số lấy theo BR-75.
   1. Lấy lại tỷ giá, bộ định mức, bộ tham số theo ngày tính giá (BR-61, BR-62).
   2. Lấy lại thông số vải hiện tại (trừ khi fabric_overridden = Yes thì giữ thông số sales đã sửa).
   3. Áp dụng các giá trị sales đã sửa (4.18).
-  4. Tính BR-10..BR-29.
+  4. Tính BR-10..BR-29 (thêm 2026-11-26: trước bước Ngành Dệt, cập nhật bảng cone theo BR-100).
   5. Lập danh sách cảnh báo BR-80.
 - **Output:** toàn bộ kết quả 4.20 và cảnh báo.
-- **Rules applied:** BR-10..BR-29, BR-45, BR-46, BR-61, BR-62, BR-80, BR-89, BR-90 (thêm 2026-11-25)
+- **Rules applied:** BR-10..BR-29, BR-45, BR-46, BR-61, BR-62, BR-80, BR-89, BR-90 (thêm 2026-11-25), BR-100 (thêm
+  2026-11-26)
 
 ### UC-17: Lưu nháp
 - **Actor:** Sales (chủ phiếu), Trưởng team (chủ phiếu)
@@ -1097,7 +1113,7 @@ Thông số lấy theo BR-75.
 | BR-19 | **Chi phí sợi** từng dòng: Lượng sợi (kg) = Kg mộc × ratio ÷ (1 − tiêu hao) ÷ (1 − waste_rate). Thành tiền = Lượng sợi × price_vnd − Kg mộc × ratio × waste_rate × yarn_waste_price. Sản lượng Se ước tính (dòng có Se) = ratio × Kg mộc ÷ (1 − (tiêu hao + waste_rate − twist_loss_offset)). Tổng chi phí sợi = tổng thành tiền (sửa 2026-11-25: Gia công dệt -> lượng sợi vẫn tính (= sợi khách cần giao), thành tiền = 0 (BR-89); Gia công nhuộm -> không tính sợi) | - |
 | BR-20 | **Định mức Se** (đ/kg) cho mỗi dòng 4.13. Loại = "SE - FILAMENT" (Filament) hoặc "SE - XƠ NGẮN" (Spun); E = chi số chuyển đổi; F = độ săn. Từ 4.5.1: tốc độ G, số cọc H, thời gian I. Năng suất = (G ÷ F) × H × I × (E ÷ 9.000.000) × 2 (kg/ngày); TG máy chạy K = I ÷ năng suất (phút/kg). Từ 4.5.2: N = TG CB/lần ÷ sản lượng/lần CB; T = (đơn giá máy chạy ÷ tổng đơn giá/phút) × K; U = (đơn giá chuẩn bị ÷ TG CB/lần ÷ tổng đơn giá/phút) × N; V = T + U. Mỗi khoản mục = V × đơn giá/phút của khoản mục; riêng Nhân công nhân hệ số NC = [số giờ làm/ngày ÷ (TG CB/lần ÷ 60 + sản lượng/lần CB × K ÷ 60)] × (số máy) ÷ (round(tổng nhân sự Se ÷ tổng số cọc × số cọc) ÷ số ca). Chi số có "CB" và là Filament: cộng thêm bấm đốt = TG bấm đốt × đơn giá/phút "BẤM ĐỐT - CARBON", TG bấm đốt = 1 ÷ (tốc độ bấm đốt × số cọc bấm đốt × E ÷ 9.000.000) ÷ hiệu suất. E lấy theo BR-81, hệ sợi theo BR-83 (sửa 2026-11-23: trước đây E tra trong 4.5.6 và có lỗi "chi số không khớp hệ sợi"; nay hệ sợi tự xác định nên không còn lỗi này) | - |
 | BR-21 | **Kiểm tra sản lượng Se:** tổng quantity_kg các dòng 4.13 phải bằng tổng Sản lượng Se ước tính (BR-19), chênh ≤ 0,01 kg | Tổng sản lượng Se nhập (<a> kg) khác sản lượng Se ước tính (<b> kg). Vui lòng kiểm tra lại. |
-| BR-22 | **Ngành Dệt** (đ, khi Hình thức bán ≠ Vải Nhuộm; Vải Nhuộm thì toàn bộ = 0). Số mét mắc = Số mét mộc ÷ (1 − warping_extra_loss) ÷ (1 − độ co mắc của mã). Se = Σ quantity_kg × định mức Se. Gia công Se = SL × đơn giá. Mắc Hồ = Số mét mắc × (6 khoản mục + Hóa chất × size_chemical_factor) của DinhMucHo theo [nguyên liệu hồ, nhóm tổng canh]; tổng canh = mật độ dọc mộc ÷ 10 × khổ mộc, nhóm theo 4.5.4. Gia công Hồ = Số mét mắc × đơn giá. Mắc phân băng (khi "Có") = Số mét mắc × Σ khoản mục, khoản mục = đơn giá/phút "MAC" × TG mắc × hệ số se; TG mắc = số nhịp tam suất ÷ (tốc độ MAC × chu vi guồng); số nhịp tam suất = roundup(tổng canh × số nhịp chuẩn ÷ tổng canh chuẩn); hệ số se = 1,97 nếu có sợi dọc tick Se, ngược lại 1. Cone = SL cone × khoản mục, khoản mục = đơn giá/phút "CONE" × 9.000.000 ÷ (tốc độ × số cọc × chi số chuyển đổi theo BR-81 (sửa 2026-11-23)); SL cone 1 mặc định = tổng SL Se ngang. Dệt = Số mét mộc × DinhMucDet[round(mật độ ngang mộc ÷ 10)]. Kiểm = Số mét mộc × đơn giá/phút KIEM HANG_1 (Mộc) hoặc KIEM HANG_2 (khác) ÷ tốc độ kiểm. Gia công Dệt, khác = Số mét mộc × đơn giá. (sửa 2026-11-25: Gia công nhuộm -> toàn bộ = 0 như Vải Nhuộm; Gia công dệt tính đủ) | Định mức <công đoạn> không có trong bảng tra. Kiểm tra lại thông tin nhập. |
+| BR-22 | **Ngành Dệt** (đ, khi Hình thức bán ≠ Vải Nhuộm; Vải Nhuộm thì toàn bộ = 0). Số mét mắc = Số mét mộc ÷ (1 − warping_extra_loss) ÷ (1 − độ co mắc của mã). Se = Σ quantity_kg × định mức Se. Gia công Se = SL × đơn giá. Mắc Hồ = Số mét mắc × (6 khoản mục + Hóa chất × size_chemical_factor) của DinhMucHo theo [nguyên liệu hồ, nhóm tổng canh]; tổng canh = mật độ dọc mộc ÷ 10 × khổ mộc, nhóm theo 4.5.4. Gia công Hồ = Số mét mắc × đơn giá. Mắc phân băng (khi "Có") = Số mét mắc × Σ khoản mục, khoản mục = đơn giá/phút "MAC" × TG mắc × hệ số se; TG mắc = số nhịp tam suất ÷ (tốc độ MAC × chu vi guồng); số nhịp tam suất = roundup(tổng canh × số nhịp chuẩn ÷ tổng canh chuẩn); hệ số se = 1,97 nếu có sợi dọc tick Se, ngược lại 1. Cone = SL cone × khoản mục, khoản mục = đơn giá/phút "CONE" × 9.000.000 ÷ (tốc độ × số cọc × chi số chuyển đổi theo BR-81 (sửa 2026-11-23)); SL cone 1 mặc định = tổng SL Se ngang. (sửa 2026-11-26: Cone = Σ các dòng bảng cone 4.14a, mỗi dòng có SL > 0 = SL × khoản mục theo chi số của dòng, tên dòng chi phí "Cone <n>" (n = thứ tự dòng trong bảng cone); dòng có SL > 0 mà trống chi số -> cảnh báo chặn "Cone dòng <n>: có <SL> kg sợi cone, vui lòng nhập chi số."; không có dòng cone -> Cone = 0. Trước đây chỉ Cone 1 + Cone 2, SL cone 1 trống = tổng SL Se ngang.) Dệt = Số mét mộc × DinhMucDet[round(mật độ ngang mộc ÷ 10)]. Kiểm = Số mét mộc × đơn giá/phút KIEM HANG_1 (Mộc) hoặc KIEM HANG_2 (khác) ÷ tốc độ kiểm. Gia công Dệt, khác = Số mét mộc × đơn giá. (sửa 2026-11-25: Gia công nhuộm -> toàn bộ = 0 như Vải Nhuộm; Gia công dệt tính đủ) | Định mức <công đoạn> không có trong bảng tra. Kiểm tra lại thông tin nhập. |
 | BR-23 | **Hệ số số lượng** (L = Số mét mộc): Vải Nhuộm -> không dùng; Thí Nghiệm -> trial_quantity_factor (2); L < 5.000 -> 1,1; L = 5.000 -> 1,05; 5.000 < L < 10.000 -> 1,05 − 0,05 × (L − 5.000) ÷ 5.000; 10.000 ≤ L ≤ 20.000 -> 1; 20.000 < L < 50.000 -> 0,95 − 0,03 × (L − 20.000) ÷ 30.000; L = 50.000 -> 0,92; 50.000 < L < 100.000 -> 0,92 − 0,02 × (L − 50.000) ÷ 50.000; L ≥ 100.000 -> 0,9. Chi phí ngành Dệt = Se + Gia công Se + Gia công Hồ + Gia công Dệt + Gia công khác + (Mắc Hồ + Mắc phân băng + Cone + Dệt + Kiểm) × hệ số. (sửa 2026-11-25: hệ số lấy từ bảng discount 4.6.1 ngành Dệt của bộ tham số dùng cho phiếu — Thí Nghiệm dùng dòng "Thí nghiệm", còn lại dòng "Đại trà" có mốc chứa số mét mộc, xét đúng ≥ / > / ≤ / < theo from_inclusive / to_inclusive; theo bậc, không chia đều. Bộ tham số cũ đánh dấu interpolate = Yes thì tính chia đều như công thức Excel nêu trên, để phiếu cũ giữ số; không có dòng nào khớp -> hệ số 1 và cảnh báo "Không có hệ số sản lượng cho <SL> m mộc trong bảng discount Dệt. Liên hệ SO.") (sửa 2026-11-25: Gia công nhuộm -> không dùng, như Vải Nhuộm; Gia công dệt dùng bảng discount Dệt như phiếu thường) | - |
 | BR-24 | **Hệ số theo mã hàng:** với mã vải của costsheet, mỗi dòng 4.7 active và effective_from ≤ ngày tính giá: định mức của [công đoạn, khoản mục] = định mức × multiplier + addition, trước khi nhân số lượng | - |
 | BR-25 | **Nhuộm TCDN** (đ/m TP, khi không phải Mộc). Đặt `co` = độ co (BR-13). Hệ số TCDN h: số mét ≥ 50.000 -> 0,95; ngược lại nếu (đã chọn nguyên liệu và cấp màu) hoặc extra_cost_type = Nhuộm -> (≤ 150 m: 1,2; khác 1); ngược lại (≤ 100 m: 1,5; khác 1) (sửa 2026-11-25: các mốc và hệ số lấy từ bảng discount 4.6.1 ngành Nhuộm TCDN; điều kiện "Nhuộm" khi đã chọn nguyên liệu và cấp màu hoặc extra_cost_type = Nhuộm, còn lại "Partial"; dòng mốc ≥ 50.000 m xét trước). (a) Tiêu chuẩn: mã "Nhuộm tiêu chuẩn-<NL>-<cấp màu>" trong 4.5.10; Blended = Σ tỷ trọng × dòng từng cấp màu (Khăn không có White; Cotton/Nylon, Cotton/Poly không có Special). Hóa chất = (giá phẩm nhuộm đặc biệt nếu có, ngược lại Hóa chất của bảng) ÷ (1 − co) ÷ 250 × g/m mộc; 6 khoản mục khác = bảng ÷ (1 − co). (b) WR: hóa chất = NhuomTCDN_HoaChat[wr_chemical, nhóm 1 nếu g/m2 mộc ≤ 150, ngược lại 2] ÷ 250 × g/m mộc ÷ (1 − co); khoản mục = dòng "WR" ÷ (1 − co) ÷ (1 − tiêu hao). (c) Mỗi công đoạn ngoài quy trình: tiêu hao t từ bảng; với công đoạn xưởng "Phụ trợ" thì không chia (1 − co). Hóa chất: CPB = HoaChat[CPB theo NL] ÷ 250 × g/m mộc; Coating/Bonding/Santa/Soaping = giá sales nhập (chưa nhập = "liên hệ TCDN", tính 0); Suse… = HoaChat[Suse] ÷ 250 × g/m mộc; Mercerzing = HoaChat[Mercerzing] ÷ 250 × g/m mộc; khác = Hóa chất bảng ÷ (1 − co) ÷ 250 × g/m mộc; mọi trường hợp ÷ (1 − t). Khoản mục: CPB lấy dòng CPB theo NL; khác lấy bảng; ÷ (1 − co) ÷ (1 − t). (d) Tính năng đặc biệt = giá sales nhập (chưa có = "liên hệ TCDN", tính 0). (e) Mỗi dòng: chi phí/m = (hóa chất + tổng khoản mục) × h. (f) Chi phí phát sinh (khi có) = Σ 7 khoản mục × h, và khi đó tổng nhuộm chỉ gồm chi phí phát sinh + gia công ngoài. (g) Gia công ngoài = đơn giá × h. Tổng nhuộm/m = Σ dòng. (sửa 2026-11-25: Gia công dệt -> không tính nhuộm, như Mộc) | Thiếu giá hóa chất cho <công đoạn>: đang tính 0 (liên hệ TCDN). |
@@ -1155,7 +1171,8 @@ Thông số lấy theo BR-75.
 | BR-82 | **Độ săn** (thêm 2026-11-23): số nguyên từ 50 đến 3.000 T/M | Độ săn <số> không hợp lệ: phải là số nguyên từ 50 đến 3.000 T/M. |
 | BR-83 | **Hệ sợi** (thêm 2026-11-23): gợi ý sẵn — chi số có chữ "D" (sau khi bỏ "SP m" và "CB") -> Filament; không có -> Spun. Sales chọn lại được; hệ sợi trên dòng (gợi ý hoặc sales chọn) dùng chọn dòng "SE - FILAMENT" / "SE - XƠ NGẮN" và tham số Se (BR-20). Gợi ý được điền khi chi số thay đổi và ô hệ sợi đang trống hoặc đang là gợi ý cũ | - |
 | BR-86 | **Gợi ý dòng Se** (thêm 2026-11-23): khi phiếu chưa có dòng Se nào và có dòng sợi tick Se (bước Tính lại / tạo phiếu), app tạo sẵn 1 dòng Se cho mỗi nhóm (hướng, chi số, độ săn) của các dòng sợi tick Se: Hướng = Dọc (WARP) / Ngang (WEFT); Độ săn = số trước "T/M" của sợi; Chi số đọc từ tên sợi: mỗi phần filament "…<n>D/…/<k>" -> "nD" (thêm "/k" khi k ≥ 2), spun "<N>/<k>" -> "N/k", có "CACBON" / "CARBON" / "C.TRANG" / "C.DEN" / "C TRANG" -> thêm "+ CB"; Hệ sợi theo BR-83; SL = sản lượng Se ước tính của các dòng sợi trong nhóm (BR-19). Đọc không ra chi số thì để trống ô Chi số. Sales sửa / xóa / thêm dòng tự do; đã có dòng Se thì không tạo lại. (sửa 2026-11-23) Mỗi dòng Se ghi nhận "do app gợi ý" hay "sales đã sửa": khi tính, các dòng còn là gợi ý được tạo lại theo tick Se và sản lượng Se ước tính hiện tại (đổi tick Se, đổi số mét, đổi tỷ lệ… đều cập nhật); dòng sales đã sửa hoặc tự thêm giữ nguyên; dòng sales đã xóa không tạo lại. Phiếu có dòng Se lưu trước 2026-11-23 coi như "sales đã sửa" | - |
-| BR-87 | **Gợi ý cone** (thêm 2026-11-23): SL cone 1 điền sẵn = tổng SL các dòng Se Ngang; chi số cone 1 điền sẵn = chi số của dòng Se Ngang nếu các dòng Se Ngang chỉ có 1 chi số (nhiều chi số thì để trống để sales nhập). Giá trị gợi ý hiện ngay trong ô và tự cập nhật khi dòng Se Ngang đổi, tới khi sales tự sửa ô đó; sales sửa thì giữ số của sales. Không có Se Ngang thì để trống | - |
+| BR-87 | (bỏ từ 2026-11-26, thay bằng BR-100) **Gợi ý cone** (thêm 2026-11-23): SL cone 1 điền sẵn = tổng SL các dòng Se Ngang; chi số cone 1 điền sẵn = chi số của dòng Se Ngang nếu các dòng Se Ngang chỉ có 1 chi số (nhiều chi số thì để trống để sales nhập). Giá trị gợi ý hiện ngay trong ô và tự cập nhật khi dòng Se Ngang đổi, tới khi sales tự sửa ô đó; sales sửa thì giữ số của sales. Không có Se Ngang thì để trống | - |
+| BR-100 | **Gợi ý bảng cone – sợi se chung / se riêng** (thêm 2026-11-26, thay BR-87). Dựa trên các dòng Se Ngang (4.13). (a) Dòng Se Ngang là **sợi phụ** khi các dòng sợi Ngang tick Se có cùng chi số và độ săn với nó có tên chứa BR1, WHITE C, BLACK C, CARBON, CACBON, C.TRANG, C.DEN, C TRANG (carbon) hoặc SPANDEX (spandex), hoặc khi chi số của dòng chỉ là "CB" hay "SP m"; các dòng khác là **sợi chính**. (b) Mỗi sợi chính = 1 cone; các dòng Se Ngang cùng chi số và độ săn gộp làm 1 (cộng SL). (c) Mỗi sợi phụ se chung với 1 sợi chính: chọn trong các sợi chính cùng độ săn (không có thì xét mọi sợi chính) sợi có SL × (chi số chuyển đổi sợi phụ ÷ chi số chuyển đổi sợi chính) gần SL sợi phụ nhất (2 sợi se chung dài bằng nhau); không có sợi chính nào thì sợi phụ thành 1 cone riêng. (d) Cone se chung: SL = SL sợi chính + SL các sợi phụ đi kèm; chi số = chi số sợi chính, nối " + " với phần của từng sợi phụ: carbon có "CB" trong chi số -> "CB", spandex -> "SP m" (m = số D của spandex), còn lại -> chi số sợi phụ. Ví dụ "150D + 30D", "75D/2 + CB", "40/2 + SP 40". (e) Thứ tự dòng = thứ tự sợi chính trong bảng Se. (f) Có từ 2 sợi chính cùng độ săn với một sợi phụ -> cảnh báo không chặn. (g) Dòng gợi ý được tạo lại mỗi lần tính theo dòng Se Ngang hiện tại; dòng sales đã sửa hoặc tự thêm giữ nguyên; dòng gợi ý sales đã xóa không tạo lại; một cone gợi ý trùng chi số với dòng sales đã sửa thì không tạo thêm; costsheet lưu trước 2026-11-26 có cone sales đã gõ thì giữ nguyên các dòng cone, không gợi ý thêm (giống dòng Se lưu trước, BR-86). (h) Không có dòng Se Ngang -> không có dòng gợi ý; bảng cone ẩn trừ khi phiếu đã có dòng cone (giữ để không mất số) | Kiểm tra lại cone: sợi <sợi phụ> có thể se chung với <sợi chính 1> hoặc <sợi chính 2>. |
 | BR-84 | **Spandex** (thêm 2026-11-23): "SP m" phải có trong bảng 4.5.13 của bộ định mức dùng cho phiếu | Chưa có số cộng thêm cho spandex SP <m>. Liên hệ SO bổ sung. |
 
 ## 8. Screens (Màn hình)
@@ -1216,6 +1233,11 @@ Màn hình 2 – Costsheet (nhóm Sales), từ trên xuống:
    tự tính mỗi khi đổi một ô, UC-16; khi có thay đổi chưa lưu, cạnh nút "Lưu nháp" hiện dòng "Có thay đổi chưa lưu".)
 - (sửa 2026-11-23) Thẻ Ngành Dệt: ô "SL cone 1" và "Chi số cone 1" hiện sẵn giá trị gợi ý (BR-87); ô công đoạn ngoài
   quy trình TCDN chỉ liệt kê 28 công đoạn có định mức.
+- (sửa 2026-11-26, thay 4 ô cone ở dòng trên) Thẻ Ngành Dệt, mục "Hồ, mắc, cone, gia công": **bảng cone** sửa trong ô,
+  cột Chi số cone (ô chữ), SL cone (kg), Gồm sợi (chỉ xem); sales sửa ô, thêm / xóa dòng; dưới bảng 1 dòng ghi chú
+  "Cone được gợi ý theo sợi se chung / se riêng, sửa lại được." Bảng chỉ hiện khi phiếu có dòng Se Ngang hoặc đã có
+  dòng cone (BR-100 h); không hiện thì không có chữ hay ô cone nào. Cảnh báo "Kiểm tra lại cone…" hiện ở đầu thẻ Ngành
+  Dệt như các cảnh báo cone khác. Bảng chi phí công đoạn hiện mỗi cone 1 dòng "Cone 1", "Cone 2"… theo thứ tự bảng cone.
 
 Đổi giao diện Màn hình 2 (2026-11-23), thay mục 4 ở trên về thứ tự thẻ và cảnh báo. Thứ tự từ trên xuống:
 1. Tiêu đề.
@@ -1255,6 +1277,29 @@ Màn hình 2 – Costsheet (nhóm Sales), từ trên xuống:
    - Thẻ Cảnh báo vẫn giữ để xem tất cả một chỗ.
    - Tên thẻ có cảnh báo hiện thêm số cảnh báo, ví dụ "Sợi (2)".
 7. Thanh nút: giữ nguyên.
+
+Đổi giao diện Màn hình 2 (2026-11-27), thay mục 3, 4, 5 của đổi giao diện 2026-11-23 (cho dễ thấy chỗ nhập). Thứ tự
+từ trên xuống:
+1. Tiêu đề, ô tóm tắt: giữ nguyên.
+2. **Dòng hướng dẫn** (chỉ khi phiếu còn sửa được): "① Điền Thông tin đơn → ② Nhập ở các thẻ ✏️ → ③ Xem Giá bán & lợi
+   nhuận → ④ Lưu nháp / Gửi duyệt".
+3. **Khối Thông tin đơn**, dải tiêu đề nền xanh + nhãn "Nhập liệu":
+   - hiện sẵn các ô chính: Nhà máy nhuộm, Khách hàng (+ "Thêm khách hàng"), Mã vải, Số lượng đặt (m), Hình thức bán,
+     Loại giá, Giá mộc mua ngoài (chỉ khi Vải Nhuộm);
+   - mục thu gọn **"Thông tin thêm"** (bấm mới mở): Thị trường, Loại đơn hàng, Style, Ngày giao hàng, Ngày tính giá,
+     Số OC, Lý do ngoại lệ độ co, Lý do độ co thấp / bằng 0, Ghi chú;
+   - phiếu "Độ co thấp" chưa có lý do: mục "Thông tin thêm" tự mở, tiêu đề ghi thêm "Độ co thấp – cần lý do".
+4. **Bỏ khung Chuỗi nhu cầu giữa trang**; Chuỗi nhu cầu thành 1 thẻ riêng (nội dung như cũ, chỉ xem).
+5. Các thẻ theo thứ tự: **✏️ Giá bán & lợi nhuận → Chuỗi nhu cầu → Thông số vải → ✏️ Nhuộm → ✏️ Ngành Dệt → ✏️ Sợi
+   → ✏️ Tham số → Cảnh báo → Lịch sử**. Thẻ ẩn theo hình thức bán như cũ; số cảnh báo vẫn hiện trong ngoặc.
+6. Khung / bảng sửa được: dải tiêu đề nền xanh + nhãn "Nhập liệu". Khung / bảng chỉ xem (Chuỗi nhu cầu, Thông số vải
+   nguồn Peace / WFX, bảng kết quả, bảng chi phí): dải xám + nhãn "Chỉ xem". Ứng dụng chỉ tô màu dải tiêu đề, không tô
+   cả nền khung.
+7. Phiếu chỉ xem (đã gửi duyệt, đã duyệt, đã hủy…): không hiện dòng hướng dẫn, dấu ✏️ và nhãn "Nhập liệu".
+8. Khung "Tạo costsheet mới" và thanh nút: giữ nguyên.
+9. (thêm 2026-11-27, sau khi dùng thử) Bảng nhập nhiều dòng (Bảng sợi, Dòng Se, Bảng cone, các bảng Nhuộm, Chi phí vào
+   giá vốn, Tham số): nhập liền một mạch không phải chờ; dưới mỗi bảng có nút **"Áp dụng & tính"** để tính lại phiếu.
+   Ô lẻ vẫn tự tính khi đổi. Lưu nháp / Gửi duyệt luôn lấy cả số đang nhập trong bảng.
 
 Màn hình 3 – Việc chờ tôi (nhóm Sales):
 - các bảng chỉ xem theo nhóm: Chờ tôi duyệt, Bị trả lại, Đã duyệt chưa có OC, Giá sợi hết hiệu lực, (SO) Tỷ giá tháng
@@ -1371,13 +1416,19 @@ Quyền màn hình và vai trò do quản trị viên cấp (giống ứng dụn
   chi phí phát sinh đã sửa.
 - **Actions:**
   - Theo trạng thái và vai trò; nút không được phép thì ẩn.
-  - "Lưu nháp" (UC-17), "Gửi duyệt" (UC-20); UC-16 tự chạy khi đổi ô (sửa 2026-11-23: bỏ nút "Tính lại").
+  - "Lưu nháp" (UC-17), "Gửi duyệt" (UC-20); UC-16 tự chạy khi đổi ô (sửa 2026-11-23: bỏ nút "Tính lại"). (sửa
+    2026-11-27: các bảng nhập nhiều dòng – Bảng sợi, Dòng Se, Bảng cone, các bảng Nhuộm, Chi phí vào giá vốn, Tham số –
+    nhập liền không tính sau mỗi ô; nút "Áp dụng & tính" dưới mỗi bảng chạy UC-16; Lưu nháp / Gửi duyệt luôn lấy số
+    đang nhập trong bảng. Ô lẻ vẫn tự tính.)
   - "Thêm khách hàng" (UC-18), "Sao chép" (UC-19), "Sửa thông số vải" (UC-14).
   - "Duyệt" (UC-21), "Trả lại" (UC-22).
   - "Tạo phiên bản mới" (UC-23), "Lưu OC" / "Chốt đơn" (UC-24).
   - "Hủy" (UC-25), "In nhãn" (UC-26).
   - "Xác nhận giá sợi hôm nay" (UC-16 với BR-44).
 - **Sau mỗi thao tác:** hiện thông báo của UC; lỗi hiện thành danh sách, mỗi lỗi 1 dòng.
+- **Sắp xếp (sửa 2026-11-27):** khối Thông tin đơn chỉ hiện sẵn ô chính, các ô khác ở mục "Thông tin thêm"; Chuỗi nhu
+  cầu thành thẻ riêng sau Giá bán & lợi nhuận; thẻ có ô nhập mang dấu ✏️; khung nhập có dải tiêu đề xanh "Nhập liệu",
+  khung chỉ xem dải xám "Chỉ xem"; dòng hướng dẫn 4 bước ở đầu phiếu còn sửa được (chi tiết ở Giao diện đã chốt).
 
 ### Screen 3: Việc chờ tôi
 - **Purpose:** UC-30.
@@ -1579,7 +1630,7 @@ Quyền màn hình và vai trò do quản trị viên cấp (giống ứng dụn
 - [ ] AC-59 (4.16, BR-25): Danh sách công đoạn ngoài quy trình TCDN có đúng 28 công đoạn có định mức (có Suse 2, Ageing
   room 2, Setting, Soaping; không có Suse 1, Ageing room, Kuster, Dyeing, Dry); chọn bất kỳ công đoạn nào trong danh sách
   thì không có cảnh báo "không có định mức".
-- [ ] AC-60 (BR-87): Cho dòng Se Ngang chi số "150D" 388 kg, thì ô SL cone 1 hiện 388 và Chi số cone 1 hiện "150D";
+- [ ] AC-60 (BR-87) (bỏ từ 2026-11-26, thay bằng AC-84..AC-88): Cho dòng Se Ngang chi số "150D" 388 kg, thì ô SL cone 1 hiện 388 và Chi số cone 1 hiện "150D";
   sales sửa SL cone 1 thành 300 thì giữ 300 khi Se Ngang đổi.
 - [ ] AC-61 (UC-16): Ở thẻ Nhuộm, chọn cấp màu khác, thì chi phí nhuộm, chuỗi nhu cầu và GP% đổi ngay không cần bấm nút;
   màn hình hiện "Có thay đổi chưa lưu"; bấm "Lưu nháp" thì dòng này mất; mở lại phiếu thì thấy số đã lưu.
@@ -1633,6 +1684,39 @@ Quyền màn hình và vai trò do quản trị viên cấp (giống ứng dụn
   EF29500023; mã "C1234" vẫn báo lỗi BR-02 như cũ.
 - [ ] AC-83 (hồi quy): Costsheet TCDN thường (AC-09 R2) cho cùng kết quả (không dùng hệ số vận hành); bộ tham số cũ hiện
   bảng hệ số vận hành với giá trị ban đầu.
+**Bảng cone (2026-11-26)**
+- [ ] AC-84 (BR-100 se chung): Cho mã EF27920021 (sợi ngang tick Se: DTY 150D/48F/1 400 T/M 3,02% và BR1 30D/6F/1
+  400 T/M 0,59%), thì bảng cone có đúng 1 dòng gợi ý chi số "150D + 30D", SL = tổng SL 2 dòng Se Ngang, Gồm sợi ghi cả
+  2; bảng chi phí có 1 dòng "Cone 1" với SL đó.
+- [ ] AC-85 (BR-100 se riêng, nhiều cone): Cho 3 dòng Se Ngang sợi chính khác chi số (ví dụ 75D 21 kg, 150D 30 kg, 300D
+  10 kg), thì bảng cone có 3 dòng theo đúng thứ tự, mỗi dòng đúng chi số và SL của dòng Se; 2 dòng Se cùng chi số và độ
+  săn thì gộp 1 dòng cone, SL cộng lại (ví dụ EF15690111: EC 75D và EY 75D cùng 400 T/M -> 1 dòng "75D").
+- [ ] AC-86 (BR-100 spandex, cảnh báo): Cho Se Ngang TR 40/2 800 T/M và SPANDEX 40D 800 T/M, thì 1 dòng cone "40/2 + SP
+  40"; cho sợi carbon cùng độ săn với 2 sợi chính, thì carbon gộp vào sợi khớp tỷ lệ nhất và có cảnh báo "Kiểm tra lại
+  cone…" (không chặn gửi duyệt).
+- [ ] AC-87 (BR-100 g, 4.14a): Sales sửa SL dòng cone thành 300 thì giữ 300 khi Se Ngang đổi; sales xóa 1 dòng gợi ý thì
+  tính lại không tạo lại dòng đó; sales thêm 1 dòng cone thì dòng đó được tính tiền; dòng có SL mà trống chi số -> cảnh
+  báo chặn như BR-22.
+- [ ] AC-88 (BR-100 h, Screen 2, hồi quy): Phiếu không có dòng Se Ngang thì thẻ Ngành Dệt không có bảng cone và tiền
+  cone = 0; costsheet lưu trước 2026-11-26 có cone 1 "150D" 388 kg mở ra thấy 1 dòng cone "150D" 388 kg và cùng tiền
+  cone, cùng GP% như trước (kể cả khi không có Se Ngang); phiếu Đã duyệt mở ra kết quả không đổi.
+- [ ] AC-89 (Screen 2, sửa 2026-11-27): Mở 1 phiếu Nháp, thì khối Thông tin đơn hiện sẵn Nhà máy nhuộm, Khách hàng,
+  Mã vải, Số lượng đặt, Hình thức bán, Loại giá; các ô Thị trường, Loại đơn hàng, Style, Ngày giao, Ngày tính giá, Số
+  OC, Lý do ngoại lệ độ co, Ghi chú nằm trong mục "Thông tin thêm" đang thu gọn; sửa 1 ô trong mục đó thì phiếu tính
+  lại như trước.
+- [ ] AC-90 (Screen 2, sửa 2026-11-27): Phiếu "Độ co thấp" chưa có lý do, thì mục "Thông tin thêm" tự mở và tiêu đề có
+  "Độ co thấp – cần lý do"; phiếu Vải Nhuộm thì ô Giá mộc mua ngoài hiện ở hàng ô chính.
+- [ ] AC-91 (Screen 2, sửa 2026-11-27): Không còn khung Chuỗi nhu cầu giữa trang; thẻ thứ 2 là "Chuỗi nhu cầu" với đúng
+  các dòng và số như khung cũ (kể cả dòng "Sợi khách giao" / "Mộc khách giao" của phiếu gia công).
+- [ ] AC-92 (Screen 2, sửa 2026-11-27): Phiếu Nháp: có dòng hướng dẫn 4 bước; tên thẻ Giá bán & lợi nhuận, Nhuộm, Ngành
+  Dệt, Sợi, Tham số có ✏️; khung Thông tin đơn và các bảng sửa được có dải xanh "Nhập liệu"; Chuỗi nhu cầu có dải xám
+  "Chỉ xem". Phiếu Chờ duyệt / Đã duyệt: không có dòng hướng dẫn, không có ✏️, không có nhãn "Nhập liệu".
+- [ ] AC-93 (Screen 2, hồi quy 2026-11-27): Cùng 1 phiếu trước và sau đổi giao diện cho cùng Đơn giá, Giá vốn, Giá bán,
+  GP%, OP%; mọi ô nhập cũ vẫn có và sửa được; Lưu nháp, Gửi duyệt, Lưu OC vẫn chạy; số cảnh báo trên tên thẻ vẫn đúng.
+- [ ] AC-94 (UC-16 sửa 2026-11-27, Screen 2): Nhập giá ở 2 dòng liền nhau của Bảng sợi thì không phải chờ, Tổng chi phí
+  sợi chưa đổi; bấm "Áp dụng & tính" dưới bảng thì phiếu tính lại và Tổng chi phí sợi đổi theo giá mới; nhập vào bảng
+  rồi bấm Lưu nháp không bấm "Áp dụng & tính" thì số đã nhập vẫn được tính và lưu; đổi 1 ô lẻ (ví dụ Số lượng đặt) vẫn
+  tự tính như trước.
 - [ ] AC-51 (hồi quy): 4 costsheet thật của AC-09 cho cùng GP% / OP% như trước; phiếu đã lưu trước mở rộng hiển thị
   không đổi; Cone chi số "150D" cho cùng định mức như trước.
 - [ ] AC-38 (UC-28): Xuất Excel theo bộ lọc, file có đúng số dòng và các cột của Màn hình 1.
@@ -1696,6 +1780,26 @@ Quyền màn hình và vai trò do quản trị viên cấp (giống ứng dụn
   - ví dụ "WHITE CACBON 20D/3F/1" -> "20D + CB", "TC 45/2 (65/35)" -> "45/2".
 - Giả định (triển khai, mở rộng 2026-11-23): "SP 40/2" dùng spandex 40 (bỏ "/2"), khớp chi số "40/2 + SP 40/2" của danh
   sách.
+- Mở rộng 2026-11-26: bảng cone thay 2 ô cone 1 / cone 2 (4.14a); app tự xác định sợi se chung (carbon, spandex đi
+  kèm sợi chính) / se riêng (các sợi chính khác nhau) và gợi ý mỗi cone 1 dòng (BR-100, thay BR-87); bảng chỉ hiện khi
+  có Se Ngang. Quy luật kiểm trên 163 mã vải có ≥ 2 sợi se ngang (EF27920021 se chung, EF15690111 se riêng). Phiếu đã
+  lưu giữ số cone cũ.
+- Giả định (mở rộng 2026-11-26): Sợi phụ nhận biết theo tên sợi (danh sách chữ ở BR-100 a); sợi carbon / spandex có tên
+  khác danh sách thì sales tự gộp trong bảng cone.
+- Giả định (mở rộng 2026-11-26): Hai sợi chính khác loại nhưng cùng chi số và cùng độ săn (như EC 75D và EY 75D) gộp 1
+  dòng cone vì dòng Se cũng gộp như vậy; tiền cone như nhau vì tính theo kg × định mức của chi số.
+- Giả định (triển khai, mở rộng 2026-11-26): Phiếu lưu trước được chuyển sang bảng cone ngay khi mở (không cần cập
+  nhật dữ liệu); lần lưu tiếp theo ghi bảng cone. Hai sợi chính cùng chi số và độ săn đã gộp 1 dòng Se (BR-86) nên
+  carbon đi kèm được gộp vào cả dòng đó (ví dụ EF32090024: "150D + 20D"); sales tách lại trong bảng cone nếu cần.
+- Giả định (triển khai, mở rộng 2026-11-26): Hai bài kiểm tra cũ của AC-60 (BR-87) được đổi theo BR-100 vì BR-87 đã bỏ;
+  phần AC-60 vẫn đúng (1 chi số -> điền sẵn, sales sửa thì giữ) vẫn được kiểm tra.
+- Mở rộng 2026-11-27: sắp xếp lại Màn hình 2 cho dễ thấy chỗ nhập: Thông tin đơn chỉ hiện ô chính + mục "Thông tin
+  thêm"; Chuỗi nhu cầu thành thẻ riêng; ✏️ trên thẻ có ô nhập; dải xanh "Nhập liệu" / xám "Chỉ xem"; dòng hướng dẫn 4
+  bước. Không đổi dữ liệu, quy tắc, công thức (AC-89..AC-93).
+- Giả định (mở rộng 2026-11-27): "Khung nhập liệu màu khác" làm bằng dải tiêu đề nền xanh vì ứng dụng không tô được cả
+  nền khung; thẻ Giá bán & lợi nhuận cũng mang ✏️ vì sales nhập giá bán ở đó.
+- Mở rộng 2026-11-27 (sau khi dùng thử): nhập giá sợi phải chờ sau mỗi ô -> bảng nhập nhiều dòng nhập liền, nút "Áp
+  dụng & tính" dưới bảng (người dùng chọn cách a); UC-16 sửa, AC-94.
 - Giả định (triển khai, mở rộng 2026-11-23): Chi số "34/2 + CB" trong danh sách là 333 (đã làm tròn), công thức ra 332,71;
   vì số trong danh sách được ưu tiên nên kết quả không đổi.
 - Giả định (triển khai, mở rộng 2026-11-23): Người có SO và cả 2 team, hoặc chỉ có SO, lập phiếu thuộc team "SO". Khách
@@ -1811,6 +1915,8 @@ Quyền màn hình và vai trò do quản trị viên cấp (giống ứng dụn
 | Mở rộng 2026-11-25: 4.6.1, 4.6.2, BR-16/23/25/26/46 sửa, BR-88; AC-63..AC-69 | `models/parameter_tables.py`, `business/discount_business.py`, `builders/parameter_builders.py`, `repositories/norm_repository.py`, `frontend/features/woven_costing/components/parameter_editor.py`, `components/costsheet_tabs.py`; test `tests/test_param_tables_20261125.py` |
 | Mở rộng 2026-11-25 (gia công): 4.11 sale_form +2, 4.6.2 +2 dòng, BR-89..BR-91, BR sửa 13/14/16/17/18/19/22/23/25/26/27/42/88; AC-70..AC-75 | `models/enums.py` (NO_DYEING_FORMS, NO_WEAVING_FORMS, JOB_FORMS, BC_FALLBACK), `models/parameter_tables.py` (complete_bc_rows), `business/quantity_business.py`, `costing_business.py`, `weaving_business.py`, `dyeing_hcm_business.py`, `dyeing_tcdn_business.py`, `discount_business.py`, `submission_business.py`, `costsheet_business.py`, `builders/demand_chain_builder.py`, `costsheet_response_builder.py`, `parameter_builders.py`; `frontend/features/woven_costing/components/costsheet_order.py` (BR-91), `costsheet_price.py`, `pages/costsheet_page.py`; test `tests/test_gia_cong_20261125.py` |
 | Mở rộng 2026-11-25 (phiếu gia công nhuộm): 4.21..4.24, UC-40..UC-46, BR-92..BR-99, BR-02 sửa, F-09, Screen 8; AC-76..AC-83 | `models/dyeing_job.py`, `models/parameter_tables.py` (OpRateRow), `business/dyeing_job_business.py` (DyeingJobTcdnBusiness, DyeingJobBusiness), `business/dyeing_tcdn_business.py` (stage_cost / standard_chemical), `business/fabric_business.py`, `builders/dyeing_job_builders.py`, `dto/dyeing_job_dto.py`, `repositories/dyeing_job_repository.py`, `services/*_dyeing_job*_service.py`, `services/list_my_tasks_service.py`, `migrations/0001_dyeing_job_order_table_phieu_gia_cong_.py`; `frontend/features/woven_costing/pages/dyeing_job_page.py`, `components/costsheet_dyeing.py` (job_line_dyeing), `components/parameter_editor.py`, `pages/my_tasks_page.py`; test `tests/test_dyeing_job_20261125.py` |
+| Mở rộng 2026-11-26 (bảng cone): 4.14a, BR-100 (thay BR-87), BR-22 sửa phần Cone, UC-16, Screen 2 thẻ Ngành Dệt; AC-84..AC-88 (AC-60 thay thế) | `models/costsheet_input.py` (ConeLine, WeavingInput.cone_lines…), `models/costsheet.py` (Costsheet.cone_rows / cone_live: chuyển ô cone 1 / cone 2 cũ khi đọc), `business/cone_business.py` (ConeBusiness: suggest_lines, merge_lines, suggest_cone, check_warnings), `business/costsheet_business.py` (suggested_inputs), `business/weaving_business.py` (Cone 1..n), `dto/costsheet_dto.py` (ConeLineDTO), `builders/costsheet_response_builder.py`; `frontend/features/woven_costing/components/costsheet_weaving.py` (_cone_lines); test `tests/test_cone_split_20261125.py`, `tests/test_fix5_20261123.py` (AC-60 theo BR-100) |
+| Đổi giao diện Màn hình 2 (2026-11-27): Thông tin đơn ô chính + "Thông tin thêm", thẻ Chuỗi nhu cầu, ✏️, dải "Nhập liệu" / "Chỉ xem", dòng hướng dẫn, bảng nhập liền + "Áp dụng & tính" (UC-16 sửa); AC-89..AC-94 | `frontend/features/woven_costing/components/marks.py` (heading, tab_label, guide, apply_table), `components/costsheet_order.py`, `components/costsheet_chain.py` (demand_chain_tab), `pages/costsheet_page.py`, `components/costsheet_price.py`, `costsheet_tabs.py`, `costsheet_weaving.py`, `costsheet_dyeing.py`; chỉ đổi màn hình nên kiểm bằng trình duyệt; hồi quy: toàn bộ test cũ (506) |
 | Screen 1 | `frontend/features/woven_costing/pages/costsheet_list_page.py` |
 | Screen 2 | `pages/costsheet_page.py` + `components/costsheet_*.py` |
 | Screen 3 | `pages/my_tasks_page.py` |

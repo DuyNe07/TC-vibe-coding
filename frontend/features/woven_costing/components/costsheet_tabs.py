@@ -7,7 +7,7 @@ import streamlit as st
 from backend.features.woven_costing.dto.common_dto import Currency, ParamGroup, YarnDirection
 from backend.features.woven_costing.dto.costsheet_dto import CostsheetResponse
 from frontend.core.base_page import BasePage
-from frontend.core.components import data_table, editable_table, empty_state, section_title, stat_row
+from frontend.core.components import data_table, empty_state, section_title, stat_row
 from frontend.core.formatting import format_number
 from frontend.features.woven_costing.components.fabric_view import spec_table, yarn_table
 from frontend.features.woven_costing.components.labels import (
@@ -21,6 +21,7 @@ from frontend.features.woven_costing.components.labels import (
     text,
     to_pct,
 )
+from frontend.features.woven_costing.components.marks import apply_table, heading
 
 WARP = YarnDirection.WARP.value
 YARN_EDITABLE = ["Đơn vị giá", "Giá", "Sợi cặn (%)", "Se"]
@@ -65,7 +66,7 @@ def fabric_tab(w: CostsheetResponse) -> None:
         overridden=f.overridden_fields,
     )
     stat_row([("Độ co", pct_text(w.result.shrinkage)), ("Độ co mắc", pct_text(f.warping_loss_rate))])
-    section_title("Sợi theo dữ liệu gốc")
+    heading("Sợi theo dữ liệu gốc", editable=False)
     yarn_table(f.yarns)
     if source != "Nhập tay":
         st.caption("Thông số lấy từ dữ liệu gốc Peace / WFX, chỉ đọc.")
@@ -79,6 +80,7 @@ def yarn_tab(page: BasePage, w: CostsheetResponse, sfx: str) -> list[dict[str, A
     if not lines:
         empty_state("Mã vải chưa có dòng sợi.", "Liên hệ SO / PD bổ sung sợi cho mã này.")
         return None
+    heading("Bảng sợi", editable=w.editable)  # UI change 2026-11-27
     warp_sized = any(line.is_sized for line in lines if text(line.direction) == WARP)
     c1, c2 = st.columns([1, 2], vertical_alignment="center")
     sized_all = c1.toggle(
@@ -110,7 +112,7 @@ def yarn_tab(page: BasePage, w: CostsheetResponse, sfx: str) -> list[dict[str, A
     ]
     result = None
     if w.editable:
-        edited = editable_table(
+        edited = apply_table(
             rows,
             key=page.key(f"yarns.{sfx}"),
             columns=YARN_COLUMNS,
@@ -188,14 +190,14 @@ def params_tab(page: BasePage, w: CostsheetResponse, sfx: str) -> list[dict[str,
         return result
     for group in enum_values(ParamGroup):
         params = [p for p in w.parameters if text(p.group) == group]
-        section_title(group)
+        heading(group, editable=result is not None and any(not p.so_only for p in params))
         editable_params = [p for p in params if not p.so_only]
         so_params = [p for p in params if p.so_only]
         rows = [_param_row(p) for p in editable_params]
         if not params:
             st.caption("Không áp dụng cho phiếu này.")
         elif rows and result is not None:
-            edited = editable_table(rows, key=page.key(f"params.{group}.{sfx}"), column_config=PARAM_CONFIG,
+            edited = apply_table(rows, key=page.key(f"params.{group}.{sfx}"), column_config=PARAM_CONFIG,
                                     column_order=PARAM_ORDER,
                                     disabled=["code", "Tham số", "Đơn vị", "Mặc định", "Đã sửa", "Lý do"])  # fmt: skip
             result += _changed(edited, editable_params)

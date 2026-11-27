@@ -22,7 +22,7 @@ from backend.features.woven_costing.dto.list_dto import CostsheetOptionsResponse
 from frontend.core.base_page import BasePage
 from frontend.core.formatting import format_datetime, format_number
 from frontend.features.woven_costing.components.costsheet_chain import (
-    demand_chain_block,
+    demand_chain_tab,
     section_warnings,
     show_warnings,
 )
@@ -42,6 +42,7 @@ from frontend.features.woven_costing.components.costsheet_weaving import weaving
 from frontend.features.woven_costing.components.errors import attempt, show_error_list
 from frontend.features.woven_costing.components.flash import show_flash
 from frontend.features.woven_costing.components.labels import pct_text, status_badge, text
+from frontend.features.woven_costing.components.marks import guide, tab_label
 from frontend.features.woven_costing.components.working import (
     OPEN_ID,
     REV,
@@ -62,6 +63,8 @@ YARN = WarningSection.YARN.value
 PARAMS = "Tham số"
 WARNINGS = "Cảnh báo"
 HISTORY = "Lịch sử"
+CHAIN = "Chuỗi nhu cầu"  # a tab since 2026-11-27 (before: a block above the tabs)
+INPUT_TABS = (PRICE, DYEING, WEAVING, YARN, PARAMS)  # tabs with cells to type in: ✏️ on an editable costsheet
 
 
 class CostsheetPage(BasePage):
@@ -83,8 +86,8 @@ class CostsheetPage(BasePage):
         sfx = f"{working.id}.{self.state.get(REV, 0)}"
         self._header(working)
         self._summary(working)
+        guide(working.editable)  # UI change 2026-11-27
         values: dict[str, Any] = {"order": order_block(self, feature, working, options, sfx)}
-        demand_chain_block(working)
         values |= self._tabs(working, options, sfx, values["order"])
         st.space("small")
         if not toolbar(self, feature, working, values):
@@ -225,23 +228,30 @@ class CostsheetPage(BasePage):
 
         Order (UI change 2026-11-23): Giá bán & lợi nhuận, Thông số vải, Nhuộm (not Mộc), Ngành Dệt and Sợi (not Vải
         Nhuộm), Tham số, Cảnh báo, Lịch sử. A tab with warnings shows them at its top and their count in its label;
-        the key does not depend on the labels, so typed cells are kept when a count changes."""
+        the key does not depend on the labels, so typed cells are kept when a count changes.
+
+        UI change 2026-11-27: "Chuỗi nhu cầu" is the 2nd tab; tabs with cells to type in carry ✏️ while the costsheet
+        can be edited."""
         sale_form = order.get("sale_form")
         with_dyeing = sale_form not in (SaleForm.GREIGE.value, SaleForm.WEAVING_JOB.value)  # BR-89 (2026-11-25)
         with_weaving = sale_form not in (SaleForm.DYED.value, SaleForm.DYEING_JOB.value)  # BR-90 (2026-11-25)
-        names = [PRICE, FABRIC]
+        names = [PRICE, CHAIN, FABRIC]
         names += [DYEING] if with_dyeing else []
         names += [WEAVING, YARN] if with_weaving else []
         names += [PARAMS, WARNINGS, HISTORY]
         own = {name: section_warnings(w.warnings, name) for name in names}
         own[WARNINGS] = w.warnings
-        labels = [f"{name} ({len(own[name])})" if own[name] else name for name in names]
+        labels = [
+            tab_label(name, editable=w.editable and name in INPUT_TABS, warnings=len(own[name])) for name in names
+        ]
         layout = f"{int(with_dyeing)}{int(with_weaving)}"
         tabs = dict(zip(names, st.tabs(labels, key=self.key(f"tabs.{w.id}.{layout}")), strict=True))
         values: dict[str, Any] = {}
         with tabs[PRICE]:
             show_warnings(own[PRICE])
             values["price"] = price_tab(self, w, sfx, order.get("price_type"))
+        with tabs[CHAIN]:
+            demand_chain_tab(w)
         with tabs[FABRIC]:
             show_warnings(own[FABRIC])
             fabric_tab(w)

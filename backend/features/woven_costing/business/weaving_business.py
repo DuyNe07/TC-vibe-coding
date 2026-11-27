@@ -3,6 +3,7 @@
 from decimal import Decimal
 
 from backend.core.base import BaseBusiness
+from backend.features.woven_costing.business.cone_business import ConeBusiness
 from backend.features.woven_costing.business.count_business import CountBusiness
 from backend.features.woven_costing.business.norm_lookup_business import NormLookupBusiness
 from backend.features.woven_costing.business.numbers import ONE, ZERO, div, num, round_half_up, round_up
@@ -185,13 +186,10 @@ class WeavingBusiness(BaseBusiness[CostingContext]):
                 warnings.append(_missing("Mắc phân băng"))
             else:
                 add("Mắc phân băng", warping, "m", self._factor(items, FactorStage.WARPING), quantity_factor)
-        weft_twist = sum((num(t.quantity_kg) for t in self.sheet.twist_lines if t.direction == WEFT_TWIST), ZERO)
-        cones = (
-            ("Cone 1", weave.cone_count_1, weave.cone_qty_1 if weave.cone_qty_1 is not None else weft_twist),
-            ("Cone 2", weave.cone_count_2, weave.cone_qty_2),
-        )
-        for name, count, qty in cones:
-            if count and num(qty) > 0:
+        # BR-22 (changed 2026-11-26): one cost line "Cone <n>" per line of the cone table 4.14a (BR-100)
+        for n, cone in enumerate(self.sheet.cone_rows, start=1):
+            name, count, qty = f"Cone {n}", cone.count.strip(), num(cone.quantity_kg)
+            if count and qty > 0:
                 count_errors = self.count_errors(count)
                 items = None if count_errors else self.cone_norm(count)
                 if count_errors:
@@ -199,16 +197,11 @@ class WeavingBusiness(BaseBusiness[CostingContext]):
                 elif items is None:
                     warnings.append(_missing(f"Cone {count}"))
                 else:
-                    add(name, num(qty), "kg", self._factor(items, FactorStage.CONE), quantity_factor)
-            elif num(qty) > 0:
-                msg = f"{name}: có {num(qty):.2f} kg sợi cone, vui lòng nhập chi số sợi cone."
-                if name == "Cone 1" and (weave.cone_qty_1 is None or weave.cone_qty_1_suggested):
-                    # BR-87: the quantity is the Ngang Se total but those lines have several counts (or none)
-                    msg = (
-                        f"Cone 1: SL gợi ý {num(qty):.2f} kg (= tổng SL Se ngang) nhưng các dòng Se ngang không có "
-                        "đúng 1 chi số, vui lòng nhập chi số sợi cone 1."
-                    )
+                    add(name, qty, "kg", self._factor(items, FactorStage.CONE), quantity_factor)
+            elif qty > 0:
+                msg = f"Cone dòng {n}: có {qty:.2f} kg sợi cone, vui lòng nhập chi số."
                 warnings.append(CostWarning(code="BR-22", message=msg, blocking=True))
+        warnings += [CostWarning(code="BR-100", message=m) for m in ConeBusiness().check_warnings(self.sheet)]
         density = int(round_half_up(num(self.sheet.fabric_snapshot.specs.greige_weft_density) / TEN))
         weave_norm = self.lookup.weave_norm(density)
         if weave_norm is None:

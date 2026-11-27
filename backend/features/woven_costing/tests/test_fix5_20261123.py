@@ -1,10 +1,11 @@
 """Fix of 5 points (2026-11-23): norm tables in 4 groups (AC-58), TCDN extra stages = stages with a norm row (AC-59),
-cone 1 suggestion (BR-87, AC-60), calculation without saving (UC-16, AC-61), live Se line suggestion (BR-86, AC-62)."""
+cone suggestion (AC-60; BR-87 replaced by BR-100 on 2026-11-26), calculation without saving (UC-16, AC-61), live Se
+line suggestion (BR-86, AC-62)."""
 
 from decimal import Decimal
 
 from backend.core.base import EmptyRequest
-from backend.features.woven_costing.business.hint_business import HintBusiness
+from backend.features.woven_costing.business.cone_business import ConeBusiness
 from backend.features.woven_costing.dto.costsheet_dto import (
     CostsheetInputRequest,
     CostsheetResponse,
@@ -13,8 +14,10 @@ from backend.features.woven_costing.dto.costsheet_dto import (
     TcdnDyeingInputDTO,
     TcdnStageInputDTO,
     TwistLineDTO,
+    WeavingInputDTO,
 )
 from backend.features.woven_costing.dto.master_dto import ViewNormSetRequest
+from backend.features.woven_costing.models.costsheet import Costsheet
 from backend.features.woven_costing.models.costsheet_input import TwistLine, WeavingInput
 from backend.features.woven_costing.models.enums import DyePlant, FiberSystem, YarnDirection
 from backend.features.woven_costing.models.fabric import Fabric, FabricSpecs, FabricYarn
@@ -95,24 +98,28 @@ def test_ac59_every_tcdn_stage_calculates_without_missing_norm() -> None:
         assert {s.name for s in chunk} <= names
 
 
-# ---- AC-60: BR-87 cone 1 suggestion ----------------------------------------------------------------------------------
+# ---- AC-60: cone suggestion (BR-87 removed 2026-11-26, replaced by the BR-100 cone table, AC-84..AC-88) -------------
+def _cone(weave: WeavingInputDTO, n: int = 0) -> tuple[str, Decimal | None]:
+    return weave.cone_lines[n].count, weave.cone_lines[n].quantity_kg
+
+
 def test_br87_cone_suggestion_rules() -> None:
-    hints = HintBusiness()
+    """What AC-60 still says under BR-100: one Ngang count -> one cone line with that count and quantity; stored
+    cone cells are converted with the same numbers (an empty quantity = Ngang Se total)."""
+    cones = ConeBusiness()
     weft = [TwistLine(direction="Ngang", count="150D", twist=400, quantity_kg=D(388))]
-    filled = hints.suggest_cone(WeavingInput(), weft)
-    assert (filled.cone_qty_1, filled.cone_count_1) == (D(388), "150D")
-    assert filled.cone_qty_1_suggested and filled.cone_count_1_suggested
+    lines, _ = cones.suggest_lines(weft, [])
+    assert [(c.count, c.quantity_kg, c.suggested) for c in lines] == [("150D", D(388), True)]
     two = [*weft, TwistLine(direction="Ngang", count="75D", twist=400, quantity_kg=D(12))]
-    both = hints.suggest_cone(filled, two)
-    assert (both.cone_qty_1, both.cone_count_1) == (D(400), "")
-    typed = hints.suggest_cone(WeavingInput(cone_count_1="100D", cone_qty_1=D(300)), weft)
-    assert (typed.cone_qty_1, typed.cone_count_1) == (D(300), "100D")
-    # stored rows: typed values kept; an empty quantity is the Se total (as before) and is now shown
-    old = WeavingInput.model_validate({"cone_count_1": "150D", "cone_qty_1": "930"})
-    assert not old.cone_qty_1_suggested and hints.suggest_cone(old, weft).cone_qty_1 == D(930)
-    old_empty = WeavingInput.model_validate({"cone_count_1": "150D"})
-    assert hints.suggest_cone(old_empty, weft).cone_qty_1 == D(388)
-    assert hints.suggest_cone(filled, []).cone_qty_1 is None
+    assert [(c.count, c.quantity_kg) for c in cones.suggest_lines(two, [])[0]] == [("150D", D(388)), ("75D", D(12))]
+    assert cones.suggest_lines([], [])[0] == []
+    old = Costsheet.model_validate(
+        {"costsheet_no": "CS-X-2026-00001", "costing_date": TODAY, "tcfno": "EF1", "fabric_snapshot": {"tcfno": "EF1"},
+         "twist_lines": [t.model_dump() for t in weft], "weaving": {"cone_count_1": "150D", "cone_qty_1": "930"}}
+    )  # fmt: skip
+    assert [(c.count, c.quantity_kg) for c in old.cone_rows] == [("150D", D(930))] and not old.cone_live
+    old_empty = old.model_copy(update={"weaving": WeavingInput.model_validate({"cone_count_1": "150D"})})
+    assert [(c.count, c.quantity_kg) for c in old_empty.cone_rows] == [("150D", D(388))]
 
 
 def test_ac60_cone_prefilled_and_kept_when_sales_edits() -> None:
@@ -121,21 +128,19 @@ def test_ac60_cone_prefilled_and_kept_when_sales_edits() -> None:
         created = CreateCostsheetService(today=TODAY).handle(create_request())
     line = TwistLineDTO(direction="Ngang", count="150D", twist=400, quantity_kg=D(388))
     calc = _calc(created, twist_lines=[line])
-    weave = calc.input.weaving
-    assert (weave.cone_qty_1, weave.cone_count_1) == (D(388), "150D")
-    assert weave.cone_qty_1_suggested and weave.cone_count_1_suggested
+    assert _cone(calc.input.weaving) == ("150D", D(388)) and calc.input.weaving.cone_lines[0].suggested
     assert any(s.stage == "Cone 1" and s.quantity == D(388) and s.norm > 0 for s in calc.result.weaving_stages)
     assert not [w for w in calc.warnings if "sợi cone" in w.message]
     more = line.model_copy(update={"quantity_kg": D(500)})
     follows = _calc(calc, twist_lines=[more])
-    assert follows.input.weaving.cone_qty_1 == D(500)
-    edited = calc.input.weaving.model_copy(update={"cone_qty_1": D(300), "cone_qty_1_suggested": False})
+    assert _cone(follows.input.weaving) == ("150D", D(500))
+    row = calc.input.weaving.cone_lines[0].model_copy(update={"quantity_kg": D(300)})
+    edited = calc.input.weaving.model_copy(update={"cone_lines": [row]})
     kept = _calc(calc, twist_lines=[more], weaving=edited)
-    assert kept.input.weaving.cone_qty_1 == D(300) and kept.input.weaving.cone_count_1 == "150D"
+    assert [_cone(kept.input.weaving, i) for i in range(len(kept.input.weaving.cone_lines))] == [("150D", D(300))]
     several = [more, TwistLineDTO(direction="Ngang", count="75D", twist=400, quantity_kg=D(10))]
     mixed = _calc(calc, twist_lines=several)
-    assert mixed.input.weaving.cone_count_1 == "" and mixed.input.weaving.cone_qty_1 == D(510)
-    assert any("SL gợi ý 510.00 kg" in w.message for w in mixed.warnings)
+    assert [_cone(mixed.input.weaving, i) for i in range(2)] == [("150D", D(500)), ("75D", D(10))]
 
 
 # ---- AC-61: UC-16 calculates without saving ---------------------------------------------------------------------------

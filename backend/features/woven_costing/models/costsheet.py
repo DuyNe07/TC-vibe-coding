@@ -7,6 +7,7 @@ from pydantic import Field
 
 from backend.core.base import BaseEntity, BaseValueObject
 from backend.features.woven_costing.models.costsheet_input import (
+    ConeLine,
     HcmDyeingInput,
     PriceInput,
     TcdnDyeingInput,
@@ -32,6 +33,7 @@ from backend.features.woven_costing.models.parameter_set import ParameterOverrid
 EDITABLE_STATUSES = (CostsheetStatus.NHAP, CostsheetStatus.TRA_LAI)
 OPEN_STATUSES = (CostsheetStatus.NHAP, CostsheetStatus.CHO_DUYET, CostsheetStatus.TRA_LAI)
 APPROVED_STATUSES = (CostsheetStatus.DA_DUYET, CostsheetStatus.DA_CHOT_DON)
+WEFT_TWIST = "Ngang"
 
 
 class FabricSnapshot(BaseValueObject):
@@ -101,6 +103,34 @@ class Costsheet(BaseEntity):
     @property
     def label(self) -> str:
         return f"{self.costsheet_no} v{self.version}"
+
+    @property
+    def cone_rows(self) -> list[ConeLine]:
+        """4.14a cone table. A costsheet stored before 2026-11-26 (old cells cone 1 / cone 2) gets one line per cone
+        that has a count or a quantity, same numbers as before (an empty cone 1 quantity = total Ngang Se quantity);
+        a line whose cells all still held the BR-87 suggestion stays a suggestion."""
+        w = self.weaving
+        if w.cone_lines_converted:
+            return list(w.cone_lines)
+        weft_total = sum((t.quantity_kg or Decimal(0) for t in self.twist_lines if t.direction == WEFT_TWIST),
+                         Decimal(0))  # fmt: skip
+        rows: list[ConeLine] = []
+        if w.cone_count_1 or w.cone_qty_1 is not None:
+            qty = w.cone_qty_1 if w.cone_qty_1 is not None else weft_total
+            suggested = (w.cone_qty_1 is None or w.cone_qty_1_suggested) and (
+                not w.cone_count_1 or w.cone_count_1_suggested
+            )
+            rows.append(ConeLine(count=w.cone_count_1, quantity_kg=qty, suggested=suggested))
+        if w.cone_count_2 or w.cone_qty_2 is not None:
+            rows.append(ConeLine(count=w.cone_count_2, quantity_kg=w.cone_qty_2))
+        return rows
+
+    @property
+    def cone_live(self) -> bool:
+        """BR-100 g: suggestions are made unless the costsheet was stored before 2026-11-26 with cones typed by sales."""
+        if self.weaving.cone_lines_converted:
+            return self.weaving.cone_lines_live
+        return all(row.suggested for row in self.cone_rows)
 
 
 class CostsheetHistory(BaseEntity):

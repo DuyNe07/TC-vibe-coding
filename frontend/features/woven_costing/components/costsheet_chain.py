@@ -1,12 +1,14 @@
-"""Screen 2 (UI change 2026-11-23): "Chuỗi nhu cầu" block and the warnings shown at the top of each tab."""
+"""Screen 2 (UI change 2026-11-23, a tab since 2026-11-27): "Chuỗi nhu cầu" and the warnings shown at the top of each
+tab."""
 
 import streamlit as st
 
 from backend.features.woven_costing.dto.common_dto import WarningDTO
 from backend.features.woven_costing.dto.costsheet_dto import CostsheetResponse
-from frontend.core.components import data_table, empty_state, panel
+from frontend.core.components import data_table, empty_state
 from frontend.core.formatting import format_number
 from frontend.features.woven_costing.components.labels import num, text
+from frontend.features.woven_costing.components.marks import heading
 
 CHAIN_CONFIG = {
     "Bước": st.column_config.TextColumn("Bước", width="medium", pinned=True),
@@ -24,26 +26,28 @@ def _round(value: object, digits: int) -> str:
     return "" if number is None else format_number(number, digits)
 
 
-def demand_chain_block(w: CostsheetResponse) -> None:
-    """Read-only table worked back from the finished meters sold to the yarn (always visible)."""
-    with panel("Chuỗi nhu cầu", icon="🔗", description="Tính ngược từ thành phẩm giao khách đến sợi."):
-        if not w.result.calculated or not w.result.demand_chain:
-            empty_state("Chưa có chuỗi nhu cầu.", 'Bấm "Tính lại" để xem số lượng và chi phí từng bước.')
-            return
-        data_table(
-            [
-                {
-                    "Bước": s.step,
-                    "Số lượng (m)": _round(s.meters, 1),
-                    "Số lượng (kg)": _round(s.kg, 1),
-                    "Hao hụt áp dụng": s.losses,
-                    "Chi phí (đ)": _round(s.cost, 0),
-                    "Chi phí/m TP (đ/m)": _round(s.cost_per_m, 2),
-                }
-                for s in w.result.demand_chain
-            ],
-            column_config=CHAIN_CONFIG,
-        )
+def demand_chain_tab(w: CostsheetResponse) -> None:
+    """Read-only table worked back from the finished meters sold to the yarn (tab "Chuỗi nhu cầu" since 2026-11-27,
+    before: a block between "Thông tin đơn" and the tabs)."""
+    heading("Chuỗi nhu cầu", editable=False, icon="🔗")
+    st.caption("Tính ngược từ thành phẩm giao khách đến sợi.")
+    if not w.result.calculated or not w.result.demand_chain:
+        empty_state("Chưa có chuỗi nhu cầu.", "Điền Thông tin đơn để app tính số lượng và chi phí từng bước.")
+        return
+    data_table(
+        [
+            {
+                "Bước": s.step,
+                "Số lượng (m)": _round(s.meters, 1),
+                "Số lượng (kg)": _round(s.kg, 1),
+                "Hao hụt áp dụng": s.losses,
+                "Chi phí (đ)": _round(s.cost, 0),
+                "Chi phí/m TP (đ/m)": _round(s.cost_per_m, 2),
+            }
+            for s in w.result.demand_chain
+        ],
+        column_config=CHAIN_CONFIG,
+    )
 
 
 def section_warnings(warnings: list[WarningDTO], section: str) -> list[WarningDTO]:

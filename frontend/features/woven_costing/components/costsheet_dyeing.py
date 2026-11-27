@@ -10,7 +10,7 @@ from backend.features.woven_costing.dto.common_dto import DyePlant, ExtraCostTyp
 from backend.features.woven_costing.dto.costsheet_dto import CostsheetResponse, ExtraCostDTO
 from backend.features.woven_costing.dto.list_dto import CostsheetOptionsResponse
 from frontend.core.base_page import BasePage
-from frontend.core.components import data_table, editable_table, section_title, stat_row
+from frontend.core.components import data_table, stat_row
 from frontend.core.formatting import format_number
 from frontend.features.woven_costing.components.labels import (
     dec,
@@ -24,6 +24,7 @@ from frontend.features.woven_costing.components.labels import (
     to_pct,
     with_value,
 )
+from frontend.features.woven_costing.components.marks import apply_table, heading
 
 BLENDED = "Blended"
 REPEAT = "Số lần xử lý thêm"
@@ -68,14 +69,14 @@ def _blend(labels: Sequence[str], ratios: Sequence[Any], key: Callable[[str], st
 def _list_table(
     title: str, key: str, values: Sequence[str], column: str, options: Sequence[str], off: bool
 ) -> list[str] | None:
-    section_title(title)
+    heading(title, editable=not off)
     rows = [{column: v} for v in values]
     items = list(dict.fromkeys([*options, *values]))
     config = {column: st.column_config.SelectboxColumn(column, options=items, required=True)}
     if off:
         data_table(rows, column_config=config, empty_message="Không có.")
         return None
-    edited = editable_table(rows, key=key, columns=[column], column_config=config, allow_add_delete=True)
+    edited = apply_table(rows, key=key, columns=[column], column_config=config, allow_add_delete=True)
     return [str(r[column]) for r in edited if r.get(column)]
 
 
@@ -83,7 +84,7 @@ def _cost_table(
     title: str, key: str, lines: Sequence[Any], columns: dict[str, str], off: bool, unit_labels: Sequence[str] = ()
 ) -> list[dict[str, Any]] | None:
     """Rows of named costs: columns = {label: dto field}; percent columns (loss_rate) are x100 on screen."""
-    section_title(title)
+    heading(title, editable=not off)
     rows = []
     for line in lines:
         row = {}
@@ -106,7 +107,7 @@ def _cost_table(
     if off:
         data_table(rows, column_config=config, empty_message="Không có.")
         return None
-    edited = editable_table(rows, key=key, columns=list(columns), column_config=config, allow_add_delete=True)
+    edited = apply_table(rows, key=key, columns=list(columns), column_config=config, allow_add_delete=True)
     result = []
     for row in edited:
         if all(row.get(label) in (None, "") for label in columns):
@@ -222,7 +223,7 @@ def _tcdn(
             )
         )  # fmt: skip
     blend = _blend(TCDN_BLEND_LABELS, data.blend_ratios, key, off) if color == BLENDED else list(data.blend_ratios)
-    section_title("Công đoạn ngoài quy trình (tối đa 13)")
+    heading("Công đoạn ngoài quy trình (tối đa 13)", editable=not off)
     stage_rows = [{"Công đoạn": s.name, "Giá hóa chất (đ/m)": num(s.chemical_price), REPEAT: s.repeat_count}
                   for s in data.extra_stages]  # fmt: skip
     stage_names = list(dict.fromkeys([*options.tcdn_stages, *(s.name for s in data.extra_stages if s.name)]))
@@ -242,7 +243,7 @@ def _tcdn(
     if off:
         data_table(stage_rows, column_config=stage_config, empty_message="Không có.")
     else:
-        edited = editable_table(stage_rows, key=key("stages"), columns=list(stage_config), column_config=stage_config,
+        edited = apply_table(stage_rows, key=key("stages"), columns=list(stage_config), column_config=stage_config,
                                 allow_add_delete=True)  # fmt: skip
         stages = [
             {
@@ -295,7 +296,7 @@ def _tcdn(
 
 def _result(w: CostsheetResponse, plant: str) -> None:
     r = w.result
-    section_title("Kết quả nhuộm")
+    heading("Kết quả nhuộm", editable=False)
     tcdn = plant == DyePlant.TCDN.value
     labels = TCDN_EXTRA_LABELS if tcdn else HCM_EXTRA_LABELS
     rows = []

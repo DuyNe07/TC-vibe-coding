@@ -56,9 +56,26 @@ class TwistLine(BaseValueObject):
     suggestion_key: str = ""
 
 
+class ConeLine(BaseValueObject):
+    """4.14a one cone line (2026-11-26): count, quantity, the Ngang Se lines gathered in it (``members``, read only).
+
+    ``suggested``: the line is still the app suggestion (BR-100, rebuilt at each calculation); False = typed or edited
+    by sales. ``suggestion_key``: the suggestion the line came from (kept after an edit so it is not suggested again)."""
+
+    count: str = ""
+    quantity_kg: Decimal | None = None
+    members: str = ""
+    suggested: bool = False
+    suggestion_key: str = ""
+
+
 class WeavingInput(BaseValueObject):
-    """4.14 choices and outsourcing of the weaving department. ``cone_*_1_suggested``: the cone 1 cell holds the app
-    suggestion (BR-87) and follows the Ngang Se lines; False = typed by sales (the default for stored rows)."""
+    """4.14 choices and outsourcing of the weaving department.
+
+    Cone (2026-11-26): ``cone_lines`` = the cone table 4.14a, valid once ``cone_lines_converted`` is True (set by
+    every calculation / screen). ``cone_lines_live``: BR-100 suggestions are made on this costsheet. The old cells
+    ``cone_count_1`` .. ``cone_qty_2`` (BR-87, removed 2026-11-26) are only read to convert costsheets stored before
+    (``Costsheet.cone_rows``); ``cone_*_1_suggested`` = the old cell held the BR-87 suggestion."""
 
     size_material: str = ""
     warping_band: str = ""  # "Có" / "Không" / ""
@@ -68,6 +85,11 @@ class WeavingInput(BaseValueObject):
     cone_qty_1_suggested: bool = False
     cone_count_2: str = ""
     cone_qty_2: Decimal | None = None
+    cone_lines: list[ConeLine] = Field(default_factory=list)
+    cone_lines_converted: bool = False
+    cone_lines_live: bool = False
+    cone_suggestions: list[ConeLine] = Field(default_factory=list)  # suggested lines of the last calculation
+    cone_suggestion_skips: list[str] = Field(default_factory=list)  # suggestions deleted / edited by sales
     twist_outsourcing_price: Decimal | None = None
     twist_outsourcing_qty: Decimal | None = None
     size_outsourcing_price: Decimal | None = None

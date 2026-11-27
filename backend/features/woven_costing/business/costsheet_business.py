@@ -8,6 +8,7 @@ from decimal import Decimal
 from backend.core.base import BaseBusiness, BaseBusinessRule
 from backend.core.current_user import CurrentUser
 from backend.features.woven_costing.business.access_business import AccessBusiness
+from backend.features.woven_costing.business.cone_business import ConeBusiness
 from backend.features.woven_costing.business.costing_business import CostingBusiness
 from backend.features.woven_costing.business.fabric_business import FabricBusiness, FabricExistsRule
 from backend.features.woven_costing.business.hint_business import WEFT_TWIST, HintBusiness
@@ -123,12 +124,12 @@ class CostsheetBusiness(BaseBusiness[Costsheet]):
         return sheet.model_copy(update={"result": result.model_copy(update={"warnings": warnings})})
 
     def suggested_inputs(self, sheet: Costsheet, result: CostsheetResult) -> Costsheet:
-        """BR-86 Se lines then BR-87 cone 1 suggestion (not for Vải Nhuộm, only once the costsheet is calculated:
-        the Se suggestion needs the estimated Se output of BR-19)."""
+        """BR-86 Se lines then the BR-100 cone table (2026-11-26, replaces BR-87) (not for Vải Nhuộm, only once the
+        costsheet is calculated: the Se suggestion needs the estimated Se output of BR-19)."""
         if not result.calculated or sheet.sale_form in NO_WEAVING_FORMS:
             return sheet
         sheet = self.suggested_twist_lines(sheet, result)
-        return sheet.model_copy(update={"weaving": HintBusiness().suggest_cone(sheet.weaving, sheet.twist_lines)})
+        return sheet.model_copy(update={"weaving": ConeBusiness().suggest_cone(sheet)})
 
     def suggested_twist_lines(self, sheet: Costsheet, result: CostsheetResult) -> Costsheet:
         """BR-86 (changed 2026-11-23): on a costsheet started without Se lines ("live"), the lines still suggested are

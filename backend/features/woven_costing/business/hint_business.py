@@ -1,5 +1,5 @@
 """BR-05 yarn ratio, BR-06 Se hint, BR-07..BR-09 Hồ hint: building the yarn lines of a costsheet; BR-86 Se lines
-suggested from the yarn lines ticked Se, BR-83 fiber system suggestion of the Se lines, BR-87 cone 1 suggestion."""
+suggested from the yarn lines ticked Se, BR-83 fiber system suggestion of the Se lines (cone: cone_business, BR-100)."""
 
 import re
 from collections.abc import Sequence
@@ -15,7 +15,7 @@ from backend.features.woven_costing.constants import (
     SPUN_SIZE_COUNT,
 )
 from backend.features.woven_costing.models.costsheet import FabricSnapshot
-from backend.features.woven_costing.models.costsheet_input import TwistLine, WeavingInput, YarnLine
+from backend.features.woven_costing.models.costsheet_input import TwistLine, YarnLine
 from backend.features.woven_costing.models.enums import YarnDirection, YarnKind
 from backend.features.woven_costing.models.fabric import FabricYarn
 from backend.shared.utils import strip_accents
@@ -197,20 +197,6 @@ class HintBusiness(BaseBusiness[Decimal]):
                 merged.append(fresh_by_key.pop(line.suggestion_key))
         merged += list(fresh_by_key.values())
         return merged, sorted(skipped)
-
-    def suggest_cone(self, weaving: WeavingInput, lines: list[TwistLine]) -> WeavingInput:
-        """BR-87: cone 1 quantity = total quantity of the Ngang Se lines, cone 1 count = their count when they have
-        only one. An empty cell or a cell still holding the suggestion follows the Se lines; a cell typed by sales
-        is kept. No Ngang Se line -> empty."""
-        weft = [line for line in lines if line.direction == WEFT_TWIST]
-        total = sum((line.quantity_kg or ZERO for line in weft), ZERO) if weft else None
-        counts = list(dict.fromkeys(line.count for line in weft if line.count))
-        update: dict[str, object] = {}
-        if weaving.cone_qty_1 is None or weaving.cone_qty_1_suggested:
-            update |= {"cone_qty_1": total, "cone_qty_1_suggested": True}
-        if not weaving.cone_count_1 or weaving.cone_count_1_suggested:
-            update |= {"cone_count_1": counts[0] if len(counts) == 1 else "", "cone_count_1_suggested": True}
-        return weaving.model_copy(update=update) if update else weaving
 
     def fill_fiber_systems(self, lines: list[TwistLine]) -> list[TwistLine]:
         """BR-83: an empty fiber system, or one that is still the app suggestion, follows the count."""

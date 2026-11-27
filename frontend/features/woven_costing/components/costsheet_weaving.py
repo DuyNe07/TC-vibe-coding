@@ -8,7 +8,7 @@ from backend.features.woven_costing.dto.common_dto import FiberSystem, SaleForm
 from backend.features.woven_costing.dto.costsheet_dto import CostsheetResponse
 from backend.features.woven_costing.dto.list_dto import CostsheetOptionsResponse
 from frontend.core.base_page import BasePage
-from frontend.core.components import data_table, editable_table, section_title, stat_row
+from frontend.core.components import data_table, stat_row
 from frontend.core.formatting import format_number
 from frontend.features.woven_costing.components.labels import (
     FLAG,
@@ -20,6 +20,7 @@ from frontend.features.woven_costing.components.labels import (
     text_or_empty,
     with_value,
 )
+from frontend.features.woven_costing.components.marks import apply_table, heading
 
 TWIST_DIRECTIONS = ["Dọc", "Ngang"]
 TWIST_COLUMNS = ["Hướng", "Hệ sợi", "Chi số", "Độ săn", "SL yêu cầu (kg)"]
@@ -28,6 +29,8 @@ AUTO, FIBER_SHOWN = "_auto", "_fiber"
 # hidden cells (BR-86): the line is the app suggestion + the suggestion it came from (the app compares the cells)
 SUGGESTED, SUGGESTION_KEY = "_suggested", "_suggestion"
 CHECK = "✓"
+WEFT = "Ngang"
+CONE_COLUMNS = ["Chi số cone", "SL cone (kg)", "Gồm sợi"]
 YES_NO = ["Có", "Không"]
 MONEY = st.column_config.NumberColumn(format="localized")
 
@@ -68,7 +71,7 @@ def _twist_lines(page: BasePage, w: CostsheetResponse, sfx: str) -> Any:
     if not w.editable:
         data_table(rows, column_config=config, column_order=TWIST_COLUMNS, empty_message="Không có dòng Se.")
         return None
-    edited = editable_table(
+    edited = apply_table(
         rows,
         key=page.key(f"twist.{sfx}"),
         columns=[*TWIST_COLUMNS, AUTO, FIBER_SHOWN, SUGGESTED, SUGGESTION_KEY],
@@ -92,6 +95,56 @@ def _twist_lines(page: BasePage, w: CostsheetResponse, sfx: str) -> Any:
     ]
 
 
+def _cone_lines(page: BasePage, w: CostsheetResponse, sfx: str) -> list[dict[str, Any]]:
+    """4.14a cone table (BR-100): shown only when the costsheet has Ngang Se lines or already has cone lines (BR-100 h);
+    the app prefills one line per cone, sales edits / adds / deletes lines."""
+    weave = w.input.weaving
+    has_weft = any(t.direction == WEFT and (t.count or t.quantity_kg) for t in w.input.twist_lines)
+    stored = [c.model_dump() for c in weave.cone_lines]
+    if not has_weft and not weave.cone_lines:
+        return stored
+    st.markdown("**Bảng cone**")
+    rows = [
+        {
+            "Chi số cone": c.count or None,
+            "SL cone (kg)": num(c.quantity_kg),
+            "Gồm sợi": c.members or None,
+            SUGGESTED: c.suggested,
+            SUGGESTION_KEY: c.suggestion_key or None,
+        }
+        for c in weave.cone_lines
+    ]
+    config = {
+        "Chi số cone": st.column_config.TextColumn("Chi số cone", help="Ví dụ: 150D + 30D, 75D/2 + CB, 40/2 + SP 40"),
+        "SL cone (kg)": st.column_config.NumberColumn("SL cone (kg)", min_value=0, format="%.2f"),
+        "Gồm sợi": st.column_config.TextColumn("Gồm sợi", help="Các dòng Se ngang gộp vào cone (chỉ xem)"),
+    }
+    if not w.editable:
+        data_table(rows, column_config=config, column_order=CONE_COLUMNS, empty_message="Không có dòng cone.")
+        return stored
+    edited = apply_table(
+        rows,
+        key=page.key(f"cone.{sfx}"),
+        columns=[*CONE_COLUMNS, SUGGESTED, SUGGESTION_KEY],
+        column_config=config,
+        column_order=CONE_COLUMNS,
+        disabled=["Gồm sợi"],
+        allow_add_delete=True,
+    )
+    st.caption("Cone được gợi ý theo sợi se chung / se riêng, sửa lại được.")
+    return [
+        {
+            "count": text_or_empty(r.get("Chi số cone")),
+            "quantity_kg": dec(r.get("SL cone (kg)")),
+            "members": text_or_empty(r.get("Gồm sợi")),
+            "suggested": bool(r.get(SUGGESTED)),
+            "suggestion_key": text_or_empty(r.get(SUGGESTION_KEY)),
+        }
+        for r in edited
+        if r.get("Chi số cone") not in (None, "") or r.get("SL cone (kg)") is not None
+    ]
+
+
 def _choices(page: BasePage, w: CostsheetResponse, options: CostsheetOptionsResponse, sfx: str) -> dict[str, Any]:
     weave = w.input.weaving
     off = not w.editable
@@ -100,7 +153,6 @@ def _choices(page: BasePage, w: CostsheetResponse, options: CostsheetOptionsResp
         return page.key(f"weave.{name}.{sfx}")
 
     sizes = with_value(options.size_materials, weave.size_material)
-    count_help = "Gõ chi số, ví dụ 150D, 75D/2 + CB, 30/2"
     c1, c2, c3, c4 = st.columns(4)
     size_material = c1.selectbox(
         "Nguyên liệu hồ", sizes, index=index_of(sizes, weave.size_material), placeholder="Không hồ",
@@ -111,36 +163,22 @@ def _choices(page: BasePage, w: CostsheetResponse, options: CostsheetOptionsResp
         band = st.segmented_control(
             "Mắc phân băng", YES_NO, default=weave.warping_band or None, key=key("band"), disabled=off
         )
-    cone_1 = c3.text_input(
-        "Chi số cone 1", value=weave.cone_count_1, max_chars=60, key=key("cone1"), disabled=off, help=count_help
-    )
-    cone_qty_1 = _number(
-        c4, "SL cone 1 (kg)", weave.cone_qty_1, key("cone1_qty"), off,
-        "App điền sẵn tổng SL Se ngang và tự cập nhật theo Se ngang tới khi bạn sửa ô này.",
-    )  # fmt: skip
-    if weave.cone_qty_1_suggested or weave.cone_count_1_suggested:
-        c3.caption("Cone 1 được điền sẵn theo các dòng Se ngang.")
-    c1, c2, c3, c4 = st.columns(4)
-    cone_2 = c3.text_input(
-        "Chi số cone 2", value=weave.cone_count_2, max_chars=60, key=key("cone2"), disabled=off, help=count_help
-    )
-    cone_qty_2 = _number(c4, "SL cone 2 (kg)", weave.cone_qty_2, key("cone2_qty"), off)
-    twist_price = _number(c1, "Gia công Se (đ/kg)", weave.twist_outsourcing_price, key("twist_price"), off)
-    twist_qty = _number(c2, "SL gia công Se (kg)", weave.twist_outsourcing_qty, key("twist_qty"), off)
+    twist_price = _number(c3, "Gia công Se (đ/kg)", weave.twist_outsourcing_price, key("twist_price"), off)
+    twist_qty = _number(c4, "SL gia công Se (kg)", weave.twist_outsourcing_qty, key("twist_qty"), off)
     c1, c2, c3, _ = st.columns(4)
     size_price = _number(c1, "Gia công Hồ (đ/m)", weave.size_outsourcing_price, key("size_price"), off)
     weaving_price = _number(c2, "Gia công Dệt (đ/m)", weave.weaving_outsourcing_price, key("weave_price"), off)
     other_price = _number(c3, "Chi phí gia công khác (đ/m)", weave.other_outsourcing_price, key("other_price"), off)
+    cone_lines = _cone_lines(page, w, sfx)
     return {
         "size_material": size_material or "",
         "warping_band": band or "",
-        "cone_count_1": (cone_1 or "").strip(),
-        "cone_qty_1": cone_qty_1,
-        # BR-87: the cell keeps following the Se lines while it still shows the suggestion
-        "cone_count_1_suggested": weave.cone_count_1_suggested and (cone_1 or "").strip() == weave.cone_count_1,
-        "cone_qty_1_suggested": weave.cone_qty_1_suggested and num(cone_qty_1) == num(weave.cone_qty_1),
-        "cone_count_2": (cone_2 or "").strip(),
-        "cone_qty_2": cone_qty_2,
+        # 4.14a (2026-11-26): the cone table replaces the old cone 1 / cone 2 cells (left empty)
+        "cone_lines": cone_lines,
+        "cone_lines_converted": True,
+        "cone_lines_live": weave.cone_lines_live,
+        "cone_suggestions": [c.model_dump() for c in weave.cone_suggestions],
+        "cone_suggestion_skips": weave.cone_suggestion_skips,
         "twist_outsourcing_price": twist_price,
         "twist_outsourcing_qty": twist_qty,
         "size_outsourcing_price": size_price,
@@ -166,7 +204,7 @@ def weaving_tab(
     if sale_form == SaleForm.DYED.value:
         st.info("Vải Nhuộm: chi phí ngành Dệt = 0, dùng giá mộc mua ngoài.", icon=":material/info:")
     else:
-        section_title("Dòng Se")
+        heading("Dòng Se", editable=w.editable)
         twist_lines = _twist_lines(page, w, sfx)
         st.caption(
             "Tối đa 9 dòng Se dọc và 9 dòng Se ngang. Hệ sợi, chi số, độ săn được gợi ý sẵn, sửa lại được. "
@@ -182,9 +220,9 @@ def weaving_tab(
         for line in r.twist_lines:
             if line.error:
                 st.warning(f"Se {line.direction} {line.count}: {line.error}", icon="⚠️")
-        section_title("Hồ, mắc, cone, gia công")
+        heading("Hồ, mắc, cone, gia công", editable=w.editable)
         weaving = _choices(page, w, options, sfx)
-    section_title("Chi phí công đoạn")
+    heading("Chi phí công đoạn", editable=False)
     data_table(
         [
             {
@@ -207,7 +245,7 @@ def weaving_tab(
         },
         empty_message="Chưa có chi phí công đoạn.",
     )
-    section_title("Chi phí theo khoản mục (đ/m)")
+    heading("Chi phí theo khoản mục (đ/m)", editable=False)
     item_labels = {
         "labor": "Nhân công", "depreciation": "Khấu hao", "power": "Điện", "material": "Vật tư", "fuel": "Nhiên liệu",
         "chemical": "Hóa chất", "overhead": "CPQL", "total": "Tổng (đ/m)",
