@@ -36,6 +36,8 @@ from backend.features.woven_costing.dto.fabric_dto import (
 from backend.features.woven_costing.dto.list_dto import (
     AddCustomerRequest,
     AddCustomerResponse,
+    BulkApproveRequest,
+    BulkApproveResponse,
     CostsheetListResponse,
     CostsheetOptionsResponse,
     ListCostsheetsRequest,
@@ -64,7 +66,9 @@ from backend.features.woven_costing.dto.master_dto import (
 from backend.features.woven_costing.dto.ping_dto import PingRequest, PingResponse
 from backend.features.woven_costing.services.add_customer_service import AddCustomerService
 from backend.features.woven_costing.services.approve_costsheet_service import ApproveCostsheetService
+from backend.features.woven_costing.services.approve_costsheets_service import ApproveCostsheetsService
 from backend.features.woven_costing.services.approve_dyeing_job_service import ApproveDyeingJobService
+from backend.features.woven_costing.services.approve_dyeing_jobs_service import ApproveDyeingJobsService
 from backend.features.woven_costing.services.calculate_costsheet_service import CalculateCostsheetService
 from backend.features.woven_costing.services.calculate_dyeing_job_service import CalculateDyeingJobService
 from backend.features.woven_costing.services.cancel_costsheet_service import CancelCostsheetService
@@ -329,3 +333,11 @@ class WovenCostingController(BaseController):
     def export_dyeing_job(self, request: GetDyeingJobRequest) -> FileDownloadDTO:
         """UC-46 Xuất bảng giá gia công nhuộm ra Excel."""
         return ExportDyeingJobService().handle(request)
+
+    def approve_costsheets(self, request: BulkApproveRequest) -> BulkApproveResponse:
+        """UC-47 Duyệt nhiều costsheet một lần (2026-11-27)."""
+        return ApproveCostsheetsService().handle(request)
+
+    def approve_dyeing_jobs(self, request: BulkApproveRequest) -> BulkApproveResponse:
+        """UC-48 Duyệt nhiều phiếu gia công nhuộm một lần (2026-11-27)."""
+        return ApproveDyeingJobsService().handle(request)

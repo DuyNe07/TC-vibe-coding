@@ -84,6 +84,35 @@ class TaskRowDTO(BaseDTO):
     gp_pct: Decimal | None = None
     op_pct: Decimal | None = None
     reason: str | None = None
+    # 2026-11-27 Screen 3 "Chờ tôi duyệt" (costsheet) / "Phiếu gia công chờ tôi duyệt" columns (BR-101, BR-103)
+    team: str | None = None
+    fabric_name: str | None = None
+    market: str | None = None
+    dye_plant: str | None = None
+    sale_form: str | None = None
+    order_type: str | None = None
+    price_type: str | None = None
+    order_meters: Decimal | None = None
+    submitted_at: datetime | None = None
+    delivery_date: date | None = None
+    sell_price: Decimal | None = None  # as typed by sales, in sell_currency per metre
+    sell_currency: str | None = None
+    cogs_vnd: Decimal | None = None
+    gp_vnd: Decimal | None = None
+    price_with_vat: Decimal | None = None
+    yarn_per_m: Decimal | None = None
+    weaving_per_m: Decimal | None = None
+    dyeing_per_m: Decimal | None = None
+    shrinkage: Decimal | None = None
+    prev_sell_price: Decimal | None = None
+    prev_gp_pct: Decimal | None = None
+    attention: str = ""
+    gp_below: bool = False
+    op_below: bool = False
+    note: str | None = None
+    contract_no: str | None = None
+    total_quantity: Decimal | None = None
+    total_revenue: Decimal | None = None
 
 
 class TaskGroupDTO(BaseDTO):
@@ -95,6 +124,18 @@ class TaskGroupDTO(BaseDTO):
 
 class MyTasksResponse(BaseResponseDTO):
     groups: list[TaskGroupDTO] = Field(default_factory=list)
+
+
+class BulkApproveRequest(BaseRequestDTO):
+    """UC-47 / UC-48 (2026-11-27): ids of the costsheets / dyeing job orders ticked in "Việc chờ tôi"."""
+
+    ids: list[str] = Field(default_factory=list, max_length=200)
+
+
+class BulkApproveResponse(BaseResponseDTO):
+    approved: list[str] = Field(default_factory=list)  # labels, e.g. "CS-ASTY-2026-00007 v1"
+    failed: list[str] = Field(default_factory=list)  # "Không duyệt được <label>: <lý do>"
+    message: str = ""
 
 
 class CustomerOptionDTO(BaseDTO):

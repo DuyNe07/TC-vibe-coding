@@ -3,14 +3,19 @@
 from datetime import date
 
 from backend.core.base import BaseService, EmptyRequest
+from backend.features.woven_costing.builders.task_row_builder import JobTaskRowBuilder, TaskRowBuilder
 from backend.features.woven_costing.business.access_business import AccessBusiness
+from backend.features.woven_costing.business.approval_business import ApprovalBusiness
 from backend.features.woven_costing.business.list_business import ListBusiness
 from backend.features.woven_costing.business.submission_business import SubmissionBusiness
 from backend.features.woven_costing.dto.list_dto import MyTasksResponse, TaskGroupDTO, TaskRowDTO
 from backend.features.woven_costing.models.costsheet import Costsheet
 from backend.features.woven_costing.models.dyeing_job import DyeingJob
-from backend.features.woven_costing.models.enums import CostsheetStatus, RoleCode
-from backend.features.woven_costing.repositories.costsheet_repository import CostsheetRepository
+from backend.features.woven_costing.models.enums import CostsheetStatus, HistoryAction, RoleCode
+from backend.features.woven_costing.repositories.costsheet_repository import (
+    CostsheetHistoryRepository,
+    CostsheetRepository,
+)
 from backend.features.woven_costing.repositories.dyeing_job_repository import DyeingJobRepository
 from backend.features.woven_costing.repositories.fabric_repository import FabricRepository
 from backend.features.woven_costing.repositories.master_repository import ExchangeRateRepository, HolidayRepository
@@ -20,18 +25,11 @@ S = CostsheetStatus
 
 
 def _row(sheet: Costsheet, reason: str = "") -> TaskRowDTO:
-    return TaskRowDTO(
-        costsheet_id=sheet.id, costsheet_no=sheet.costsheet_no, version=sheet.version, customer_name=sheet.customer_name,
-        tcfno=sheet.tcfno, sales_name=sheet.sales_name, costing_date=sheet.costing_date, gp_pct=sheet.result.gp_pct,
-        op_pct=sheet.result.op_pct, reason=reason or None,
-    )  # fmt: skip
+    return TaskRowBuilder(sheet, reason).build()
 
 
 def _job_row(job: DyeingJob, reason: str = "") -> TaskRowDTO:
-    return TaskRowDTO(
-        costsheet_id=job.id, costsheet_no=job.job_no, customer_name=job.customer_name, sales_name=job.sales_name,
-        costing_date=job.costing_date, gp_pct=job.result.gp_pct, reason=reason or None,
-    )  # fmt: skip
+    return JobTaskRowBuilder(job, reason).build()
 
 
 class ListMyTasksService(BaseService[EmptyRequest, MyTasksResponse]):
@@ -45,7 +43,8 @@ class ListMyTasksService(BaseService[EmptyRequest, MyTasksResponse]):
         sheets = ListBusiness().visible(self.repository.latest_versions(), user)
         mine = [s for s in sheets if access.is_owner(user, s)]
         groups: list[TaskGroupDTO] = []
-        to_approve = [_row(s) for s in sheets if s.status == S.CHO_DUYET and access.can_approve(user, s)]
+        pending = [s for s in sheets if s.status == S.CHO_DUYET and access.can_approve(user, s)]
+        to_approve = [self._approval_row(s) for s in pending]
         groups.append(TaskGroupDTO(code="approve", title="Chờ tôi duyệt", rows=to_approve))
         groups.append(TaskGroupDTO(code="returned", title="Bị trả lại",
                                    rows=[_row(s, s.return_reason) for s in mine if s.status == S.TRA_LAI]))  # fmt: skip
@@ -63,7 +62,12 @@ class ListMyTasksService(BaseService[EmptyRequest, MyTasksResponse]):
         groups.append(TaskGroupDTO(code="expired_prices", title="Giá sợi hết hiệu lực", rows=expired))
         # 2026-11-25 dyeing job orders (Screen 8)
         jobs = [j for j in DyeingJobRepository().list_all() if access.can_view(user, j)]
-        job_approve = [_job_row(j) for j in jobs if j.status == S.CHO_DUYET and access.can_approve(user, j)]
+        approval = ApprovalBusiness()
+        job_approve = [
+            JobTaskRowBuilder(j, attention=approval.job_attention(j)).build()
+            for j in jobs
+            if j.status == S.CHO_DUYET and access.can_approve(user, j)
+        ]
         job_returned = [
             _job_row(j, j.return_reason) for j in jobs if j.status == S.TRA_LAI and access.is_owner(user, j)
         ]
@@ -81,3 +85,19 @@ class ListMyTasksService(BaseService[EmptyRequest, MyTasksResponse]):
             groups.append(TaskGroupDTO(code="missing_yarn", title="Mã vải thiếu sợi", kind="fabric", rows=fabric_rows))
         self.logger.info("UC-30 tasks: %s", {g.code: len(g.rows) for g in groups})
         return MyTasksResponse(groups=groups)
+
+    def _approval_row(self, sheet: Costsheet) -> TaskRowDTO:
+        """2026-11-27: every column a leader needs to approve without opening (BR-101, BR-103, last "Gửi duyệt")."""
+        approval = ApprovalBusiness()
+        previous = None
+        if sheet.version > 1:
+            previous = approval.previous_approved(sheet, self.repository.versions(sheet.costsheet_no))
+        sent = [
+            h.created_at
+            for h in CostsheetHistoryRepository().of_costsheet(sheet.costsheet_no)
+            if h.version == sheet.version and h.action == HistoryAction.SUBMIT
+        ]
+        return TaskRowBuilder(
+            sheet, detail=True, attention=approval.attention(sheet), previous=previous,
+            submitted_at=max(sent) if sent else None,
+        ).build()  # fmt: skip
