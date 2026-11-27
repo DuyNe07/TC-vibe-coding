@@ -1,4 +1,7 @@
-"""Screen 2 block A "Thông tin đơn" and the create panel (UC-15)."""
+"""Screen 2 block A "Thông tin đơn" and the create panel (UC-15).
+
+UI change 2026-11-27: main cells shown, the other cells in the folded "Thông tin thêm" (opened by itself when the
+costsheet has a low shrinkage without a reason)."""
 
 from datetime import date
 from typing import Any
@@ -23,6 +26,7 @@ from frontend.features.woven_costing.components.customer_dialog import add_custo
 from frontend.features.woven_costing.components.errors import attempt
 from frontend.features.woven_costing.components.flash import set_flash
 from frontend.features.woven_costing.components.labels import dec, enum_values, index_of, num, text, with_value
+from frontend.features.woven_costing.components.marks import heading
 from frontend.features.woven_costing.components.working import CUSTOMER_CHOICE, CUSTOMER_REV, replace_working
 
 DYE_PLANTS = enum_values(DyePlant)
@@ -88,7 +92,10 @@ def order_block(
     def key(name: str) -> str:
         return page.key(f"{name}.{sfx}")
 
-    with panel("Thông tin đơn", icon="📝"):
+    low = w.result.low_shrinkage
+    with panel():
+        # UI change 2026-11-27: blue "Nhập liệu" strip; main cells first, the others in "Thông tin thêm"
+        heading("Thông tin đơn", editable=not off, icon="📝")
         c1, c2, c3, c4 = st.columns(4)
         with c1:
             dye_plant = st.segmented_control(
@@ -109,15 +116,15 @@ def order_block(
                 can_add=CostsheetAction.ADD_CUSTOMER in allowed,
                 disabled=off,
             )
-        with c3:
-            market = _select("Thị trường", MARKETS, data.market, key("market"), disabled=off)
-        with c4:
-            order_type = _select("Loại đơn hàng", ORDER_TYPES, data.order_type, key("order_type"), disabled=off)
-        c1, c2, c3, c4 = st.columns(4)
-        style = c1.text_input("Style", value=data.style, max_chars=100, key=key("style"), disabled=off)
-        with c2:
+        tcfno = c3.text_input("Mã vải", value=data.tcfno, max_chars=15, key=key("tcfno"), disabled=off)
+        meters = c4.number_input(
+            "Số lượng đặt (m)", min_value=0.0, step=100.0, value=num(data.order_meters), key=key("meters"), disabled=off
+        )
+        c1, c2, c3, _ = st.columns(4)
+        with c1:
             sale_form = _select("Hình thức bán", SALE_FORMS, data.sale_form, key("sale_form"), disabled=off)
-        order_type = job_order_type(sale_form, text(data.sale_form), order_type, text(data.order_type))
+        with c2:
+            price_type = _select("Loại giá", PRICE_TYPES, data.price_type, key("price_type"), disabled=off)
         greige_buy_price = data.greige_buy_price
         if sale_form == DYED:
             greige_buy_price = dec(
@@ -130,44 +137,46 @@ def order_block(
                     disabled=off,
                 )
             )
-        delivery = c4.date_input(
-            "Ngày giao hàng", value=data.delivery_date, format="DD/MM/YYYY", key=key("delivery"), disabled=off
-        )
-        c1, c2, c3, c4 = st.columns(4)
-        costing = c1.date_input(
-            "Ngày tính giá", value=data.costing_date, format="DD/MM/YYYY", key=key("costing"), disabled=off
-        )
-        tcfno = c2.text_input("Mã vải", value=data.tcfno, max_chars=15, key=key("tcfno"), disabled=off)
-        meters = c3.number_input(
-            "Số lượng đặt (m)", min_value=0.0, step=100.0, value=num(data.order_meters), key=key("meters"), disabled=off
-        )
-        with c4:
-            price_type = _select("Loại giá", PRICE_TYPES, data.price_type, key("price_type"), disabled=off)
-        c1, c2, c3 = st.columns([1, 1, 2])
-        oc_no = c1.text_input(
-            "Số OC",
-            value=data.oc_no,
-            max_chars=40,
-            placeholder="KDV10-SX-LO-0726-6564.1",
-            key=key("oc"),
-            disabled=not (w.editable or CostsheetAction.SAVE_OC in allowed),
-        )
-        low = w.result.low_shrinkage
-        with c2:
-            exception = _select(
-                "Lý do ngoại lệ độ co" + (" :orange-badge[Độ co thấp]" if low else ""),
-                SHRINKAGE_EXCEPTIONS,
-                data.shrinkage_exception,
-                key("shrink_exc"),
-                disabled=off,
+        needs_reason = bool(low and not data.shrinkage_reason)
+        more = "Thông tin thêm" + (" · ⚠️ Độ co thấp – cần lý do" if needs_reason else "")
+        with st.expander(more, expanded=needs_reason, icon=":material/tune:"):
+            c1, c2, c3, c4 = st.columns(4)
+            with c1:
+                market = _select("Thị trường", MARKETS, data.market, key("market"), disabled=off)
+            with c2:
+                order_type = _select("Loại đơn hàng", ORDER_TYPES, data.order_type, key("order_type"), disabled=off)
+            style = c3.text_input("Style", value=data.style, max_chars=100, key=key("style"), disabled=off)
+            delivery = c4.date_input(
+                "Ngày giao hàng", value=data.delivery_date, format="DD/MM/YYYY", key=key("delivery"), disabled=off
             )
-        shrinkage_reason = data.shrinkage_reason
-        if low or data.shrinkage_reason:
-            shrinkage_reason = c3.text_input(
-                "Lý do độ co thấp / bằng 0", value=data.shrinkage_reason, max_chars=300, key=key("shrink_reason"),
-                disabled=off,
-            )  # fmt: skip
-        note = st.text_area("Ghi chú", value=data.note, max_chars=1000, height=68, key=key("note"), disabled=off)
+            c1, c2, c3, c4 = st.columns(4)
+            costing = c1.date_input(
+                "Ngày tính giá", value=data.costing_date, format="DD/MM/YYYY", key=key("costing"), disabled=off
+            )
+            oc_no = c2.text_input(
+                "Số OC",
+                value=data.oc_no,
+                max_chars=40,
+                placeholder="KDV10-SX-LO-0726-6564.1",
+                key=key("oc"),
+                disabled=not (w.editable or CostsheetAction.SAVE_OC in allowed),
+            )
+            with c3:
+                exception = _select(
+                    "Lý do ngoại lệ độ co" + (" :orange-badge[Độ co thấp]" if low else ""),
+                    SHRINKAGE_EXCEPTIONS,
+                    data.shrinkage_exception,
+                    key("shrink_exc"),
+                    disabled=off,
+                )
+            shrinkage_reason = data.shrinkage_reason
+            if low or data.shrinkage_reason:
+                shrinkage_reason = c4.text_input(
+                    "Lý do độ co thấp / bằng 0", value=data.shrinkage_reason, max_chars=300, key=key("shrink_reason"),
+                    disabled=off,
+                )  # fmt: skip
+            note = st.text_area("Ghi chú", value=data.note, max_chars=1000, height=68, key=key("note"), disabled=off)
+        order_type = job_order_type(sale_form, text(data.sale_form), order_type, text(data.order_type))
     return {
         "dye_plant": dye_plant or text(data.dye_plant),
         "customer_name": customer or "",

@@ -7,7 +7,7 @@ import streamlit as st
 from backend.features.woven_costing.dto.common_dto import Currency, PriceType, SaleForm
 from backend.features.woven_costing.dto.costsheet_dto import CostsheetResponse
 from frontend.core.base_page import BasePage
-from frontend.core.components import data_table, editable_table, section_title
+from frontend.core.components import data_table
 from frontend.core.formatting import format_number
 from frontend.features.woven_costing.components.labels import (
     RED_FLAG,
@@ -18,6 +18,7 @@ from frontend.features.woven_costing.components.labels import (
     text,
     text_or_empty,
 )
+from frontend.features.woven_costing.components.marks import apply_table, heading
 
 FREIGHT_LABELS = {
     PriceType.CIF.value: "F&I (đ/m)",
@@ -51,6 +52,7 @@ def price_tab(page: BasePage, w: CostsheetResponse, sfx: str, price_type: str | 
     def key(name: str) -> str:
         return page.key(f"price.{name}.{sfx}")
 
+    heading("Giá bán", editable=not off)  # UI change 2026-11-27
     c1, c2, c3, c4 = st.columns(4)
     with c1:
         currency = st.segmented_control(
@@ -82,16 +84,14 @@ def price_tab(page: BasePage, w: CostsheetResponse, sfx: str, price_type: str | 
         )
     ship_date = c2.date_input("Ngày shipment", value=price.ship_date, format="DD/MM/YYYY", key=key("ship"),
                               disabled=off)  # fmt: skip
-    section_title("Chi phí vào giá vốn (tối đa 10)")
+    heading("Chi phí vào giá vốn (tối đa 10)", editable=not off)
     rows = [{"Tên": c.name, "Đơn giá (đ/m)": num(c.amount), "Ghi chú": c.note} for c in price.cogs_extra_lines]
     config = {"Đơn giá (đ/m)": st.column_config.NumberColumn("Đơn giá (đ/m)", min_value=0, format="localized")}
     cogs = None
     if off:
         data_table(rows, column_config=config, empty_message="Không có chi phí vào giá vốn.")
     else:
-        edited = editable_table(
-            rows, key=key("cogs"), columns=COGS_COLUMNS, column_config=config, allow_add_delete=True
-        )
+        edited = apply_table(rows, key=key("cogs"), columns=COGS_COLUMNS, column_config=config, allow_add_delete=True)
         cogs = [
             {
                 "name": text_or_empty(r.get("Tên")),
@@ -101,7 +101,7 @@ def price_tab(page: BasePage, w: CostsheetResponse, sfx: str, price_type: str | 
             for r in edited
             if text_or_empty(r.get("Tên")) or r.get("Đơn giá (đ/m)") is not None
         ]
-    section_title("Lợi nhuận")
+    heading("Lợi nhuận", editable=False)
     _profit_table(w)
     r = w.result
     st.caption(f"Ngưỡng cảnh báo: GP% {pct_text(r.gp_threshold)}, OP% {pct_text(r.op_threshold)} (SO đặt).")

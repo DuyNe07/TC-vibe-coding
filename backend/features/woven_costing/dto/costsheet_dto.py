@@ -53,15 +53,32 @@ class TwistLineDTO(BaseDTO):
     suggestion_key: str = ""
 
 
+class ConeLineDTO(BaseDTO):
+    """4.14a one cone line (2026-11-26); ``suggested`` = still the app suggestion (BR-100)."""
+
+    count: str = ""
+    quantity_kg: Decimal | None = None
+    members: str = ""
+    suggested: bool = False
+    suggestion_key: str = ""
+
+
 class WeavingInputDTO(BaseDTO):
+    """4.14; cone table 4.14a in ``cone_lines`` (the old cells cone 1 / cone 2 are only read for stored costsheets)."""
+
     size_material: str = ""
     warping_band: str = ""
     cone_count_1: str = ""
     cone_qty_1: Decimal | None = None
-    cone_count_1_suggested: bool = False  # BR-87: the cell holds the app suggestion
+    cone_count_1_suggested: bool = False
     cone_qty_1_suggested: bool = False
     cone_count_2: str = ""
     cone_qty_2: Decimal | None = None
+    cone_lines: list[ConeLineDTO] = Field(default_factory=list)
+    cone_lines_converted: bool = False
+    cone_lines_live: bool = False
+    cone_suggestions: list[ConeLineDTO] = Field(default_factory=list)
+    cone_suggestion_skips: list[str] = Field(default_factory=list)
     twist_outsourcing_price: Decimal | None = None
     twist_outsourcing_qty: Decimal | None = None
     size_outsourcing_price: Decimal | None = None
