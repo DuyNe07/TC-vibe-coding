@@ -1000,7 +1000,9 @@ Thông số lấy theo BR-75.
   - Sales: phiếu của mình ở trạng thái Trả lại; phiếu Đã duyệt chưa có OC; phiếu Nháp có giá sợi hết hiệu lực
     (BR-44).
   - SO: tháng hiện tại chưa có tỷ giá; mã vải thiếu sợi.
-- **Rules applied:** BR-44, BR-53
+  - (sửa 2026-11-27) Bảng Chờ tôi duyệt và Phiếu gia công chờ tôi duyệt có thêm các cột của Màn hình 3 (BR-101,
+    BR-103), duyệt nhiều phiếu (UC-47, UC-48) và trả lại ngay trên bảng (UC-22).
+- **Rules applied:** BR-44, BR-53, BR-101, BR-103 (thêm 2026-11-27)
 
 ### UC-31: Xem danh sách tỷ giá
 - **Actor:** SO
@@ -1089,6 +1091,27 @@ Thông số lấy theo BR-75.
 - **Actor:** ai xem được phiếu
 - **Output:** file F-09 `gia-cong-<số phiếu>.xlsx` theo kết quả đang hiện.
 
+### UC-47: Duyệt nhiều costsheet một lần (thêm 2026-11-27)
+- **Actor:** Trưởng team, Trưởng đơn vị, SO (theo BR-53)
+- **Trigger:** ở Màn hình 3, bảng "Chờ tôi duyệt", tick một hoặc nhiều phiếu rồi bấm "Duyệt các phiếu đã chọn".
+- **Main flow:**
+  1. App hiện hộp xác nhận: số phiếu, từng phiếu với GP%, OP%; các phiếu có "Cần chú ý" (BR-101) được liệt kê riêng ở
+     đầu hộp.
+  2. Người duyệt bấm "Duyệt"; mỗi phiếu được duyệt như UC-21 (kiểm tra BR-53, trạng thái Chờ duyệt; ghi người, lúc
+     duyệt, lịch sử "Duyệt"; phiên bản cũ chuyển Đã thay thế theo BR-37).
+  3. Phiếu không duyệt được thì bỏ qua, các phiếu khác vẫn được duyệt (BR-102).
+- **Output:** "Đã duyệt N costsheet." và, nếu có, từng dòng "Không duyệt được <số> v<n>: <lý do>."
+- **Rules applied:** BR-37, BR-53, BR-101, BR-102
+
+### UC-48: Duyệt nhiều phiếu gia công nhuộm một lần (thêm 2026-11-27)
+- **Actor:** như UC-47 (BR-99)
+- **Trigger:** ở Màn hình 3, bảng "Phiếu gia công chờ tôi duyệt", tick một hoặc nhiều phiếu rồi bấm "Duyệt các phiếu đã
+  chọn".
+- **Main flow:** như UC-47; mỗi phiếu được duyệt như UC-43 (duyệt); hộp xác nhận ghi %GP từng phiếu, liệt kê riêng phiếu
+  có "Cần chú ý".
+- **Output:** "Đã duyệt N phiếu gia công." và, nếu có, từng dòng "Không duyệt được <số phiếu>: <lý do>."
+- **Rules applied:** BR-99, BR-101, BR-102
+
 ## 7. Business rules (Quy tắc nghiệp vụ)
 | ID | Rule | Error message shown to user (VI) |
 |---|---|---|
@@ -1173,6 +1196,9 @@ Thông số lấy theo BR-75.
 | BR-86 | **Gợi ý dòng Se** (thêm 2026-11-23): khi phiếu chưa có dòng Se nào và có dòng sợi tick Se (bước Tính lại / tạo phiếu), app tạo sẵn 1 dòng Se cho mỗi nhóm (hướng, chi số, độ săn) của các dòng sợi tick Se: Hướng = Dọc (WARP) / Ngang (WEFT); Độ săn = số trước "T/M" của sợi; Chi số đọc từ tên sợi: mỗi phần filament "…<n>D/…/<k>" -> "nD" (thêm "/k" khi k ≥ 2), spun "<N>/<k>" -> "N/k", có "CACBON" / "CARBON" / "C.TRANG" / "C.DEN" / "C TRANG" -> thêm "+ CB"; Hệ sợi theo BR-83; SL = sản lượng Se ước tính của các dòng sợi trong nhóm (BR-19). Đọc không ra chi số thì để trống ô Chi số. Sales sửa / xóa / thêm dòng tự do; đã có dòng Se thì không tạo lại. (sửa 2026-11-23) Mỗi dòng Se ghi nhận "do app gợi ý" hay "sales đã sửa": khi tính, các dòng còn là gợi ý được tạo lại theo tick Se và sản lượng Se ước tính hiện tại (đổi tick Se, đổi số mét, đổi tỷ lệ… đều cập nhật); dòng sales đã sửa hoặc tự thêm giữ nguyên; dòng sales đã xóa không tạo lại. Phiếu có dòng Se lưu trước 2026-11-23 coi như "sales đã sửa" | - |
 | BR-87 | (bỏ từ 2026-11-26, thay bằng BR-100) **Gợi ý cone** (thêm 2026-11-23): SL cone 1 điền sẵn = tổng SL các dòng Se Ngang; chi số cone 1 điền sẵn = chi số của dòng Se Ngang nếu các dòng Se Ngang chỉ có 1 chi số (nhiều chi số thì để trống để sales nhập). Giá trị gợi ý hiện ngay trong ô và tự cập nhật khi dòng Se Ngang đổi, tới khi sales tự sửa ô đó; sales sửa thì giữ số của sales. Không có Se Ngang thì để trống | - |
 | BR-100 | **Gợi ý bảng cone – sợi se chung / se riêng** (thêm 2026-11-26, thay BR-87). Dựa trên các dòng Se Ngang (4.13). (a) Dòng Se Ngang là **sợi phụ** khi các dòng sợi Ngang tick Se có cùng chi số và độ săn với nó có tên chứa BR1, WHITE C, BLACK C, CARBON, CACBON, C.TRANG, C.DEN, C TRANG (carbon) hoặc SPANDEX (spandex), hoặc khi chi số của dòng chỉ là "CB" hay "SP m"; các dòng khác là **sợi chính**. (b) Mỗi sợi chính = 1 cone; các dòng Se Ngang cùng chi số và độ săn gộp làm 1 (cộng SL). (c) Mỗi sợi phụ se chung với 1 sợi chính: chọn trong các sợi chính cùng độ săn (không có thì xét mọi sợi chính) sợi có SL × (chi số chuyển đổi sợi phụ ÷ chi số chuyển đổi sợi chính) gần SL sợi phụ nhất (2 sợi se chung dài bằng nhau); không có sợi chính nào thì sợi phụ thành 1 cone riêng. (d) Cone se chung: SL = SL sợi chính + SL các sợi phụ đi kèm; chi số = chi số sợi chính, nối " + " với phần của từng sợi phụ: carbon có "CB" trong chi số -> "CB", spandex -> "SP m" (m = số D của spandex), còn lại -> chi số sợi phụ. Ví dụ "150D + 30D", "75D/2 + CB", "40/2 + SP 40". (e) Thứ tự dòng = thứ tự sợi chính trong bảng Se. (f) Có từ 2 sợi chính cùng độ săn với một sợi phụ -> cảnh báo không chặn. (g) Dòng gợi ý được tạo lại mỗi lần tính theo dòng Se Ngang hiện tại; dòng sales đã sửa hoặc tự thêm giữ nguyên; dòng gợi ý sales đã xóa không tạo lại; một cone gợi ý trùng chi số với dòng sales đã sửa thì không tạo thêm; costsheet lưu trước 2026-11-26 có cone sales đã gõ thì giữ nguyên các dòng cone, không gợi ý thêm (giống dòng Se lưu trước, BR-86). (h) Không có dòng Se Ngang -> không có dòng gợi ý; bảng cone ẩn trừ khi phiếu đã có dòng cone (giữ để không mất số) | Kiểm tra lại cone: sợi <sợi phụ> có thể se chung với <sợi chính 1> hoặc <sợi chính 2>. |
+| BR-101 | **Cần chú ý** (thêm 2026-11-27, Màn hình 3): mỗi phiếu chờ duyệt có 1 ô chữ ngắn, các mục nối bằng " · ", không có mục nào thì để trống. Costsheet: "GP dưới ngưỡng <y>%" khi GP% < gp_threshold; "OP dưới ngưỡng <y>%" khi OP% < op_threshold; "Độ co <x>%" khi độ co ≤ 5% (BR-14) hoặc có lý do ngoại lệ độ co; "Sửa <n> tham số" khi sales sửa n tham số (4.18); "Sửa thông số vải" khi fabric_overridden; "Sửa chi phí phát sinh" khi phiếu có chi phí phát sinh do ngành báo giá. Phiếu gia công nhuộm: "%GP phiếu dưới ngưỡng <y>%"; "<n> dòng %GP dưới ngưỡng"; "<n> dòng báo giá riêng". GP% / OP% (và %GP) dưới ngưỡng tô đỏ trong bảng | - |
+| BR-102 | **Duyệt nhiều phiếu** (thêm 2026-11-27): mỗi phiếu được kiểm tra riêng như khi duyệt một phiếu (đang Chờ duyệt, người duyệt có quyền theo BR-53 / BR-99); phiếu không đạt thì không duyệt và báo lý do, không làm hỏng việc duyệt các phiếu khác. Phiếu có "Cần chú ý" vẫn duyệt được, chỉ được liệt kê riêng trong hộp xác nhận | Không duyệt được <số>: Costsheet không ở trạng thái Chờ duyệt. / Không duyệt được <số>: Bạn không có quyền duyệt costsheet này. |
+| BR-103 | **So với phiên bản đã duyệt** (thêm 2026-11-27, Màn hình 3): costsheet phiên bản n ≥ 2 hiện "Giá bán trước → nay" và "GP% trước → nay", "trước" = phiên bản gần nhất có trạng thái Đã duyệt, Đã chốt đơn hoặc Đã thay thế; không có phiên bản như vậy (v1, hoặc chưa bản nào được duyệt) thì 2 ô để trống | - |
 | BR-84 | **Spandex** (thêm 2026-11-23): "SP m" phải có trong bảng 4.5.13 của bộ định mức dùng cho phiếu | Chưa có số cộng thêm cho spandex SP <m>. Liên hệ SO bổ sung. |
 
 ## 8. Screens (Màn hình)
@@ -1305,6 +1331,9 @@ Màn hình 3 – Việc chờ tôi (nhóm Sales):
 - các bảng chỉ xem theo nhóm: Chờ tôi duyệt, Bị trả lại, Đã duyệt chưa có OC, Giá sợi hết hiệu lực, (SO) Tỷ giá tháng
   này, Mã vải thiếu sợi;
 - chọn 1 dòng + "Mở".
+- (sửa 2026-11-27) Bảng **Chờ tôi duyệt** và **Phiếu gia công chờ tôi duyệt**: tick nhiều dòng, nút "Duyệt các phiếu đã
+  chọn" (hộp xác nhận liệt kê riêng phiếu có "Cần chú ý"); costsheet tick 1 dòng thì có ô "Lý do trả lại" + nút "Trả
+  lại" ngay dưới bảng; nút "Mở" giữ nguyên. Cột như mục Screen 3. Không có khung xem nhanh (muốn xem kỹ thì bấm "Mở").
 
 Màn hình 4 – Dữ liệu mã vải (nhóm Phòng SO), 2 thẻ:
 - **Tải Peace/WFX**: ô chọn 1-4 file; "Kiểm tra"; ô tổng hợp (mới / thay đổi / không đổi / thiếu sợi / lỗi); bảng kết
@@ -1441,6 +1470,19 @@ Quyền màn hình và vai trò do quản trị viên cấp (giống ứng dụn
 - **Cột:** Số costsheet, Phiên bản, Khách hàng, Mã vải, Sales, Ngày tính giá, GP%, OP%, Lý do.
 - **Trống:** "Không có việc nào đang chờ bạn."
 - **Actions:** chọn dòng + "Mở" -> Màn hình 2.
+- **Bảng "Chờ tôi duyệt" (sửa 2026-11-27, UC-47; các nhóm khác giữ như trên):**
+  - Cột theo thứ tự: Số costsheet, Phiên bản, Team, Sales, Khách hàng, Mã vải, Tên vải, Thị trường, Nhà máy nhuộm, Hình
+    thức bán, Loại đơn, Loại giá, Số lượng đặt (m), Ngày tính giá, Ngày gửi duyệt (lúc gửi duyệt gần nhất, theo lịch sử),
+    Ngày giao hàng, Giá bán (theo đơn vị sales nhập, ví dụ "3,0233 USD/m"), Giá vốn (đ/m), GP (đ/m), GP%, OP%, Giá có
+    VAT, Tiền sợi (đ/m), Tiền Dệt (đ/m), Tiền Nhuộm (đ/m), Độ co (%), Giá bán trước → nay, GP% trước → nay (BR-103), Cần
+    chú ý (BR-101), Ghi chú của Sales.
+  - Tiền sợi / Dệt / Nhuộm (đ/m) = cột "Chi phí/m TP" của các dòng Chi phí Sợi / Dệt / Nhuộm trong Chuỗi nhu cầu (trống
+    khi phiếu không có khoản đó).
+  - Tick được nhiều dòng; nút "Duyệt các phiếu đã chọn" (UC-47); tick đúng 1 dòng thì có thêm ô "Lý do trả lại" và nút
+    "Trả lại" (UC-22) và nút "Mở".
+- **Bảng "Phiếu gia công chờ tôi duyệt" (sửa 2026-11-27, UC-48):** cột Số phiếu, Khách hàng, Số hợp đồng, Đơn vị gia
+  công, Sales, Ngày tính giá, Tổng số lượng (m), Tổng giá GC (đ), %GP, Cần chú ý; tick nhiều dòng + "Duyệt các phiếu đã
+  chọn"; tick 1 dòng + "Mở" (trả lại / hủy phiếu gia công vẫn làm trong phiếu).
 
 ### Screen 4: Dữ liệu mã vải
 - **Purpose:** UC-01..UC-04, UC-26 (theo mã vải).
@@ -1717,6 +1759,23 @@ Quyền màn hình và vai trò do quản trị viên cấp (giống ứng dụn
   sợi chưa đổi; bấm "Áp dụng & tính" dưới bảng thì phiếu tính lại và Tổng chi phí sợi đổi theo giá mới; nhập vào bảng
   rồi bấm Lưu nháp không bấm "Áp dụng & tính" thì số đã nhập vẫn được tính và lưu; đổi 1 ô lẻ (ví dụ Số lượng đặt) vẫn
   tự tính như trước.
+- [ ] AC-95 (UC-47, BR-102): Trưởng team FS1 tick 3 phiếu Chờ duyệt của team FS1 và bấm "Duyệt các phiếu đã chọn" ->
+  "Duyệt" thì cả 3 thành Đã duyệt, mỗi phiếu ghi người, lúc duyệt và lịch sử "Duyệt", thông báo "Đã duyệt 3
+  costsheet."; nếu 1 trong 3 phiếu vừa bị người khác duyệt trước thì 2 phiếu kia vẫn được duyệt và có dòng "Không duyệt
+  được <số> v<n>: Costsheet không ở trạng thái Chờ duyệt."
+- [ ] AC-96 (BR-101): Phiếu GP% 10% với ngưỡng 12%, độ co 3%, sales sửa 2 tham số có ô Cần chú ý "GP dưới ngưỡng 12% ·
+  Độ co 3% · Sửa 2 tham số" và GP% tô đỏ; phiếu không có điểm nào thì ô trống; hộp xác nhận duyệt liệt kê riêng phiếu có
+  Cần chú ý nhưng vẫn duyệt được.
+- [ ] AC-97 (BR-103): Phiên bản 2 của phiếu có v1 Đã duyệt giá bán 3,00 USD/m, GP% 20% và v2 giá 3,10 USD/m, GP% 22% thì
+  hiện "3,0000 → 3,1000 USD/m" (USD 4 số lẻ, VND không số lẻ, như ô giá bán) và "20,00% → 22,00%"; phiên bản 1 để
+  trống 2 ô này.
+- [ ] AC-98 (Screen 3): Bảng Chờ tôi duyệt có đủ các cột theo đúng thứ tự mục Screen 3; Tiền sợi / Dệt / Nhuộm (đ/m)
+  bằng số Chi phí/m TP của Chuỗi nhu cầu; phiếu Vải Nhuộm để trống Tiền sợi và Tiền Dệt.
+- [ ] AC-99 (UC-22 trên bảng): Tick 1 phiếu, nhập lý do "Sai giá sợi" và bấm "Trả lại" thì phiếu thành Trả lại với lý
+  do đó; bấm "Trả lại" khi lý do trống -> "Vui lòng nhập lý do trả lại."; tick 2 dòng thì không có nút Trả lại.
+- [ ] AC-100 (UC-48, hồi quy): Tick 2 phiếu gia công Chờ duyệt và duyệt thì cả 2 Đã duyệt; Sales (không có quyền duyệt)
+  không thấy nhóm Chờ tôi duyệt; các nhóm Bị trả lại, Đã duyệt chưa có OC, Giá sợi hết hiệu lực, Mã vải thiếu sợi vẫn như
+  cũ; duyệt từng phiếu trong Màn hình 2 vẫn chạy.
 - [ ] AC-51 (hồi quy): 4 costsheet thật của AC-09 cho cùng GP% / OP% như trước; phiếu đã lưu trước mở rộng hiển thị
   không đổi; Cone chi số "150D" cho cùng định mức như trước.
 - [ ] AC-38 (UC-28): Xuất Excel theo bộ lọc, file có đúng số dòng và các cột của Màn hình 1.
@@ -1800,6 +1859,12 @@ Quyền màn hình và vai trò do quản trị viên cấp (giống ứng dụn
   nền khung; thẻ Giá bán & lợi nhuận cũng mang ✏️ vì sales nhập giá bán ở đó.
 - Mở rộng 2026-11-27 (sau khi dùng thử): nhập giá sợi phải chờ sau mỗi ô -> bảng nhập nhiều dòng nhập liền, nút "Áp
   dụng & tính" dưới bảng (người dùng chọn cách a); UC-16 sửa, AC-94.
+- Mở rộng 2026-11-27 (duyệt hàng loạt): Màn hình 3 - bảng Chờ tôi duyệt nhiều cột để Trưởng team nhìn bên ngoài mà
+  duyệt, tick nhiều phiếu + "Duyệt các phiếu đã chọn" (UC-47), trả lại ngay trên bảng (UC-22); phiếu gia công nhuộm cũng
+  duyệt nhiều phiếu (UC-48); cột Cần chú ý (BR-101), so phiên bản đã duyệt (BR-103), quy tắc duyệt nhiều phiếu (BR-102);
+  AC-95..AC-100. Không có khung xem nhanh (người dùng chọn 6b). Không đổi dữ liệu đã lưu.
+- Giả định (mở rộng 2026-11-27, duyệt hàng loạt): "Ngày gửi duyệt" lấy từ lần "Gửi duyệt" gần nhất trong lịch sử phiếu;
+  phiếu duyệt tự động không vào bảng này vì không qua Chờ duyệt.
 - Giả định (triển khai, mở rộng 2026-11-23): Chi số "34/2 + CB" trong danh sách là 333 (đã làm tròn), công thức ra 332,71;
   vì số trong danh sách được ưu tiên nên kết quả không đổi.
 - Giả định (triển khai, mở rộng 2026-11-23): Người có SO và cả 2 team, hoặc chỉ có SO, lập phiếu thuộc team "SO". Khách
@@ -1917,6 +1982,7 @@ Quyền màn hình và vai trò do quản trị viên cấp (giống ứng dụn
 | Mở rộng 2026-11-25 (phiếu gia công nhuộm): 4.21..4.24, UC-40..UC-46, BR-92..BR-99, BR-02 sửa, F-09, Screen 8; AC-76..AC-83 | `models/dyeing_job.py`, `models/parameter_tables.py` (OpRateRow), `business/dyeing_job_business.py` (DyeingJobTcdnBusiness, DyeingJobBusiness), `business/dyeing_tcdn_business.py` (stage_cost / standard_chemical), `business/fabric_business.py`, `builders/dyeing_job_builders.py`, `dto/dyeing_job_dto.py`, `repositories/dyeing_job_repository.py`, `services/*_dyeing_job*_service.py`, `services/list_my_tasks_service.py`, `migrations/0001_dyeing_job_order_table_phieu_gia_cong_.py`; `frontend/features/woven_costing/pages/dyeing_job_page.py`, `components/costsheet_dyeing.py` (job_line_dyeing), `components/parameter_editor.py`, `pages/my_tasks_page.py`; test `tests/test_dyeing_job_20261125.py` |
 | Mở rộng 2026-11-26 (bảng cone): 4.14a, BR-100 (thay BR-87), BR-22 sửa phần Cone, UC-16, Screen 2 thẻ Ngành Dệt; AC-84..AC-88 (AC-60 thay thế) | `models/costsheet_input.py` (ConeLine, WeavingInput.cone_lines…), `models/costsheet.py` (Costsheet.cone_rows / cone_live: chuyển ô cone 1 / cone 2 cũ khi đọc), `business/cone_business.py` (ConeBusiness: suggest_lines, merge_lines, suggest_cone, check_warnings), `business/costsheet_business.py` (suggested_inputs), `business/weaving_business.py` (Cone 1..n), `dto/costsheet_dto.py` (ConeLineDTO), `builders/costsheet_response_builder.py`; `frontend/features/woven_costing/components/costsheet_weaving.py` (_cone_lines); test `tests/test_cone_split_20261125.py`, `tests/test_fix5_20261123.py` (AC-60 theo BR-100) |
 | Đổi giao diện Màn hình 2 (2026-11-27): Thông tin đơn ô chính + "Thông tin thêm", thẻ Chuỗi nhu cầu, ✏️, dải "Nhập liệu" / "Chỉ xem", dòng hướng dẫn, bảng nhập liền + "Áp dụng & tính" (UC-16 sửa); AC-89..AC-94 | `frontend/features/woven_costing/components/marks.py` (heading, tab_label, guide, apply_table), `components/costsheet_order.py`, `components/costsheet_chain.py` (demand_chain_tab), `pages/costsheet_page.py`, `components/costsheet_price.py`, `costsheet_tabs.py`, `costsheet_weaving.py`, `costsheet_dyeing.py`; chỉ đổi màn hình nên kiểm bằng trình duyệt; hồi quy: toàn bộ test cũ (506) |
+| Mở rộng 2026-11-27 (duyệt hàng loạt): UC-47, UC-48, UC-30 sửa, BR-101..BR-103, Screen 3; AC-95..AC-100 | `business/approval_business.py` (ApprovalBusiness: attention, job_attention, previous_approved, approved_sheet / approved_job, approve_history; UC-21 / UC-43 dùng chung), `builders/task_row_builder.py` (TaskRowBuilder, JobTaskRowBuilder), `dto/list_dto.py` (TaskRowDTO thêm cột, BulkApproveRequest / Response), `services/approve_costsheets_service.py`, `services/approve_dyeing_jobs_service.py`, `services/list_my_tasks_service.py`, `services/approve_costsheet_service.py`, `services/approve_dyeing_job_service.py`, controller `approve_costsheets` / `approve_dyeing_jobs`; `frontend/features/woven_costing/pages/my_tasks_page.py`; test `tests/test_bulk_approve_20261127.py` |
 | Screen 1 | `frontend/features/woven_costing/pages/costsheet_list_page.py` |
 | Screen 2 | `pages/costsheet_page.py` + `components/costsheet_*.py` |
 | Screen 3 | `pages/my_tasks_page.py` |
