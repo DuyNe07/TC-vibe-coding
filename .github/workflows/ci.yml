@@ -1,0 +1,32 @@
+# Basic checks on every Pull Request: lint + tests (scripts/check.py), then the app really starts (scripts/doctor.py).
+# No secrets, no company database: tests use throw-away SQLite, the app check uses a fresh data/app.db.
+# Build + deploy stay local (packaging/build.sh --deploy).
+name: checks
+
+on:
+  pull_request:
+    branches: [dev, main]
+  push:
+    branches: [dev, main]
+
+concurrency:
+  group: checks-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version-file: .python-version
+          cache: pip
+      - run: pip install -r requirements.txt
+      - name: Lint + tests
+        run: python scripts/check.py
+      - name: Migrations on a fresh database
+        run: python scripts/migrate.py
+      - name: App starts
+        run: python scripts/doctor.py --skip-checks

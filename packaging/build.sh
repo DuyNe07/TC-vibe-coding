@@ -2,7 +2,7 @@
 # Build the app image and record it in packaging/RELEASE; with --deploy, start it right after (packaging/deploy.sh).
 #
 #   ./packaging/build.sh -v 1.2.0             image tc-vibe-coding:1.2.0 (+ :latest)
-#   ./packaging/build.sh -v 1.2.0 --deploy    build, then deploy it
+#   git pull && ./packaging/build.sh -v 1.3.12 --deploy    build, then deploy it
 set -euo pipefail
 
 usage() { echo "usage: ./packaging/build.sh -v <version> [--deploy]   (e.g. ./packaging/build.sh -v 1.2.0 --deploy)" >&2; exit 1; }
